@@ -1,164 +1,150 @@
 /*
 Design reminder for this file:
-- Philosophy: Post-minimal bio-computing workspace
-- Keep Biomni-like information architecture, but shift to a more layered central workbench
-- Use deep brand blues as structure, peach only for key actions, lilac for metadata
-- Favor soft planes, timelines, and nested panels over uniform bordered boxes
+- Philosophy: Agent-first biotech workspace
+- The first thing users must understand is how to start a task, what the agent is doing, and where to read outputs
+- Keep the Ailux brand blues and layered visual language, but prioritize usability over showcase composition
+- Structure should communicate a clear loop: 输入任务 → Agent 执行 → 查看结果 → 继续追问
 */
 import { Button } from "@/components/ui/button";
 import {
-  Activity,
+  ArrowRight,
+  Atom,
   BarChart3,
-  Beaker,
   Bot,
   BrainCircuit,
-  ChevronRight,
   CircleCheckBig,
   Clock3,
-  Command,
   Database,
-  Download,
+  FileSpreadsheet,
   FileText,
   FlaskConical,
   FolderOpen,
-  Layers3,
-  Microscope,
-  MoreHorizontal,
-  Paperclip,
+  Lightbulb,
+  LoaderCircle,
   PanelLeft,
+  Paperclip,
+  Play,
   Search,
   SendHorizonal,
   Share2,
   Sparkles,
+  SquareTerminal,
+  Stethoscope,
+  WandSparkles,
 } from "lucide-react";
 
-type StepItem = {
-  id: string;
+type RunStep = {
   title: string;
   detail: string;
-  duration: string;
-  status: "done" | "running" | "queued";
+  time: string;
+  status: "done" | "running" | "next";
 };
 
+const sideItems = [
+  "双抗内化研究项目",
+  "EGFR 抗体优化",
+  "内化特征关联分析",
+  "双抗内化功能预测模型",
+  "CDR 区域内化影响评估",
+];
+
 const primaryNav = [
-  { label: "工作台", icon: PanelLeft, active: true },
-  { label: "任务", icon: Command },
+  { label: "工作台", icon: PanelLeft },
+  { label: "任务", icon: Sparkles },
   { label: "实验", icon: FlaskConical },
   { label: "资源", icon: FolderOpen },
 ];
 
-const projectGroups = [
-  {
-    heading: "项目",
-    items: [
-      "双抗内化研究项目",
-      "EGFR 抗体优化",
-      "内化特征关联分析",
-    ],
-  },
-  {
-    heading: "所有任务",
-    items: [
-      "双抗内化功能预测模型",
-      "内化特征相关性分析",
-      "CDR 区域内化影响评估",
-      "EGFR 亲和力成熟化",
-    ],
-  },
+const starterPrompts = [
+  "基于上传的实验数据，分析哪些特征影响双抗内化率，并输出预测模型。",
+  "模拟 150 条双抗数据，完成 EDA、特征重要性分析和模型评估。",
+  "比较 HER2×CD3 与 EGFR×CD3 在内化率上的差异，并给出实验建议。",
 ];
 
-const metricCards = [
-  { label: "样本规模", value: "150", note: "双抗分子记录" },
-  { label: "特征维度", value: "20", note: "靶点、柔性、结合能力" },
-  { label: "候选模型", value: "6", note: "XGBoost / RF / SVM" },
-  { label: "当前阶段", value: "EDA", note: "相关性与重要性提取" },
-];
-
-const steps: StepItem[] = [
+const runSteps: RunStep[] = [
   {
-    id: "01",
-    title: "生成模拟实验数据集",
-    detail: "构建 150 个双抗分子记录，覆盖靶点生物学、结合动力学、抗体工程学与细胞生物学等 4 类关键特征。",
-    duration: "4s",
+    title: "生成模拟数据集",
+    detail: "建立 150 条记录，补齐靶点表达、结合动力学、连接区柔性等关键字段。",
+    time: "4s",
     status: "done",
   },
   {
-    id: "02",
     title: "探索性数据分析（EDA）",
-    detail: "对内化评分分布、关键变量相关性与聚类趋势进行初筛，确认 KD 与内化率、靶点共定位与内化率的主要关系。",
-    duration: "19s",
+    detail: "检查分布、相关性与离群点，确认 KD 与内化率、共定位与内化率的关系。",
+    time: "19s",
     status: "running",
   },
   {
-    id: "03",
     title: "特征重要性分析",
-    detail: "使用 SHAP 与随机森林 MDI 联合识别决定性变量，突出靶点生物学特征与连接区柔性的解释价值。",
-    duration: "32s",
-    status: "queued",
+    detail: "结合 SHAP 与随机森林重要性，提取最值得纳入解释的变量。",
+    time: "32s",
+    status: "next",
   },
   {
-    id: "04",
     title: "构建预测模型",
-    detail: "训练并比较多个机器学习模型，对双抗内化功能进行预测，并准备后续阈值建议。",
-    duration: "1m27s",
-    status: "queued",
-  },
-  {
-    id: "05",
-    title: "模型评估与可视化",
-    detail: "输出 ROC、学习曲线、特征贡献与误差分布图，用于设计建议的可信审阅。",
-    duration: "25s",
-    status: "queued",
-  },
-  {
-    id: "06",
-    title: "生物学解释与总结",
-    detail: "形成设计准则、推荐阈值与实验验证建议，沉淀为可复用的任务模板。",
-    duration: "16s",
-    status: "queued",
+    detail: "训练 XGBoost / RF / SVM 并比较效果，形成推荐模型。",
+    time: "1m27s",
+    status: "next",
   },
 ];
 
-const files = [
-  { name: "bsab_internalization_dataset.csv", size: "28.5 KB", tag: "数据集" },
-  { name: "data_summary.json", size: "3.2 KB", tag: "摘要" },
-  { name: "fig1_distribution.png", size: "142 KB", tag: "可视化" },
-  { name: "fig2_correlation_heatmap.png", size: "293 KB", tag: "热图" },
-  { name: "fig3_scatter_matrix.png", size: "319 KB", tag: "散点" },
-  { name: "eda_report.json", size: "6.1 KB", tag: "报告" },
+const outputs = [
+  { name: "bsab_internalization_dataset.csv", meta: "数据集 · 28.5 KB", icon: Database },
+  { name: "fig2_correlation_heatmap.png", meta: "热图 · 293 KB", icon: BarChart3 },
+  { name: "eda_report.json", meta: "结构化报告 · 6.1 KB", icon: FileText },
+  { name: "model_comparison.xlsx", meta: "模型对比表 · 43 KB", icon: FileSpreadsheet },
 ];
 
-const statusTone = {
+const guidance = [
+  {
+    title: "如何开始",
+    detail: "先在输入区描述任务，或直接点击下方示例任务生成一条标准指令。",
+    icon: WandSparkles,
+  },
+  {
+    title: "执行中看哪里",
+    detail: "中间看对话与执行日志，右侧看计划、当前步骤和已生成文件。",
+    icon: SquareTerminal,
+  },
+  {
+    title: "结果出来后做什么",
+    detail: "先看总结卡，再打开文件列表，最后继续追问让 Agent 深挖。",
+    icon: Lightbulb,
+  },
+];
+
+const statusClass = {
   done: "bg-[rgba(23,36,216,0.08)] text-[#161FAD] border-[rgba(23,36,216,0.14)]",
-  running: "bg-[rgba(132,140,254,0.16)] text-[#161FAD] border-[rgba(132,140,254,0.34)]",
-  queued: "bg-white text-slate-500 border-slate-200",
+  running: "bg-[rgba(255,201,151,0.25)] text-[#8a5216] border-[rgba(255,201,151,0.45)]",
+  next: "bg-white text-slate-500 border-slate-200",
 };
 
 const statusText = {
-  done: "已完成",
-  running: "处理中",
-  queued: "排队中",
+  done: "完成",
+  running: "执行中",
+  next: "待执行",
 };
 
 export default function Home() {
   return (
-    <div className="ailux-shell min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(132,140,254,0.18),transparent_26%),linear-gradient(180deg,#f7f9ff_0%,#eef3ff_100%)] text-slate-900">
-      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(90deg,rgba(7,2,97,0.03)_1px,transparent_1px),linear-gradient(rgba(7,2,97,0.03)_1px,transparent_1px)] bg-[size:30px_30px] opacity-40" />
+    <div className="ailux-shell min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(132,140,254,0.16),transparent_24%),linear-gradient(180deg,#f7f9ff_0%,#eef3ff_100%)] text-slate-900">
+      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(90deg,rgba(7,2,97,0.03)_1px,transparent_1px),linear-gradient(rgba(7,2,97,0.03)_1px,transparent_1px)] bg-[size:30px_30px] opacity-30" />
 
-      <div className="relative grid min-h-screen grid-cols-1 xl:grid-cols-[72px_220px_minmax(0,1fr)_300px] 2xl:grid-cols-[76px_240px_minmax(0,1fr)_340px]">
-        <aside className="hidden border-r border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(245,248,255,0.82))] px-3 py-5 backdrop-blur xl:flex xl:flex-col xl:items-center xl:gap-5">
+      <div className="relative grid min-h-screen grid-cols-1 xl:grid-cols-[76px_240px_minmax(0,1fr)]">
+        <aside className="hidden border-r border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(245,248,255,0.82))] px-3 py-5 backdrop-blur xl:flex xl:flex-col xl:items-center xl:gap-5">
           <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-[#070261] text-white shadow-[0_18px_40px_rgba(7,2,97,0.28)]">
             <Bot className="h-6 w-6" />
           </div>
           <div className="mt-4 flex flex-1 flex-col items-center gap-2">
-            {primaryNav.map((item) => {
+            {primaryNav.map((item, index) => {
               const Icon = item.icon;
+              const active = index === 0;
               return (
                 <button
                   key={item.label}
                   className={`group flex w-full flex-col items-center gap-2 rounded-2xl px-2 py-3 text-[11px] font-medium transition ${
-                    item.active
-                      ? "bg-[linear-gradient(180deg,rgba(23,36,216,0.12),rgba(132,140,254,0.14))] text-[#161FAD] shadow-[inset_0_0_0_1px_rgba(23,36,216,0.08)]"
+                    active
+                      ? "bg-[linear-gradient(180deg,rgba(23,36,216,0.12),rgba(132,140,254,0.14))] text-[#161FAD]"
                       : "text-slate-500 hover:bg-white/80 hover:text-slate-900"
                   }`}
                 >
@@ -170,16 +156,13 @@ export default function Home() {
               );
             })}
           </div>
-          <div className="rounded-2xl border border-white/60 bg-white/80 p-2 text-slate-500 shadow-sm">
-            <Activity className="h-4 w-4" />
-          </div>
         </aside>
 
         <aside className="hidden border-r border-white/50 bg-white/72 px-5 py-5 backdrop-blur xl:flex xl:flex-col">
           <div className="mb-6 flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Ailux Agent</p>
-              <h1 className="mt-2 text-[22px] font-semibold tracking-tight text-[#070261]">双抗内化工作台</h1>
+              <h1 className="mt-2 text-[22px] font-semibold tracking-tight text-[#070261]">智能体工作台</h1>
             </div>
             <button className="rounded-2xl border border-slate-200 bg-white p-2 text-slate-500 shadow-sm transition hover:text-[#161FAD]">
               <PanelLeft className="h-4 w-4" />
@@ -188,47 +171,41 @@ export default function Home() {
 
           <Button className="mb-5 h-11 justify-start rounded-2xl bg-[#161FAD] px-4 text-white shadow-[0_18px_32px_rgba(22,31,173,0.24)] hover:bg-[#1724D8]">
             <Sparkles className="mr-2 h-4 w-4" />
-            新建任务
+            新建 Agent 任务
           </Button>
 
-          {projectGroups.map((group) => (
-            <section key={group.heading} className="mb-5">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{group.heading}</p>
-                <span className="text-xs text-slate-300">+</span>
-              </div>
-              <div className="space-y-2">
-                {group.items.map((item, index) => {
-                  const active = item === "双抗内化功能预测模型";
-                  return (
-                    <button
-                      key={item}
-                      className={`w-full rounded-2xl px-3 py-3 text-left transition ${
-                        active
-                          ? "border border-[rgba(23,36,216,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(239,243,255,0.92))] shadow-[0_18px_36px_rgba(23,36,216,0.08)]"
-                          : "bg-transparent hover:bg-white/78"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className={`truncate text-sm ${active ? "font-semibold text-[#070261]" : "text-slate-600"}`}>{item}</p>
-                          <p className="mt-1 text-xs text-slate-400">{index === 0 ? "当前项目" : "3w ago"}</p>
-                        </div>
-                        {active ? (
-                          <span className="rounded-full bg-[rgba(255,201,151,0.28)] px-2 py-1 text-[10px] font-medium text-[#9a5a1a]">进行中</span>
-                        ) : null}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">最近项目</p>
+            <span className="text-xs text-slate-300">+</span>
+          </div>
+          <div className="space-y-2">
+            {sideItems.map((item, index) => {
+              const active = item === "双抗内化功能预测模型";
+              return (
+                <button
+                  key={item}
+                  className={`w-full rounded-2xl px-3 py-3 text-left transition ${
+                    active
+                      ? "border border-[rgba(23,36,216,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(239,243,255,0.92))] shadow-[0_18px_36px_rgba(23,36,216,0.08)]"
+                      : "bg-transparent hover:bg-white/78"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className={`truncate text-sm ${active ? "font-semibold text-[#070261]" : "text-slate-600"}`}>{item}</p>
+                      <p className="mt-1 text-xs text-slate-400">{index < 2 ? "当前项目" : "3w ago"}</p>
+                    </div>
+                    {active ? <span className="rounded-full bg-[rgba(255,201,151,0.28)] px-2 py-1 text-[10px] font-medium text-[#9a5a1a]">运行中</span> : null}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
 
           <div className="mt-auto rounded-[28px] border border-white/70 bg-[linear-gradient(180deg,rgba(7,2,97,0.96),rgba(22,31,173,0.92))] p-4 text-white shadow-[0_24px_48px_rgba(7,2,97,0.26)]">
-            <p className="text-xs uppercase tracking-[0.2em] text-white/55">Workspace pulse</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-white/55">Agent flow</p>
             <p className="mt-2 text-sm leading-6 text-white/86">
-              当前工作流已切换到新的品牌化界面，保留原有字段结构，但强化了中心工作台与时间线感知。
+              这一版把首页重点改成“如何发起任务、如何跟踪执行、如何消费结果”，让首次用户也能顺着界面完成一次完整交互。
             </p>
           </div>
         </aside>
@@ -239,11 +216,11 @@ export default function Home() {
               <div className="min-w-0 flex-1">
                 <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                   <span className="rounded-full bg-[rgba(23,36,216,0.08)] px-3 py-1 font-medium text-[#161FAD]">Agent Workspace</span>
-                  <span className="rounded-full bg-[rgba(132,140,254,0.14)] px-3 py-1 text-[#4f59d3]">Biospecific Internalization Prediction</span>
+                  <span className="rounded-full bg-[rgba(132,140,254,0.14)] px-3 py-1 text-[#4f59d3]">Biotech Reasoning Interface</span>
                 </div>
-                <h2 className="text-[24px] font-semibold tracking-tight text-[#070261] md:text-[28px]">双抗内化功能预测模型</h2>
+                <h2 className="text-[24px] font-semibold tracking-tight text-[#070261] md:text-[28px]">先提任务，再看 Agent 如何执行</h2>
                 <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600">
-                  保留现有任务字段和分析节奏，但通过新的工作台叙事、时间线视图与结果栈布局，让界面更贴近 Ailux 自身品牌，而不是 Biomni 的直接镜像。
+                  我把首屏改成更明确的 Agent 交互路径：顶部直接告诉用户怎么开始，中间以输入与对话为主，右侧持续显示计划、状态与产出，让整个产品的使用方式更直观。
                 </p>
               </div>
               <div className="flex items-center gap-2 text-sm">
@@ -251,174 +228,176 @@ export default function Home() {
                   <Share2 className="mr-2 h-4 w-4" />分享
                 </Button>
                 <Button className="h-10 rounded-2xl bg-[#161FAD] px-4 text-white shadow-[0_14px_28px_rgba(22,31,173,0.22)] hover:bg-[#1724D8]">
-                  <Sparkles className="mr-2 h-4 w-4" />运行任务
+                  <Play className="mr-2 h-4 w-4" />运行当前任务
                 </Button>
               </div>
             </header>
 
-            <div className="grid min-h-0 flex-1 gap-4 p-4 md:p-5 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="grid min-h-0 flex-1 gap-4 p-4 md:p-5 xl:grid-cols-[minmax(0,1fr)_340px]">
               <section className="min-h-0 space-y-4">
                 <div className="relative overflow-hidden rounded-[28px] border border-[rgba(23,36,216,0.08)] bg-[#070261] p-5 text-white shadow-[0_30px_60px_rgba(7,2,97,0.26)] md:p-6">
                   <img
                     src="https://d2xsxph8kpxj0f.cloudfront.net/310519663553223948/9Go2FLz3jbkZPo7DBzKuK5/ailux-hero-bio-grid-7nnF6d9BhqXaVefvNoZKif.webp"
                     alt="Ailux 品牌化科研背景"
-                    className="absolute inset-0 h-full w-full object-cover opacity-45"
+                    className="absolute inset-0 h-full w-full object-cover opacity-38"
                   />
                   <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#1928FB_0%,#848CFE_68%,#FFC997_100%)]" />
-                  <div className="relative">
-                    <div className="mb-6 flex flex-wrap items-center gap-2 text-xs text-white/70">
-                      <span className="rounded-full border border-white/14 bg-white/10 px-3 py-1">Ailux Research Flow</span>
-                      <span className="rounded-full border border-white/14 bg-white/10 px-3 py-1">双抗内化分析</span>
+                  <div className="relative space-y-5">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-white/72">
+                      <span className="rounded-full border border-white/14 bg-white/10 px-3 py-1">Ailux Agent</span>
+                      <span className="rounded-full border border-white/14 bg-white/10 px-3 py-1">任务发起区</span>
                     </div>
-                    <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.3fr)_minmax(260px,0.7fr)]">
-                      <div>
-                        <div className="inline-flex max-w-3xl rounded-[24px] bg-white/10 px-4 py-3 text-sm leading-7 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)] backdrop-blur">
-                          现在模拟一轮双抗内化研究流程：生成假数据，分析关键特征，建立预测模型，并给出后续实验建议。
+
+                    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-[22px] font-semibold tracking-tight text-white">告诉 Agent 你要完成什么</h3>
+                          <p className="mt-2 max-w-2xl text-sm leading-7 text-white/78">
+                            适合直接输入研究目标、上传数据说明或指定分析流程。你不需要先理解所有模块，只需要从一条任务描述开始。
+                          </p>
                         </div>
-                        <div className="mt-4 rounded-[24px] bg-white px-5 py-5 text-slate-900 shadow-[0_18px_50px_rgba(3,7,18,0.18)]">
-                          <div className="mb-3 flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.10)] text-[#161FAD]">
-                              <BrainCircuit className="h-5 w-5" />
+
+                        <div className="rounded-[26px] border border-white/12 bg-white/10 p-3 backdrop-blur">
+                          <textarea
+                            className="min-h-[120px] w-full resize-none border-0 bg-transparent px-2 py-2 text-sm leading-7 text-white outline-none placeholder:text-white/45"
+                            placeholder="例如：请基于上传的实验数据，分析哪些分子特征影响双抗内化率，构建预测模型，并输出可视化与实验建议。"
+                          />
+                          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3">
+                            <div className="flex items-center gap-2 text-white/70">
+                              <button className="rounded-2xl bg-white/10 p-2 transition hover:bg-white/16"><Paperclip className="h-4 w-4" /></button>
+                              <button className="rounded-2xl bg-white/10 p-2 transition hover:bg-white/16"><Database className="h-4 w-4" /></button>
+                              <button className="rounded-2xl bg-white/10 p-2 transition hover:bg-white/16"><Search className="h-4 w-4" /></button>
                             </div>
-                            <div>
-                              <p className="text-sm font-semibold text-[#070261]">执行摘要</p>
-                              <p className="text-xs text-slate-500">围绕数据生成、EDA、解释性建模与建议输出构建完整闭环</p>
-                            </div>
-                          </div>
-                            <div className="grid gap-3 text-sm leading-6 text-slate-600 md:grid-cols-2">
-                            <div className="rounded-2xl bg-slate-50 px-4 py-3">生成模拟数据并补齐关键实验特征。</div>
-                            <div className="rounded-2xl bg-slate-50 px-4 py-3">完成 EDA 与相关性筛查。</div>
-                            <div className="rounded-2xl bg-slate-50 px-4 py-3">提取可解释的重要性变量。</div>
-                            <div className="rounded-2xl bg-slate-50 px-4 py-3">输出模型、图表与实验建议。</div>
+                            <Button className="h-11 rounded-2xl bg-[#FFC997] px-5 text-[#5d3b14] shadow-[0_14px_28px_rgba(255,201,151,0.34)] hover:bg-[#ffbd7b]">
+                              启动 Agent
+                              <SendHorizonal className="ml-2 h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex flex-col gap-3 rounded-[26px] border border-white/14 bg-white/10 p-4 backdrop-blur">
+                      <div className="rounded-[26px] border border-white/14 bg-white/10 p-4 backdrop-blur">
                         <img
                           src="https://d2xsxph8kpxj0f.cloudfront.net/310519663553223948/9Go2FLz3jbkZPo7DBzKuK5/ailux-panel-ribbon-ktJxcsugSbu6jUffCMwjxY.webp"
                           alt="Ailux 品牌化流线"
                           className="h-16 w-full rounded-2xl object-cover opacity-90"
                         />
-                        <div className="grid grid-cols-2 gap-3">
-                          {metricCards.map((metric) => (
-                            <div key={metric.label} className="rounded-2xl border border-white/12 bg-white/12 p-3">
-                              <p className="text-[11px] uppercase tracking-[0.16em] text-white/58">{metric.label}</p>
-                              <p className="mt-2 text-2xl font-semibold text-white">{metric.value}</p>
-                              <p className="mt-1 text-xs leading-5 text-white/72">{metric.note}</p>
-                            </div>
-                          ))}
+                        <div className="mt-4 space-y-3">
+                          {guidance.map((item) => {
+                            const Icon = item.icon;
+                            return (
+                              <div key={item.title} className="rounded-2xl border border-white/10 bg-white/10 p-3">
+                                <div className="flex items-center gap-2 text-sm font-medium text-white">
+                                  <Icon className="h-4 w-4 text-[#FFC997]" />
+                                  {item.title}
+                                </div>
+                                <p className="mt-2 text-sm leading-6 text-white/72">{item.detail}</p>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_320px]">
-                  <div className="rounded-[28px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8faff_100%)] p-4 shadow-[0_20px_50px_rgba(15,23,42,0.05)] md:p-5">
+                <div className="rounded-[28px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8faff_100%)] p-4 shadow-[0_20px_50px_rgba(15,23,42,0.05)] md:p-5">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">建议起步方式</p>
+                      <h3 className="mt-1 text-lg font-semibold tracking-tight text-[#070261]">示例任务</h3>
+                    </div>
+                    <div className="inline-flex items-center gap-2 rounded-full bg-[rgba(132,140,254,0.12)] px-3 py-1 text-xs font-medium text-[#4f59d3]">
+                      <Sparkles className="h-3.5 w-3.5" />一键生成标准任务描述
+                    </div>
+                  </div>
+                  <div className="grid gap-3 lg:grid-cols-3">
+                    {starterPrompts.map((prompt) => (
+                      <button
+                        key={prompt}
+                        className="rounded-[22px] border border-slate-200 bg-white px-4 py-4 text-left transition hover:-translate-y-0.5 hover:border-[rgba(23,36,216,0.18)] hover:shadow-[0_16px_36px_rgba(15,23,42,0.06)]"
+                      >
+                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
+                          <Atom className="h-4 w-4" />
+                        </div>
+                        <p className="text-sm leading-7 text-slate-700">{prompt}</p>
+                        <div className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#161FAD]">
+                          使用这个任务
+                          <ArrowRight className="h-4 w-4" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.15fr)_0.85fr]">
+                  <div className="rounded-[28px] border border-slate-200/80 bg-white p-4 shadow-[0_20px_50px_rgba(15,23,42,0.05)] md:p-5">
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">执行轨迹</p>
-                        <h3 className="mt-1 text-lg font-semibold tracking-tight text-[#070261]">分阶段工作流</h3>
+                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Conversation 对话</p>
+                        <h3 className="mt-1 text-lg font-semibold tracking-tight text-[#070261]">当前任务对话</h3>
                       </div>
-                      <div className="inline-flex items-center gap-2 rounded-full bg-[rgba(255,201,151,0.24)] px-3 py-1 text-xs font-medium text-[#9a5a1a]">
-                        <Clock3 className="h-3.5 w-3.5" />当前在第 2 步
+                      <div className="inline-flex items-center gap-2 rounded-full bg-[rgba(23,36,216,0.08)] px-3 py-1 text-xs font-medium text-[#161FAD]">
+                        <Bot className="h-3.5 w-3.5" />Agent 正在推进任务
                       </div>
                     </div>
 
-                    <div className="space-y-3">
-                      {steps.map((step, index) => (
-                        <article
-                          key={step.id}
-                          className={`group grid gap-4 rounded-[24px] border p-4 transition md:grid-cols-[64px_minmax(0,1fr)_96px] ${
-                            step.status === "running"
-                              ? "border-[rgba(132,140,254,0.35)] bg-[linear-gradient(180deg,rgba(132,140,254,0.14),rgba(255,255,255,0.9))] shadow-[0_16px_40px_rgba(132,140,254,0.16)]"
-                              : "border-slate-200 bg-white hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(15,23,42,0.06)]"
-                          }`}
-                        >
-                          <div className="flex items-start gap-3 md:block">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(180deg,#edf1ff,#ffffff)] text-sm font-semibold text-[#161FAD] shadow-[inset_0_0_0_1px_rgba(23,36,216,0.08)]">
-                              {step.id}
-                            </div>
-                            {index < steps.length - 1 ? <div className="ml-6 mt-2 hidden h-full min-h-10 w-px bg-[linear-gradient(180deg,rgba(23,36,216,0.22),rgba(132,140,254,0.04))] md:block" /> : null}
-                          </div>
+                    <div className="space-y-4">
+                      <div className="flex justify-end">
+                        <div className="max-w-3xl rounded-[24px] bg-[#1724D8] px-5 py-4 text-sm leading-7 text-white shadow-[0_18px_40px_rgba(23,36,216,0.24)]">
+                          现在模拟一轮双抗内化研究流程：生成假数据，分析关键特征，建立预测模型，并给出后续实验建议。
+                        </div>
+                      </div>
 
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="text-base font-semibold text-slate-900">{step.title}</h4>
-                              <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusTone[step.status]}`}>{statusText[step.status]}</span>
-                            </div>
-                            <p className="mt-2 text-sm leading-6 text-slate-600">{step.detail}</p>
+                      <div className="flex gap-3">
+                        <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
+                          <BrainCircuit className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1 rounded-[26px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfcff_100%)] p-5 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
+                          <p className="text-sm font-semibold text-[#070261]">Agent 已理解你的目标，并准备按以下路径执行：</p>
+                          <div className="mt-4 grid gap-3 text-sm leading-6 text-slate-600 md:grid-cols-2">
+                            <div className="rounded-2xl bg-slate-50 px-4 py-3">先生成模拟数据，保证任务能完整演示。</div>
+                            <div className="rounded-2xl bg-slate-50 px-4 py-3">再做 EDA，确认关键变量和异常值。</div>
+                            <div className="rounded-2xl bg-slate-50 px-4 py-3">随后提取特征重要性并比较多种模型。</div>
+                            <div className="rounded-2xl bg-slate-50 px-4 py-3">最后输出结论摘要、文件和后续实验建议。</div>
                           </div>
+                        </div>
+                      </div>
 
-                          <div className="flex flex-row items-center justify-between gap-3 md:flex-col md:items-end md:justify-center">
-                            <span className="text-sm font-medium text-slate-400">{step.duration}</span>
-                            <button className="inline-flex items-center gap-1 text-sm font-medium text-[#161FAD] transition group-hover:translate-x-0.5">
-                              查看
-                              <ChevronRight className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </article>
-                      ))}
+                      <div className="flex gap-3">
+                        <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[rgba(255,201,151,0.22)] text-[#8a5216]">
+                          <LoaderCircle className="h-5 w-5 animate-spin" />
+                        </div>
+                        <div className="min-w-0 flex-1 rounded-[26px] border border-[rgba(255,201,151,0.35)] bg-[linear-gradient(180deg,rgba(255,201,151,0.12),#ffffff)] p-5 shadow-[0_12px_32px_rgba(255,201,151,0.15)]">
+                          <p className="text-sm font-semibold text-slate-900">执行中：正在完成探索性数据分析（EDA）</p>
+                          <p className="mt-2 text-sm leading-7 text-slate-600">
+                            当前已完成数据集生成，正在分析分布、相关性矩阵与内化率变化。右侧可以同步看到计划进度和已生成文件。
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
                   <div className="rounded-[28px] border border-slate-200/80 bg-white p-4 shadow-[0_20px_50px_rgba(15,23,42,0.05)] md:p-5">
                     <div className="mb-4 flex items-center justify-between">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">关键洞察</p>
-                        <h3 className="mt-1 text-lg font-semibold tracking-tight text-[#070261]">模型提示</h3>
+                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Result summary</p>
+                        <h3 className="mt-1 text-lg font-semibold tracking-tight text-[#070261]">当前阶段产出</h3>
                       </div>
-                      <Beaker className="h-4 w-4 text-[#848CFE]" />
+                      <Stethoscope className="h-4 w-4 text-[#848CFE]" />
                     </div>
+
                     <div className="space-y-3">
                       {[
-                        ["内化率分布", "中位内化评分约 62.3%，KD 与内化率呈 Pearson r≈-0.68。"],
-                        ["特征重要性", "靶点生物学特征贡献最大，其次为双价结合评分与连接区柔性。"],
-                        ["建模建议", "先采用 XGBoost 与随机森林对比，再用 SHAP 输出可解释结论。"],
+                        ["数据状态", "已生成 150 条双抗样本记录，可继续用于特征筛查与建模。"],
+                        ["初步发现", "KD 与内化率呈负相关，靶点共定位可能是重要驱动因素。"],
+                        ["下一步动作", "等待特征重要性完成后输出 SHAP 解读与模型建议。"],
                       ].map(([title, detail]) => (
                         <div key={title} className="rounded-2xl bg-slate-50 px-4 py-3">
                           <p className="text-sm font-semibold text-slate-800">{title}</p>
                           <p className="mt-1 text-sm leading-6 text-slate-500">{detail}</p>
                         </div>
                       ))}
-                    </div>
-                    <div className="mt-4 rounded-[24px] border border-dashed border-[rgba(23,36,216,0.16)] bg-[linear-gradient(180deg,rgba(23,36,216,0.03),rgba(132,140,254,0.08))] p-4">
-                      <div className="mb-2 flex items-center gap-2 text-sm font-medium text-[#161FAD]">
-                        <Microscope className="h-4 w-4" />下一轮实验建议
-                      </div>
-                      <p className="text-sm leading-6 text-slate-600">
-                        优先验证靶点表面表达定位与连接区柔性的联合作用，并将 HER2×CD3 作为额外对照组加入后续模拟中。
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-[28px] border border-slate-200/80 bg-white px-4 pb-4 pt-3 shadow-[0_20px_50px_rgba(15,23,42,0.05)] md:px-5">
-                  <div className="mb-3 flex items-center justify-between border-b border-slate-100 pb-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">对话输入</p>
-                      <h3 className="mt-1 text-base font-semibold text-[#070261]">继续追加分析问题</h3>
-                    </div>
-                    <div className="inline-flex items-center gap-2 rounded-full bg-[rgba(255,201,151,0.22)] px-3 py-1 text-xs text-[#9a5a1a]">
-                      <Sparkles className="h-3.5 w-3.5" />建议使用结构化指令
-                    </div>
-                  </div>
-                  <div className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfcff_100%)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-                    <textarea
-                      className="min-h-[96px] w-full resize-none border-0 bg-transparent px-2 py-2 text-sm leading-7 text-slate-700 outline-none placeholder:text-slate-400"
-                      placeholder="例如：请基于当前结果，补充连接区长度与靶点共定位之间的交互分析，并输出新的可视化建议。"
-                    />
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
-                      <div className="flex items-center gap-2 text-slate-400">
-                        <button className="rounded-2xl bg-slate-100 p-2 transition hover:bg-slate-200"><Paperclip className="h-4 w-4" /></button>
-                        <button className="rounded-2xl bg-slate-100 p-2 transition hover:bg-slate-200"><Search className="h-4 w-4" /></button>
-                        <button className="rounded-2xl bg-slate-100 p-2 transition hover:bg-slate-200"><Database className="h-4 w-4" /></button>
-                      </div>
-                      <Button className="h-11 rounded-2xl bg-[#FFC997] px-5 text-[#5d3b14] shadow-[0_14px_28px_rgba(255,201,151,0.34)] hover:bg-[#ffbd7b]">
-                        发送到工作流
-                        <SendHorizonal className="ml-2 h-4 w-4" />
-                      </Button>
                     </div>
                   </div>
                 </div>
@@ -428,30 +407,33 @@ export default function Home() {
                 <section className="rounded-[28px] border border-slate-200/80 bg-white p-4 shadow-[0_20px_50px_rgba(15,23,42,0.05)] md:p-5">
                   <div className="mb-4 flex items-center justify-between">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Plan 计划</p>
-                      <h3 className="mt-1 text-lg font-semibold tracking-tight text-[#070261]">推进时间线</h3>
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Execution 执行状态</p>
+                      <h3 className="mt-1 text-lg font-semibold tracking-tight text-[#070261]">Agent 当前在做什么</h3>
                     </div>
-                    <div className="text-sm font-semibold text-[#161FAD]">6 / 6</div>
+                    <div className="rounded-full bg-[rgba(255,201,151,0.22)] px-3 py-1 text-xs font-medium text-[#8a5216]">第 2 / 4 步</div>
                   </div>
                   <div className="mb-4 h-2 rounded-full bg-slate-100">
-                    <div className="h-2 w-full rounded-full bg-[linear-gradient(90deg,#161FAD_0%,#848CFE_70%,#FFC997_100%)]" />
+                    <div className="h-2 w-1/2 rounded-full bg-[linear-gradient(90deg,#161FAD_0%,#848CFE_75%,#FFC997_100%)]" />
                   </div>
                   <div className="space-y-3">
-                    {steps.map((step) => (
-                      <div key={step.id} className="rounded-[22px] border border-slate-100 bg-[linear-gradient(180deg,#ffffff_0%,#f9fbff_100%)] p-4">
+                    {runSteps.map((step) => (
+                      <article key={step.title} className="rounded-[22px] border border-slate-100 bg-[linear-gradient(180deg,#ffffff_0%,#f9fbff_100%)] p-4">
                         <div className="flex items-start gap-3">
-                          <div className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-full ${step.status === "queued" ? "bg-slate-100 text-slate-400" : "bg-[rgba(23,36,216,0.10)] text-[#161FAD]"}`}>
+                          <div className={`mt-0.5 flex h-9 w-9 items-center justify-center rounded-full border ${statusClass[step.status]}`}>
                             <CircleCheckBig className="h-4 w-4" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-3">
                               <p className="text-sm font-semibold text-slate-800">{step.title}</p>
-                              <span className="text-xs text-slate-400">{step.duration}</span>
+                              <span className="text-xs text-slate-400">{step.time}</span>
                             </div>
                             <p className="mt-1 text-xs leading-5 text-slate-500">{step.detail}</p>
+                            <div className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusClass[step.status]}`}>
+                              {statusText[step.status]}
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      </article>
                     ))}
                   </div>
                 </section>
@@ -459,67 +441,54 @@ export default function Home() {
                 <section className="rounded-[28px] border border-slate-200/80 bg-white p-4 shadow-[0_20px_50px_rgba(15,23,42,0.05)] md:p-5">
                   <div className="mb-4 flex items-center justify-between">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Results 结果</p>
-                      <h3 className="mt-1 text-lg font-semibold tracking-tight text-[#070261]">输出文件栈</h3>
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Outputs 输出</p>
+                      <h3 className="mt-1 text-lg font-semibold tracking-tight text-[#070261]">已生成文件</h3>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-400">
-                      <Download className="h-4 w-4" />
-                      <MoreHorizontal className="h-4 w-4" />
-                    </div>
+                    <FolderOpen className="h-4 w-4 text-slate-400" />
                   </div>
+
                   <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
                     <div className="flex items-center gap-2 text-slate-400">
                       <Search className="h-4 w-4" />
-                      <input className="w-full border-0 bg-transparent text-sm outline-none placeholder:text-slate-400" placeholder="Filter files..." />
+                      <input className="w-full border-0 bg-transparent text-sm outline-none placeholder:text-slate-400" placeholder="搜索文件或结果..." />
                     </div>
                   </div>
-                  <div className="mb-4 overflow-hidden rounded-[22px] border border-[rgba(23,36,216,0.08)] bg-[linear-gradient(180deg,rgba(23,36,216,0.03),rgba(132,140,254,0.03))]">
-                    <div className="flex items-center justify-between px-4 py-3">
-                      <div>
-                        <p className="text-sm font-semibold text-[#070261]">当前结果摘要</p>
-                        <p className="mt-1 text-xs leading-5 text-slate-500">来自探索性分析与模拟数据生成阶段</p>
-                      </div>
-                      <img
-                        src="https://d2xsxph8kpxj0f.cloudfront.net/310519663553223948/9Go2FLz3jbkZPo7DBzKuK5/ailux-empty-state-orb-dXKJfL69bjRZJR6HbmyaUV.webp"
-                        alt="计算生物学品牌插画"
-                        className="h-16 w-16 object-contain"
-                      />
-                    </div>
-                  </div>
+
                   <div className="space-y-2.5">
-                    {files.map((file) => (
-                      <button
-                        key={file.name}
-                        className="flex w-full items-start gap-3 rounded-[20px] border border-slate-100 bg-[linear-gradient(180deg,#ffffff_0%,#fbfcff_100%)] px-3 py-3 text-left transition hover:-translate-y-0.5 hover:border-[rgba(23,36,216,0.14)] hover:shadow-[0_14px_28px_rgba(15,23,42,0.05)]"
-                      >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
-                          {file.tag === "数据集" ? <Database className="h-4 w-4" /> : file.tag === "报告" ? <FileText className="h-4 w-4" /> : <BarChart3 className="h-4 w-4" />}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-slate-800">{file.name}</p>
-                          <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
-                            <span>{file.size}</span>
-                            <span>·</span>
-                            <span>{file.tag}</span>
+                    {outputs.map((file) => {
+                      const Icon = file.icon;
+                      return (
+                        <button
+                          key={file.name}
+                          className="flex w-full items-start gap-3 rounded-[20px] border border-slate-100 bg-[linear-gradient(180deg,#ffffff_0%,#fbfcff_100%)] px-3 py-3 text-left transition hover:-translate-y-0.5 hover:border-[rgba(23,36,216,0.14)] hover:shadow-[0_14px_28px_rgba(15,23,42,0.05)]"
+                        >
+                          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
+                            <Icon className="h-4 w-4" />
                           </div>
-                        </div>
-                      </button>
-                    ))}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-slate-800">{file.name}</p>
+                            <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
+                              <span>{file.meta}</span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </section>
 
                 <section className="rounded-[28px] border border-slate-200/80 bg-[linear-gradient(180deg,#070261_0%,#161FAD_100%)] p-5 text-white shadow-[0_24px_48px_rgba(7,2,97,0.28)]">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/50">Brand distinction</p>
-                      <h3 className="mt-2 text-lg font-semibold">与 Biomni 的差异点</h3>
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/50">Follow-up</p>
+                      <h3 className="mt-2 text-lg font-semibold">下一步你可以这样做</h3>
                     </div>
-                    <Layers3 className="h-5 w-5 text-white/70" />
+                    <Sparkles className="h-5 w-5 text-white/70" />
                   </div>
                   <div className="mt-4 space-y-3 text-sm leading-6 text-white/82">
-                    <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3">中央区从“单一文档面”改成“对话摘要 + 执行轨迹 + 输入台”的双层工作台。</div>
-                    <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3">右侧栏采用堆叠式计划与结果卡，不再复制原始三栏比例与线性分割。</div>
-                    <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3">颜色完全回到 Ailux 品牌蓝系，并用桃色只强调关键按钮与提示。</div>
+                    <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3">打开结果文件，查看热图、数据集和模型对比表。</div>
+                    <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3">继续追加追问，例如“把 HER2×CD3 加进对照组重新分析”。</div>
+                    <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3">如果有真实数据，可以直接在输入区补充文件并重新运行。 </div>
                   </div>
                 </section>
               </aside>
