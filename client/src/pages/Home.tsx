@@ -328,6 +328,16 @@ function Sidebar({ activeView }: { activeView: ViewMode }) {
         </div>
       </div>
 
+      <button
+        className={`mb-4 flex w-full items-center gap-2 rounded-[18px] border px-3.5 py-3 text-left text-[13px] font-medium transition ${
+          activeView === "new"
+            ? "border-[rgba(23,36,216,0.12)] bg-[linear-gradient(180deg,rgba(23,36,216,0.08),rgba(132,140,254,0.08))] text-[#161FAD] shadow-[0_12px_28px_rgba(23,36,216,0.08)]"
+            : "border-transparent bg-slate-50 text-slate-700 hover:border-slate-200 hover:bg-white"
+        }`}
+      >
+        <Plus className="h-4 w-4" />新对话
+      </button>
+
       <div className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Tasks</p>
@@ -933,28 +943,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8faff_0%,#eef3ff_100%)] text-slate-900">
       <div className="mx-auto flex min-h-screen max-w-[1580px] flex-col p-4 lg:p-5">
-        <div className="mb-3 flex justify-end">
-          <div className="flex flex-wrap items-center gap-2 rounded-[20px] border border-white/70 bg-white/82 px-3 py-2.5 shadow-[0_12px_30px_rgba(15,23,42,0.05)] backdrop-blur">
-            <ScreenSwitch activeView={activeView} onChange={handleScreenChange} />
-            <Button variant="outline" className="h-8 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-700 hover:bg-slate-50">
-              <Share2 className="mr-1.5 h-4 w-4" />分享
-            </Button>
-            {meta.secondaryAction ? (
-              <Button variant="outline" className="h-8 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-700 hover:bg-slate-50">
-                <Sparkles className="mr-1.5 h-4 w-4" />{meta.secondaryAction}
-              </Button>
-            ) : null}
-            <Button
-              onClick={handlePrimaryAction}
-              className="h-8 rounded-xl bg-[#161FAD] px-3 text-[12px] text-white shadow-[0_10px_24px_rgba(22,31,173,0.16)] hover:bg-[#1724D8]"
-            >
-              {activeView === "result" ? <BarChart3 className="mr-1.5 h-4 w-4" /> : <Play className="mr-1.5 h-4 w-4" />}
-              {meta.primaryAction}
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid flex-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_360px]">
+          <div className="grid flex-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_360px]">
           <Sidebar activeView={activeView} />
 
           {activeView === "new" ? (
