@@ -317,7 +317,7 @@ function ScreenSwitch({
 
 function Sidebar({ activeView }: { activeView: ViewMode }) {
   return (
-    <aside className="rounded-[24px] border border-white/70 bg-white/84 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
+    <aside className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className="mb-5 flex items-center gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#161FAD_0%,#848CFE_100%)] text-white shadow-[0_10px_22px_rgba(22,31,173,0.2)]">
           <FlaskConical className="h-5 w-5" />
@@ -327,16 +327,6 @@ function Sidebar({ activeView }: { activeView: ViewMode }) {
           <p className="text-[14px] font-semibold text-[#070261]">智能体平台</p>
         </div>
       </div>
-
-      <button
-        className={`mb-4 flex w-full items-center gap-2 rounded-[18px] border px-3.5 py-3 text-left text-[13px] font-medium transition ${
-          activeView === "new"
-            ? "border-[rgba(23,36,216,0.12)] bg-[linear-gradient(180deg,rgba(23,36,216,0.08),rgba(132,140,254,0.08))] text-[#161FAD] shadow-[0_12px_28px_rgba(23,36,216,0.08)]"
-            : "border-transparent bg-slate-50 text-slate-700 hover:border-slate-200 hover:bg-white"
-        }`}
-      >
-        <Plus className="h-4 w-4" />新对话
-      </button>
 
       <div className="mb-3 flex items-center justify-between">
         <div>
@@ -348,11 +338,9 @@ function Sidebar({ activeView }: { activeView: ViewMode }) {
         </button>
       </div>
 
-      <div className="space-y-2">
-        {historyTasks.map((task) => {
-          const active =
-            (activeView === "new" && task.isDraft) ||
-            (activeView !== "new" && task.id === "t1");
+      <div className="flex-1 space-y-2">
+        {historyTasks.filter((task) => !task.isDraft).map((task) => {
+          const active = activeView !== "new" && task.id === "t1";
 
           return (
             <button
@@ -372,13 +360,7 @@ function Sidebar({ activeView }: { activeView: ViewMode }) {
         })}
       </div>
 
-      <div className="mt-5 rounded-[18px] border border-dashed border-slate-200 bg-slate-50/60 p-3.5">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Project</p>
-        <p className="mt-1 text-[13px] font-medium text-slate-700">DLL3 双抗表位功能预测</p>
-        <p className="mt-1 text-[11px] leading-5 text-slate-500">按项目维度隔离任务、文件与过程结果，支持后续扩展多流程与持久化。</p>
-      </div>
-
-      <div className="mt-5 flex items-center gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3">
+      <div className="mt-4 flex items-center gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3">
         <UserCircle2 className="h-8 w-8 text-slate-400" />
         <div>
           <p className="text-[13px] font-medium text-slate-700">Chen Lab</p>
@@ -445,14 +427,14 @@ function NewTaskWorkspace({
           </div>
         </div>
 
-        <div className="mt-6 rounded-[20px] border border-slate-200 bg-slate-50/90 p-3.5">
+        <div className="mt-6 rounded-[18px] border border-slate-200 bg-slate-50/90 p-3">
           <textarea
             value={prompt}
             onChange={(event) => onPromptChange(event.target.value)}
-            className="min-h-[110px] w-full resize-none border-0 bg-transparent text-[13px] leading-6 outline-none placeholder:text-slate-400"
+            className="min-h-[72px] w-full resize-none border-0 bg-transparent text-[13px] leading-6 outline-none placeholder:text-slate-400"
             placeholder="描述你的目标，或上传数据后提问…"
           />
-          <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-200 pt-3">
+          <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-2.5">
             <div className="flex items-center gap-2">
               <button className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]">
                 <Upload className="mr-1.5 inline h-4 w-4" />上传文件
@@ -550,14 +532,14 @@ function RunningWorkspace({
       </div>
 
       <div className="border-t border-slate-200/80 px-6 py-4">
-        <div className="rounded-[20px] border border-slate-200 bg-slate-50/90 p-3.5">
+        <div className="rounded-[18px] border border-slate-200 bg-slate-50/90 p-3">
           <textarea
             value={prompt}
             onChange={(event) => onPromptChange(event.target.value)}
-            className="min-h-[98px] w-full resize-none border-0 bg-transparent text-[13px] leading-6 outline-none placeholder:text-slate-400"
+            className="min-h-[68px] w-full resize-none border-0 bg-transparent text-[13px] leading-6 outline-none placeholder:text-slate-400"
             placeholder="继续向 Agent 追问，例如：请解释为什么共定位评分是最高贡献特征。"
           />
-          <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-200 pt-3">
+          <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-2.5">
             <div className="flex items-center gap-2 text-slate-500">
               <button className="rounded-xl p-2 transition hover:bg-white hover:text-[#161FAD]">
                 <Upload className="h-4 w-4" />
@@ -951,32 +933,26 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8faff_0%,#eef3ff_100%)] text-slate-900">
       <div className="mx-auto flex min-h-screen max-w-[1580px] flex-col p-4 lg:p-5">
-        <header className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-[24px] border border-white/70 bg-white/82 px-5 py-3.5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] backdrop-blur">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">{meta.eyebrow}</p>
-            <h1 className="mt-1 text-[22px] font-semibold tracking-tight text-[#070261]">{meta.title}</h1>
-            <p className="mt-1 text-[12px] text-slate-500">{meta.subtitle}</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="mb-3 flex justify-end">
+          <div className="flex flex-wrap items-center gap-2 rounded-[20px] border border-white/70 bg-white/82 px-3 py-2.5 shadow-[0_12px_30px_rgba(15,23,42,0.05)] backdrop-blur">
             <ScreenSwitch activeView={activeView} onChange={handleScreenChange} />
-            <Button variant="outline" className="h-9 rounded-xl border-slate-200 bg-white px-3.5 text-[13px] text-slate-700 hover:bg-slate-50">
-              <Share2 className="mr-2 h-4 w-4" />分享
+            <Button variant="outline" className="h-8 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-700 hover:bg-slate-50">
+              <Share2 className="mr-1.5 h-4 w-4" />分享
             </Button>
             {meta.secondaryAction ? (
-              <Button variant="outline" className="h-9 rounded-xl border-slate-200 bg-white px-3.5 text-[13px] text-slate-700 hover:bg-slate-50">
-                <Sparkles className="mr-2 h-4 w-4" />{meta.secondaryAction}
+              <Button variant="outline" className="h-8 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-700 hover:bg-slate-50">
+                <Sparkles className="mr-1.5 h-4 w-4" />{meta.secondaryAction}
               </Button>
             ) : null}
             <Button
               onClick={handlePrimaryAction}
-              className="h-9 rounded-xl bg-[#161FAD] px-3.5 text-[13px] text-white shadow-[0_10px_24px_rgba(22,31,173,0.18)] hover:bg-[#1724D8]"
+              className="h-8 rounded-xl bg-[#161FAD] px-3 text-[12px] text-white shadow-[0_10px_24px_rgba(22,31,173,0.16)] hover:bg-[#1724D8]"
             >
-              {activeView === "result" ? <BarChart3 className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+              {activeView === "result" ? <BarChart3 className="mr-1.5 h-4 w-4" /> : <Play className="mr-1.5 h-4 w-4" />}
               {meta.primaryAction}
             </Button>
           </div>
-        </header>
+        </div>
 
         <div className="grid flex-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_360px]">
           <Sidebar activeView={activeView} />
