@@ -19,7 +19,6 @@ import {
   FileJson,
   FileSpreadsheet,
   FileText,
-  FolderOpen,
   FlaskConical,
   PanelRightOpen,
   Plus,
@@ -558,20 +557,7 @@ function ResultWorkspace({
 }) {
   return (
     <section className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
-      <div className="border-b border-slate-200/80 px-6 py-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Visualization</p>
-            <h2 className="mt-1 text-[17px] font-semibold text-[#070261]">结果可视化与文件预览</h2>
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.08)] px-3 py-1 text-[11px] font-medium text-[#161FAD]">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            已完成
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="rounded-[22px] border border-slate-100 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           <div className="border-b border-slate-200/80 px-4 py-3">
             <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
@@ -614,10 +600,7 @@ function ResultWorkspace({
             ) : (
               <>
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[12px] font-medium text-slate-700">{selectedFile.name}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">{selectedFile.step} · {selectedFile.meta}</p>
-                  </div>
+                  <p className="truncate pr-3 text-[14px] font-semibold text-[#070261]">{selectedFile.name}</p>
                   <Button
                     variant="outline"
                     onClick={() => onDownloadFile(selectedFile)}
@@ -759,7 +742,6 @@ function SidePanel({
   onExportSelected: () => void;
 }) {
   const showEmpty = view === "new";
-  const progressDone = runningSteps.filter((item) => item.status === "done").length;
   const progressPercent = view === "result" ? 100 : 42;
   const filteredFiles = useMemo(() => {
     const keyword = searchQuery.trim().toLowerCase();
@@ -810,17 +792,7 @@ function SidePanel({
             </div>
           ) : (
             <div>
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Plan</p>
-                  <h3 className="mt-1 text-[17px] font-semibold text-[#070261]">计划</h3>
-                </div>
-                <div className="inline-flex items-center gap-1 rounded-full bg-[rgba(255,201,151,0.2)] px-2.5 py-1 text-[11px] font-medium text-[#8a5216]">
-                  <Clock3 className="h-3.5 w-3.5" />
-                  {view === "result" ? "6 / 6" : `${progressDone + 1} / 6`}
-                </div>
-              </div>
-              <div className="mb-4">
+              <div className="mb-4 pt-1">
                 <div className="mb-1 flex items-center justify-between text-[11px] text-slate-400">
                   <span>整体进度</span>
                   <span>{progressPercent}%</span>
@@ -866,21 +838,12 @@ function SidePanel({
           </div>
         ) : (
           <div>
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Results</p>
-                <h3 className="mt-1 text-[17px] font-semibold text-[#070261]">结果文件</h3>
-              </div>
+            <div className="mb-4 pt-1 flex items-center justify-end gap-3">
               {selectedFileIds.length > 0 ? (
                 <Button onClick={onExportSelected} className="h-8 rounded-xl bg-[#161FAD] px-3 text-[12px] text-white hover:bg-[#1724D8]">
                   导出所选 ({selectedFileIds.length})
                 </Button>
-              ) : (
-                <div className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-500">
-                  <FolderOpen className="h-3.5 w-3.5" />
-                  {filteredFiles.length} 个文件
-                </div>
-              )}
+              ) : null}
             </div>
 
             <div className="mb-4 rounded-[18px] border border-slate-200 bg-slate-50/90 px-3 py-2.5">
