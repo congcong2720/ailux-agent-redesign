@@ -55,38 +55,6 @@ type ResultFile = {
   type: ResultType;
 };
 
-type PreviewTab = {
-  id: string;
-  label: string;
-  active?: boolean;
-};
-
-const screenMeta: Record<
-  ViewMode,
-  { eyebrow: string; title: string; subtitle: string; primaryAction: string; secondaryAction?: string }
-> = {
-  new: {
-    eyebrow: "New Task",
-    title: "新任务",
-    subtitle: "从自然语言描述、文件上传和推荐模板开始发起新的分析任务。",
-    primaryAction: "开始任务",
-  },
-  running: {
-    eyebrow: "Task Running",
-    title: "双抗内化功能预测模型",
-    subtitle: "对话、执行步骤与右侧计划信息实时联动，帮助用户理解当前进展。",
-    primaryAction: "查看结果",
-    secondaryAction: "继续追问",
-  },
-  result: {
-    eyebrow: "Result Review",
-    title: "结果总览",
-    subtitle: "聚焦最终结论、关键文件预览与可解释结果，方便科研用户做复核与导出。",
-    primaryAction: "导出报告",
-    secondaryAction: "再次运行",
-  },
-};
-
 const historyTasks = [
   { id: "draft", title: "新对话", meta: "创建任务", isDraft: true },
   { id: "t1", title: "双抗内化功能预测模型", meta: "当前任务" },
@@ -220,48 +188,18 @@ const datasetPreviewRows = [
   ["BsAb_006", "3.384", "66.053", "Fab-Fc", "mid-stalk", "distal"],
 ];
 
-const finalInsights = [
-  {
-    title: "关键发现 01",
-    detail: "KD 与内化率呈负相关，尤其在 5nM 以下样本中表现出更稳定的高内化水平。",
-  },
-  {
-    title: "关键发现 02",
-    detail: "靶点共定位评分与内化率的解释力最高，是模型中最稳定的核心特征之一。",
-  },
-  {
-    title: "关键发现 03",
-    detail: "最佳模型为 XGBoost，综合 R² 与误差指标后优于 RF 与 SVM。",
-  },
-];
-
-const statusStyles: Record<
-  StepStatus,
-  { badge: string; chip: string; icon: string; label: string }
-> = {
+const statusStyles: Record<StepStatus, { icon: string }> = {
   done: {
-    badge: "border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.08)] text-[#161FAD]",
-    chip: "border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.08)] text-[#161FAD]",
     icon: "border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.08)] text-[#161FAD]",
-    label: "完成",
   },
   running: {
-    badge: "border-[rgba(255,201,151,0.45)] bg-[rgba(255,201,151,0.2)] text-[#8a5216]",
-    chip: "border-[rgba(255,201,151,0.45)] bg-[rgba(255,201,151,0.2)] text-[#8a5216]",
     icon: "border-[rgba(255,201,151,0.45)] bg-[rgba(255,201,151,0.2)] text-[#8a5216]",
-    label: "进行中",
   },
   waiting: {
-    badge: "border-slate-200 bg-slate-100 text-slate-500",
-    chip: "border-slate-200 bg-slate-100 text-slate-500",
     icon: "border-slate-200 bg-slate-100 text-slate-500",
-    label: "待执行",
   },
   failed: {
-    badge: "border-[rgba(220,38,38,0.16)] bg-[rgba(220,38,38,0.1)] text-red-600",
-    chip: "border-[rgba(220,38,38,0.16)] bg-[rgba(220,38,38,0.1)] text-red-600",
     icon: "border-[rgba(220,38,38,0.16)] bg-[rgba(220,38,38,0.1)] text-red-600",
-    label: "失败",
   },
 };
 
@@ -325,42 +263,60 @@ function downloadResultFile(file: ResultFile) {
   URL.revokeObjectURL(url);
 }
 
-function ScreenSwitch({
+function Sidebar({
   activeView,
-  onChange,
+  onNewConversation,
+  collapsed = false,
 }: {
   activeView: ViewMode;
-  onChange: (view: ViewMode) => void;
+  onNewConversation: () => void;
+  collapsed?: boolean;
 }) {
-  const items: { id: ViewMode; label: string }[] = [
-    { id: "new", label: "新建任务" },
-    { id: "running", label: "任务运行中" },
-    { id: "result", label: "结果展示" },
-  ];
+  if (collapsed) {
+    return (
+      <aside className="flex min-h-[760px] flex-col items-center rounded-[24px] border border-white/70 bg-white/84 p-3 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#161FAD_0%,#848CFE_100%)] text-white shadow-[0_10px_22px_rgba(22,31,173,0.2)]">
+          <FlaskConical className="h-5 w-5" />
+        </div>
 
-  return (
-    <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1">
-      {items.map((item) => {
-        const active = activeView === item.id;
-        return (
-          <button
-            key={item.id}
-            onClick={() => onChange(item.id)}
-            className={`rounded-xl px-3 py-2 text-[12px] font-medium transition ${
-              active
-                ? "bg-white text-[#161FAD] shadow-[0_6px_16px_rgba(15,23,42,0.06)]"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            {item.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+        <button
+          onClick={onNewConversation}
+          className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:bg-white hover:text-[#161FAD]"
+          aria-label="新对话"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
 
-function Sidebar({ activeView, onNewConversation }: { activeView: ViewMode; onNewConversation: () => void }) {
+        <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50/80 text-slate-400">
+          <PanelRightOpen className="h-4 w-4" />
+        </div>
+
+        <div className="flex flex-1 flex-col items-center gap-2">
+          {historyTasks.filter((task) => !task.isDraft).map((task) => {
+            const active = activeView !== "new" && task.id === "t1";
+            return (
+              <button
+                key={task.id}
+                className={`flex h-12 w-12 items-center justify-center rounded-2xl border text-[11px] font-semibold transition ${
+                  active
+                    ? "border-[rgba(23,36,216,0.12)] bg-[linear-gradient(180deg,rgba(23,36,216,0.08),rgba(132,140,254,0.08))] text-[#161FAD] shadow-[0_12px_28px_rgba(23,36,216,0.08)]"
+                    : "border-transparent bg-slate-50/80 text-slate-500 hover:border-slate-200 hover:bg-white"
+                }`}
+                aria-label={task.title}
+              >
+                {task.title.slice(0, 2)}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50/90 text-slate-400">
+          <UserCircle2 className="h-5 w-5" />
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <aside className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className="mb-5 flex items-center gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3">
@@ -513,13 +469,15 @@ function NewTaskWorkspace({
 function RunningWorkspace({
   prompt,
   onPromptChange,
+  compact = false,
 }: {
   prompt: string;
   onPromptChange: (value: string) => void;
+  compact?: boolean;
 }) {
   return (
     <section className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
-      <div className="border-b border-slate-200/80 px-6 py-5">
+      <div className={`border-b border-slate-200/80 ${compact ? "px-4 py-4" : "px-6 py-5"}`}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Conversation</p>
@@ -527,20 +485,22 @@ function RunningWorkspace({
           </div>
           <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,201,151,0.45)] bg-[rgba(255,201,151,0.2)] px-3 py-1 text-[11px] font-medium text-[#8a5216]">
             <Clock3 className="h-3.5 w-3.5" />
-            运行中
+            {compact ? "联动查看" : "运行中"}
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className={`flex-1 overflow-y-auto ${compact ? "px-4 py-4" : "px-6 py-6"}`}>
         <div className="space-y-4">
           {runningMessages.map((message, index) => {
             const isUser = message.role === "user";
             return (
               <div key={`${message.role}-${index}`} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[88%] rounded-[20px] px-4 py-3 text-[13px] leading-6 shadow-sm ${
-                  isUser ? "bg-[#1724D8] text-white" : "border border-slate-200 bg-slate-50 text-slate-700"
-                }`}>
+                <div
+                  className={`rounded-[20px] px-4 py-3 text-[13px] leading-6 shadow-sm ${compact ? "max-w-[96%]" : "max-w-[88%]"} ${
+                    isUser ? "bg-[#1724D8] text-white" : "border border-slate-200 bg-slate-50 text-slate-700"
+                  }`}
+                >
                   {!isUser ? (
                     <div className="mb-1.5 flex items-center gap-2 text-[11px] font-medium text-[#161FAD]">
                       <Bot className="h-4 w-4" />Ailux Agent
@@ -555,7 +515,7 @@ function RunningWorkspace({
         </div>
       </div>
 
-      <div className="border-t border-slate-200/80 px-6 py-4">
+      <div className={`border-t border-slate-200/80 ${compact ? "px-4 py-3" : "px-6 py-4"}`}>
         <div className="rounded-[18px] border border-slate-200 bg-slate-50/90 p-3">
           <textarea
             value={prompt}
@@ -601,8 +561,8 @@ function ResultWorkspace({
       <div className="border-b border-slate-200/80 px-6 py-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Final Result Review</p>
-            <h2 className="mt-1 text-[17px] font-semibold text-[#070261]">双抗内化功能预测模型 · 最终结果</h2>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Visualization</p>
+            <h2 className="mt-1 text-[17px] font-semibold text-[#070261]">结果可视化与文件预览</h2>
           </div>
           <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.08)] px-3 py-1 text-[11px] font-medium text-[#161FAD]">
             <CheckCircle2 className="h-3.5 w-3.5" />
@@ -649,7 +609,7 @@ function ResultWorkspace({
           <div className="px-4 py-4">
             {!selectedFile ? (
               <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-[12px] leading-6 text-slate-500">
-                当前未打开任何结果文件。请从右侧结果文件列表选择需要查看的文件。
+                当前未打开任何结果文件。请从最右侧结果文件列表选择需要查看的文件，系统会在此区域展示对应预览，同时左侧对话区保持可追问。
               </div>
             ) : (
               <>
@@ -1035,11 +995,13 @@ export default function Home() {
   };
 
   const handleCloseFile = (id: string) => {
-    setOpenedFileIds((current) => current.filter((item) => item !== id));
-    if (selectedFileId === id) {
-      const remaining = openedFileIds.filter((item) => item !== id);
-      setSelectedFileId(remaining[remaining.length - 1] ?? "");
-    }
+    setOpenedFileIds((current) => {
+      const remaining = current.filter((item) => item !== id);
+      if (selectedFileId === id) {
+        setSelectedFileId(remaining[remaining.length - 1] ?? "");
+      }
+      return remaining;
+    });
   };
 
   const handleToggleFile = (id: string) => {
@@ -1081,9 +1043,17 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8faff_0%,#eef3ff_100%)] text-slate-900">
-      <div className="mx-auto flex min-h-screen max-w-[1580px] flex-col p-4 lg:p-5">
-        <div className={`grid flex-1 gap-4 ${activeView === "new" ? "xl:grid-cols-[260px_minmax(0,1fr)]" : "xl:grid-cols-[260px_minmax(0,1fr)_360px]"}`}>
-          <Sidebar activeView={activeView} onNewConversation={handleNewConversation} />
+      <div className="mx-auto flex min-h-screen max-w-[1680px] flex-col p-4 lg:p-5">
+        <div
+          className={`grid flex-1 gap-4 ${
+            activeView === "new"
+              ? "xl:grid-cols-[260px_minmax(0,1fr)]"
+              : activeView === "result"
+                ? "xl:grid-cols-[88px_minmax(320px,0.82fr)_minmax(500px,1.18fr)_360px]"
+                : "xl:grid-cols-[260px_minmax(0,1fr)_360px]"
+          }`}
+        >
+          <Sidebar activeView={activeView} onNewConversation={handleNewConversation} collapsed={activeView === "result"} />
 
           {activeView === "new" ? (
             <NewTaskWorkspace
@@ -1092,9 +1062,11 @@ export default function Home() {
               onPromptPick={handlePromptPick}
               onStart={handleStart}
             />
-          ) : activeView === "running" ? (
-            <RunningWorkspace prompt={composerValue} onPromptChange={setComposerValue} />
           ) : (
+            <RunningWorkspace prompt={composerValue} onPromptChange={setComposerValue} compact={activeView === "result"} />
+          )}
+
+          {activeView === "result" ? (
             <ResultWorkspace
               openedFiles={openedFiles}
               selectedFile={selectedFile}
@@ -1102,7 +1074,7 @@ export default function Home() {
               onCloseFile={handleCloseFile}
               onDownloadFile={handleDownloadFile}
             />
-          )}
+          ) : null}
 
           {activeView !== "new" ? (
             <SidePanel
