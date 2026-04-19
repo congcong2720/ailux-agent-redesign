@@ -29,6 +29,7 @@ import {
   Upload,
   UserCircle2,
   WandSparkles,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -473,7 +474,6 @@ function NewTaskWorkspace({
                 >
                   <div>
                     <p className="text-[13px] font-medium text-slate-700">{item}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">点击后自动填入输入框，不会直接发送。</p>
                   </div>
                   <ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
                 </button>
@@ -486,7 +486,7 @@ function NewTaskWorkspace({
           <textarea
             value={prompt}
             onChange={(event) => onPromptChange(event.target.value)}
-            className="min-h-[72px] w-full resize-none border-0 bg-transparent text-[13px] leading-6 outline-none placeholder:text-slate-400"
+            className="min-h-[52px] w-full resize-none border-0 bg-transparent text-[13px] leading-6 outline-none placeholder:text-slate-400"
             placeholder="描述你的目标，或上传数据后提问…"
           />
           <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-2.5">
@@ -494,7 +494,6 @@ function NewTaskWorkspace({
               <button className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]">
                 <Upload className="mr-1.5 inline h-4 w-4" />上传文件
               </button>
-              <p className="text-[11px] text-slate-400">支持 CSV、PDB 等输入文件</p>
             </div>
             <Button
               onClick={onStart}
@@ -561,7 +560,7 @@ function RunningWorkspace({
           <textarea
             value={prompt}
             onChange={(event) => onPromptChange(event.target.value)}
-            className="min-h-[62px] w-full resize-none border-0 bg-transparent text-[13px] leading-6 outline-none placeholder:text-slate-400"
+            className="min-h-[54px] w-full resize-none border-0 bg-transparent text-[13px] leading-6 outline-none placeholder:text-slate-400"
             placeholder="继续向 Agent 追问，例如：请解释为什么共定位评分是最高贡献特征。"
           />
           <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-2.5">
@@ -585,12 +584,16 @@ function RunningWorkspace({
 }
 
 function ResultWorkspace({
+  openedFiles,
   selectedFile,
   onSelectFile,
+  onCloseFile,
   onDownloadFile,
 }: {
-  selectedFile: ResultFile;
+  openedFiles: ResultFile[];
+  selectedFile: ResultFile | null;
   onSelectFile: (id: string) => void;
+  onCloseFile: (id: string) => void;
   onDownloadFile: (file: ResultFile) => void;
 }) {
   return (
@@ -609,145 +612,159 @@ function ResultWorkspace({
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="grid gap-4 lg:grid-cols-3">
-          {finalInsights.map((item) => (
-            <article key={item.title} className="rounded-[20px] border border-slate-100 bg-slate-50/85 p-4">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Insight</p>
-              <h3 className="mt-1 text-[13px] font-semibold text-[#070261]">{item.title}</h3>
-              <p className="mt-2 text-[12px] leading-6 text-slate-600">{item.detail}</p>
-            </article>
-          ))}
-        </div>
-
-        <div className="mt-5 rounded-[22px] border border-slate-100 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/80 px-4 py-3">
-            {resultFiles.map((file) => {
-              const active = selectedFile.id === file.id;
-              return (
-                <button
-                  key={file.id}
-                  onClick={() => onSelectFile(file.id)}
-                  className={`rounded-xl px-3 py-2 text-[12px] font-medium transition ${
-                    active ? "bg-[rgba(255,201,151,0.32)] text-[#6c4b1d]" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                  }`}
-                >
-                  {file.name}
-                </button>
-              );
-            })}
+        <div className="rounded-[22px] border border-slate-100 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+          <div className="border-b border-slate-200/80 px-4 py-3">
+            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
+              {openedFiles.length > 0 ? (
+                openedFiles.map((file) => {
+                  const active = selectedFile?.id === file.id;
+                  return (
+                    <div
+                      key={file.id}
+                      className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-[12px] font-medium transition ${
+                        active
+                          ? "border-[rgba(255,201,151,0.5)] bg-[rgba(255,201,151,0.28)] text-[#6c4b1d]"
+                          : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-white hover:text-slate-700"
+                      }`}
+                    >
+                      <button onClick={() => onSelectFile(file.id)} className="truncate text-left">
+                        {file.name}
+                      </button>
+                      <button
+                        onClick={() => onCloseFile(file.id)}
+                        className="rounded-full p-0.5 text-slate-400 transition hover:bg-white hover:text-slate-700"
+                        aria-label={`关闭 ${file.name}`}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-[12px] text-slate-400">从右侧结果文件列表打开一个文件后，会在这里显示当前文件标签。</p>
+              )}
+            </div>
           </div>
 
           <div className="px-4 py-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[12px] font-medium text-slate-700">{selectedFile.name}</p>
-                <p className="mt-1 text-[11px] text-slate-400">{selectedFile.step} · {selectedFile.meta}</p>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => onDownloadFile(selectedFile)}
-                className="h-8 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-600 hover:bg-slate-50"
-              >
-                <ArrowDownToLine className="mr-1.5 h-4 w-4" />下载文件
-              </Button>
-            </div>
-
-            {selectedFile.type === "csv" ? (
-              <div className="overflow-hidden rounded-[18px] border border-slate-200">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full border-collapse text-left text-[12px]">
-                    <thead>
-                      <tr className="bg-slate-50 text-slate-500">
-                        {[
-                          "sample_id",
-                          "KD_arm1_nM",
-                          "KD_arm2_nM",
-                          "antibody_format",
-                          "epitope_pos_A",
-                          "epitope_pos_B",
-                        ].map((head) => (
-                          <th key={head} className="border-b border-slate-200 px-3 py-2.5 font-medium">
-                            {head}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {datasetPreviewRows.map((row, index) => (
-                        <tr key={`${row[0]}-${index}`} className="even:bg-slate-50/60">
-                          {row.map((cell) => (
-                            <td key={`${row[0]}-${cell}`} className="border-b border-slate-100 px-3 py-2.5 text-slate-700">
-                              {cell}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="bg-slate-50/70 px-3 py-2 text-[11px] text-slate-400">Showing first 100 rows. Download file to see all data.</div>
-              </div>
-            ) : selectedFile.type === "json" ? (
-              <div className="rounded-[18px] border border-slate-200 bg-[#0f172a] p-4 font-mono text-[12px] leading-6 text-slate-200">
-                <p>{`{`}</p>
-                <p className="pl-4">"best_model": "XGBoost",</p>
-                <p className="pl-4">"top_features": ["target_colocalization", "KD_arm1_nM", "linker_flexibility"],</p>
-                <p className="pl-4">"r2": 0.72,</p>
-                <p className="pl-4">"rmse": 0.106</p>
-                <p>{`}`}</p>
-              </div>
-            ) : selectedFile.type === "xlsx" ? (
-              <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-                <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 p-4">
-                  <p className="text-[12px] font-medium text-slate-700">模型比较摘要</p>
-                  <div className="mt-4 space-y-3">
-                    {[
-                      ["XGBoost", "R² 0.72", "RMSE 0.106"],
-                      ["Random Forest", "R² 0.69", "RMSE 0.118"],
-                      ["SVM", "R² 0.64", "RMSE 0.131"],
-                    ].map(([name, score, error]) => (
-                      <div key={name} className="flex items-center justify-between rounded-[16px] border border-slate-100 bg-white px-3 py-3">
-                        <p className="text-[12px] font-medium text-slate-700">{name}</p>
-                        <div className="text-right">
-                          <p className="text-[11px] text-slate-500">{score}</p>
-                          <p className="text-[11px] text-slate-400">{error}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,255,0.98),rgba(236,241,255,0.95))] p-4">
-                  <p className="text-[12px] font-medium text-slate-700">结论建议</p>
-                  <p className="mt-3 text-[12px] leading-6 text-slate-600">
-                    推荐默认展示 XGBoost 作为最佳模型，并在结果页同步展示可解释特征与模型性能对比，帮助业务用户快速理解选择依据。
-                  </p>
-                </div>
+            {!selectedFile ? (
+              <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-[12px] leading-6 text-slate-500">
+                当前未打开任何结果文件。请从右侧结果文件列表选择需要查看的文件。
               </div>
             ) : (
-              <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-                <div className="rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,rgba(244,247,255,1)_0%,rgba(255,255,255,1)_100%)] p-5">
-                  <div className="flex items-end gap-3">
-                    {[48, 78, 66, 92, 57, 86].map((height, index) => (
-                      <div key={`${height}-${index}`} className="flex flex-1 flex-col items-center gap-2">
-                        <div
-                          className="w-full rounded-t-[12px] bg-[linear-gradient(180deg,#161FAD_0%,#848CFE_100%)]"
-                          style={{ height }}
-                        />
-                        <span className="text-[10px] text-slate-400">F{index + 1}</span>
-                      </div>
-                    ))}
+              <>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[12px] font-medium text-slate-700">{selectedFile.name}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">{selectedFile.step} · {selectedFile.meta}</p>
                   </div>
-                  <p className="mt-4 text-[11px] text-slate-400">示意图：关键特征贡献或相关性结果预览。</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => onDownloadFile(selectedFile)}
+                    className="h-8 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-600 hover:bg-slate-50"
+                  >
+                    <ArrowDownToLine className="mr-1.5 h-4 w-4" />下载文件
+                  </Button>
                 </div>
-                <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 p-4">
-                  <p className="text-[12px] font-medium text-slate-700">图像结果摘要</p>
-                  <ul className="mt-3 space-y-3 text-[12px] leading-6 text-slate-600">
-                    <li>靶点共定位评分在高内化组中显著更高。</li>
-                    <li>KD 过高时内化率显著下降，呈现负相关趋势。</li>
-                    <li>连接区柔性在中等区间时，模型表现更稳定。</li>
-                  </ul>
-                </div>
-              </div>
+
+                {selectedFile.type === "csv" ? (
+                  <div className="overflow-hidden rounded-[18px] border border-slate-200">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full border-collapse text-left text-[12px]">
+                        <thead>
+                          <tr className="bg-slate-50 text-slate-500">
+                            {[
+                              "sample_id",
+                              "KD_arm1_nM",
+                              "KD_arm2_nM",
+                              "antibody_format",
+                              "epitope_pos_A",
+                              "epitope_pos_B",
+                            ].map((head) => (
+                              <th key={head} className="border-b border-slate-200 px-3 py-2.5 font-medium">
+                                {head}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {datasetPreviewRows.map((row, index) => (
+                            <tr key={`${row[0]}-${index}`} className="even:bg-slate-50/60">
+                              {row.map((cell) => (
+                                <td key={`${row[0]}-${cell}`} className="border-b border-slate-100 px-3 py-2.5 text-slate-700">
+                                  {cell}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="bg-slate-50/70 px-3 py-2 text-[11px] text-slate-400">Showing first 100 rows. Download file to see all data.</div>
+                  </div>
+                ) : selectedFile.type === "json" ? (
+                  <div className="rounded-[18px] border border-slate-200 bg-[#0f172a] p-4 font-mono text-[12px] leading-6 text-slate-200">
+                    <p>{`{`}</p>
+                    <p className="pl-4">"best_model": "XGBoost",</p>
+                    <p className="pl-4">"top_features": ["target_colocalization", "KD_arm1_nM", "linker_flexibility"],</p>
+                    <p className="pl-4">"r2": 0.72,</p>
+                    <p className="pl-4">"rmse": 0.106</p>
+                    <p>{`}`}</p>
+                  </div>
+                ) : selectedFile.type === "xlsx" ? (
+                  <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+                    <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 p-4">
+                      <p className="text-[12px] font-medium text-slate-700">模型比较摘要</p>
+                      <div className="mt-4 space-y-3">
+                        {[
+                          ["XGBoost", "R² 0.72", "RMSE 0.106"],
+                          ["Random Forest", "R² 0.69", "RMSE 0.118"],
+                          ["SVM", "R² 0.64", "RMSE 0.131"],
+                        ].map(([name, score, error]) => (
+                          <div key={name} className="flex items-center justify-between rounded-[16px] border border-slate-100 bg-white px-3 py-3">
+                            <p className="text-[12px] font-medium text-slate-700">{name}</p>
+                            <div className="text-right">
+                              <p className="text-[11px] text-slate-500">{score}</p>
+                              <p className="text-[11px] text-slate-400">{error}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,255,0.98),rgba(236,241,255,0.95))] p-4">
+                      <p className="text-[12px] font-medium text-slate-700">结论建议</p>
+                      <p className="mt-3 text-[12px] leading-6 text-slate-600">
+                        推荐默认展示 XGBoost 作为最佳模型，并在结果页同步展示可解释特征与模型性能对比，帮助业务用户快速理解选择依据。
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+                    <div className="rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,rgba(244,247,255,1)_0%,rgba(255,255,255,1)_100%)] p-5">
+                      <div className="flex items-end gap-3">
+                        {[48, 78, 66, 92, 57, 86].map((height, index) => (
+                          <div key={`${height}-${index}`} className="flex flex-1 flex-col items-center gap-2">
+                            <div
+                              className="w-full rounded-t-[12px] bg-[linear-gradient(180deg,#161FAD_0%,#848CFE_100%)]"
+                              style={{ height }}
+                            />
+                            <span className="text-[10px] text-slate-400">F{index + 1}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="mt-4 text-[11px] text-slate-400">示意图：关键特征贡献或相关性结果预览。</p>
+                    </div>
+                    <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 p-4">
+                      <p className="text-[12px] font-medium text-slate-700">图像结果摘要</p>
+                      <ul className="mt-3 space-y-3 text-[12px] leading-6 text-slate-600">
+                        <li>靶点共定位评分在高内化组中显著更高。</li>
+                        <li>KD 过高时内化率显著下降，呈现负相关趋势。</li>
+                        <li>连接区柔性在中等区间时，模型表现更稳定。</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -981,11 +998,15 @@ export default function Home() {
   const [activeView, setActiveView] = useState<ViewMode>("new");
   const [sideTab, setSideTab] = useState<SideTab>("plan");
   const [composerValue, setComposerValue] = useState("");
-  const [selectedFileId, setSelectedFileId] = useState<string>("dataset");
+  const [selectedFileId, setSelectedFileId] = useState<string>("");
+  const [openedFileIds, setOpenedFileIds] = useState<string[]>([]);
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const selectedFile = resultFiles.find((file) => file.id === selectedFileId) ?? resultFiles[0];
+  const openedFiles = openedFileIds
+    .map((id) => resultFiles.find((file) => file.id === id))
+    .filter((file): file is ResultFile => Boolean(file));
+  const selectedFile = resultFiles.find((file) => file.id === selectedFileId) ?? null;
 
   const handlePromptPick = (value: string) => {
     setComposerValue(value);
@@ -1000,14 +1021,25 @@ export default function Home() {
     setActiveView("new");
     setSideTab("plan");
     setComposerValue("");
+    setSelectedFileId("");
+    setOpenedFileIds([]);
     setSelectedFileIds([]);
     setSearchQuery("");
   };
 
   const handleSelectFile = (id: string) => {
+    setOpenedFileIds((current) => (current.includes(id) ? current : [...current, id]));
     setSelectedFileId(id);
     setSideTab("results");
     setActiveView("result");
+  };
+
+  const handleCloseFile = (id: string) => {
+    setOpenedFileIds((current) => current.filter((item) => item !== id));
+    if (selectedFileId === id) {
+      const remaining = openedFileIds.filter((item) => item !== id);
+      setSelectedFileId(remaining[remaining.length - 1] ?? "");
+    }
   };
 
   const handleToggleFile = (id: string) => {
@@ -1050,7 +1082,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8faff_0%,#eef3ff_100%)] text-slate-900">
       <div className="mx-auto flex min-h-screen max-w-[1580px] flex-col p-4 lg:p-5">
-        <div className="grid flex-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_360px]">
+        <div className={`grid flex-1 gap-4 ${activeView === "new" ? "xl:grid-cols-[260px_minmax(0,1fr)]" : "xl:grid-cols-[260px_minmax(0,1fr)_360px]"}`}>
           <Sidebar activeView={activeView} onNewConversation={handleNewConversation} />
 
           {activeView === "new" ? (
@@ -1063,22 +1095,30 @@ export default function Home() {
           ) : activeView === "running" ? (
             <RunningWorkspace prompt={composerValue} onPromptChange={setComposerValue} />
           ) : (
-            <ResultWorkspace selectedFile={selectedFile} onSelectFile={handleSelectFile} onDownloadFile={handleDownloadFile} />
+            <ResultWorkspace
+              openedFiles={openedFiles}
+              selectedFile={selectedFile}
+              onSelectFile={handleSelectFile}
+              onCloseFile={handleCloseFile}
+              onDownloadFile={handleDownloadFile}
+            />
           )}
 
-          <SidePanel
-            view={activeView}
-            sideTab={sideTab}
-            onSideTabChange={setSideTab}
-            selectedFileId={selectedFileId}
-            selectedFileIds={selectedFileIds}
-            searchQuery={searchQuery}
-            onSearchQueryChange={setSearchQuery}
-            onSelectFile={handleSelectFile}
-            onToggleFile={handleToggleFile}
-            onDownloadFile={handleDownloadFile}
-            onExportSelected={handleExportSelected}
-          />
+          {activeView !== "new" ? (
+            <SidePanel
+              view={activeView}
+              sideTab={sideTab}
+              onSideTabChange={setSideTab}
+              selectedFileId={selectedFileId}
+              selectedFileIds={selectedFileIds}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              onSelectFile={handleSelectFile}
+              onToggleFile={handleToggleFile}
+              onDownloadFile={handleDownloadFile}
+              onExportSelected={handleExportSelected}
+            />
+          ) : null}
         </div>
       </div>
     </div>
