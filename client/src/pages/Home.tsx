@@ -7,32 +7,30 @@ Design reminder for this file:
 */
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
+  ArrowDownToLine,
   ArrowUpRight,
-  BarChart3,
   Bot,
   CheckCircle2,
-  ChevronRight,
   CircleDashed,
   Clock3,
   Database,
-  FileCode2,
   FileJson,
   FileSpreadsheet,
   FileText,
   FolderOpen,
   FlaskConical,
   PanelRightOpen,
-  Play,
   Plus,
   Search,
   SendHorizonal,
-  Share2,
   Sparkles,
   Upload,
   UserCircle2,
   WandSparkles,
 } from "lucide-react";
+import { toast } from "sonner";
 
 type ViewMode = "new" | "running" | "result";
 type SideTab = "plan" | "results";
@@ -212,13 +210,6 @@ const resultFiles: ResultFile[] = [
   },
 ];
 
-const previewTabs: PreviewTab[] = [
-  { id: "overview", label: "最终评估" },
-  { id: "dataset", label: "bsab_dataset.csv", active: true },
-  { id: "importance", label: "fig5_rf_feature_importance" },
-  { id: "scatter", label: "fig3_key_feature_scatter" },
-];
-
 const datasetPreviewRows = [
   ["BsAb_001", "8.134", "16.298", "ScFv-Fc", "mid-stalk", "membrane-proximal"],
   ["BsAb_002", "3.797", "2.976", "IgG-like", "distal", "distal"],
@@ -280,6 +271,59 @@ function ResultTypeIcon({ type }: { type: ResultType }) {
   return <FileText className="h-4 w-4" />;
 }
 
+function getFilePayload(file: ResultFile) {
+  if (file.type === "csv") {
+    return {
+      mime: "text/csv;charset=utf-8",
+      content: [
+        ["sample_id", "KD_arm1_nM", "KD_arm2_nM", "antibody_format", "epitope_pos_A", "epitope_pos_B"].join(","),
+        ...datasetPreviewRows.map((row) => row.join(",")),
+      ].join("\n"),
+    };
+  }
+
+  if (file.type === "json") {
+    return {
+      mime: "application/json;charset=utf-8",
+      content: JSON.stringify(
+        {
+          best_model: "XGBoost",
+          top_features: ["target_colocalization", "KD_arm1_nM", "linker_flexibility"],
+          r2: 0.72,
+          rmse: 0.106,
+        },
+        null,
+        2,
+      ),
+    };
+  }
+
+  if (file.type === "xlsx") {
+    return {
+      mime: "text/plain;charset=utf-8",
+      content: "Model\tR2\tRMSE\nXGBoost\t0.72\t0.106\nRandom Forest\t0.69\t0.118\nSVM\t0.64\t0.131",
+    };
+  }
+
+  return {
+    mime: "text/plain;charset=utf-8",
+    content: `${file.name}\n\n该原型以示意内容展示图像结果，可在后续接入真实图片下载地址。`,
+  };
+}
+
+function downloadResultFile(file: ResultFile) {
+  const payload = getFilePayload(file);
+  const blob = new Blob([payload.content], { type: payload.mime });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = file.name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function ScreenSwitch({
   activeView,
   onChange,
@@ -315,7 +359,7 @@ function ScreenSwitch({
   );
 }
 
-function Sidebar({ activeView }: { activeView: ViewMode }) {
+function Sidebar({ activeView, onNewConversation }: { activeView: ViewMode; onNewConversation: () => void }) {
   return (
     <aside className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className="mb-5 flex items-center gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3">
@@ -329,6 +373,7 @@ function Sidebar({ activeView }: { activeView: ViewMode }) {
       </div>
 
       <button
+        onClick={onNewConversation}
         className={`mb-4 flex w-full items-center gap-2 rounded-[18px] border px-3.5 py-3 text-left text-[13px] font-medium transition ${
           activeView === "new"
             ? "border-[rgba(23,36,216,0.12)] bg-[linear-gradient(180deg,rgba(23,36,216,0.08),rgba(132,140,254,0.08))] text-[#161FAD] shadow-[0_12px_28px_rgba(23,36,216,0.08)]"
@@ -478,7 +523,7 @@ function RunningWorkspace({
       <div className="border-b border-slate-200/80 px-6 py-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Conversation & Execution</p>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Conversation</p>
             <h2 className="mt-1 text-[17px] font-semibold text-[#070261]">双抗内化功能预测模型</h2>
           </div>
           <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,201,151,0.45)] bg-[rgba(255,201,151,0.2)] px-3 py-1 text-[11px] font-medium text-[#8a5216]">
@@ -509,36 +554,6 @@ function RunningWorkspace({
             );
           })}
         </div>
-
-        <div className="mt-8">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Execution Steps</p>
-            <p className="text-[11px] text-slate-400">与右侧 Plan 步骤保持同步</p>
-          </div>
-          <div className="space-y-3">
-            {runningSteps.map((step) => {
-              const style = statusStyles[step.status];
-              return (
-                <button
-                  key={step.id}
-                  className="flex w-full items-center gap-3 rounded-[18px] border border-[rgba(22,31,173,0.06)] bg-[linear-gradient(180deg,rgba(243,252,248,0.8)_0%,rgba(247,251,255,0.9)_100%)] px-4 py-3 text-left transition hover:border-[rgba(23,36,216,0.14)] hover:bg-white"
-                >
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border ${style.icon}`}>
-                    {step.status === "done" ? <CheckCircle2 className="h-4 w-4" /> : <CircleDashed className="h-4 w-4" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="truncate text-[13px] font-semibold text-slate-800">{step.title}</p>
-                      <span className="text-[11px] text-slate-400">{step.duration}</span>
-                    </div>
-                    <p className="mt-1 text-[11px] leading-5 text-slate-500">{step.detail}</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-slate-300" />
-                </button>
-              );
-            })}
-          </div>
-        </div>
       </div>
 
       <div className="border-t border-slate-200/80 px-6 py-4">
@@ -546,7 +561,7 @@ function RunningWorkspace({
           <textarea
             value={prompt}
             onChange={(event) => onPromptChange(event.target.value)}
-            className="min-h-[68px] w-full resize-none border-0 bg-transparent text-[13px] leading-6 outline-none placeholder:text-slate-400"
+            className="min-h-[62px] w-full resize-none border-0 bg-transparent text-[13px] leading-6 outline-none placeholder:text-slate-400"
             placeholder="继续向 Agent 追问，例如：请解释为什么共定位评分是最高贡献特征。"
           />
           <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-2.5">
@@ -569,7 +584,15 @@ function RunningWorkspace({
   );
 }
 
-function ResultWorkspace({ selectedFile }: { selectedFile: ResultFile }) {
+function ResultWorkspace({
+  selectedFile,
+  onSelectFile,
+  onDownloadFile,
+}: {
+  selectedFile: ResultFile;
+  onSelectFile: (id: string) => void;
+  onDownloadFile: (file: ResultFile) => void;
+}) {
   return (
     <section className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className="border-b border-slate-200/80 px-6 py-5">
@@ -598,18 +621,20 @@ function ResultWorkspace({ selectedFile }: { selectedFile: ResultFile }) {
 
         <div className="mt-5 rounded-[22px] border border-slate-100 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/80 px-4 py-3">
-            {previewTabs.map((tab) => (
-              <button
-                key={tab.id}
-                className={`rounded-xl px-3 py-2 text-[12px] font-medium transition ${
-                  tab.active
-                    ? "bg-[rgba(255,201,151,0.32)] text-[#6c4b1d]"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+            {resultFiles.map((file) => {
+              const active = selectedFile.id === file.id;
+              return (
+                <button
+                  key={file.id}
+                  onClick={() => onSelectFile(file.id)}
+                  className={`rounded-xl px-3 py-2 text-[12px] font-medium transition ${
+                    active ? "bg-[rgba(255,201,151,0.32)] text-[#6c4b1d]" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                  }`}
+                >
+                  {file.name}
+                </button>
+              );
+            })}
           </div>
 
           <div className="px-4 py-4">
@@ -618,8 +643,12 @@ function ResultWorkspace({ selectedFile }: { selectedFile: ResultFile }) {
                 <p className="text-[12px] font-medium text-slate-700">{selectedFile.name}</p>
                 <p className="mt-1 text-[11px] text-slate-400">{selectedFile.step} · {selectedFile.meta}</p>
               </div>
-              <Button variant="outline" className="h-8 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-600 hover:bg-slate-50">
-                下载文件
+              <Button
+                variant="outline"
+                onClick={() => onDownloadFile(selectedFile)}
+                className="h-8 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-600 hover:bg-slate-50"
+              >
+                <ArrowDownToLine className="mr-1.5 h-4 w-4" />下载文件
               </Button>
             </div>
 
@@ -732,24 +761,41 @@ function SidePanel({
   sideTab,
   onSideTabChange,
   selectedFileId,
+  selectedFileIds,
+  searchQuery,
+  onSearchQueryChange,
   onSelectFile,
+  onToggleFile,
+  onDownloadFile,
+  onExportSelected,
 }: {
   view: ViewMode;
   sideTab: SideTab;
   onSideTabChange: (tab: SideTab) => void;
   selectedFileId: string;
+  selectedFileIds: string[];
+  searchQuery: string;
+  onSearchQueryChange: (value: string) => void;
   onSelectFile: (id: string) => void;
+  onToggleFile: (id: string) => void;
+  onDownloadFile: (file: ResultFile) => void;
+  onExportSelected: () => void;
 }) {
   const showEmpty = view === "new";
   const progressDone = runningSteps.filter((item) => item.status === "done").length;
   const progressPercent = view === "result" ? 100 : 42;
+  const filteredFiles = useMemo(() => {
+    const keyword = searchQuery.trim().toLowerCase();
+    if (!keyword) return resultFiles;
+    return resultFiles.filter((file) => `${file.name} ${file.meta} ${file.step}`.toLowerCase().includes(keyword));
+  }, [searchQuery]);
   const groupedFiles = useMemo(() => {
-    return resultFiles.reduce<Record<string, ResultFile[]>>((acc, file) => {
+    return filteredFiles.reduce<Record<string, ResultFile[]>>((acc, file) => {
       if (!acc[file.step]) acc[file.step] = [];
       acc[file.step].push(file);
       return acc;
     }, {});
-  }, []);
+  }, [filteredFiles]);
 
   return (
     <aside className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
@@ -825,9 +871,6 @@ function SidePanel({
                             <span className="text-[11px] text-slate-400">{step.duration}</span>
                           </div>
                           <p className="mt-1 text-[11px] leading-5 text-slate-500">{step.summary}</p>
-                          <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-medium ${style.chip}`}>
-                            {style.label}
-                          </span>
                         </div>
                       </div>
                     </article>
@@ -851,49 +894,81 @@ function SidePanel({
                 <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Results</p>
                 <h3 className="mt-1 text-[17px] font-semibold text-[#070261]">结果文件</h3>
               </div>
-              <div className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-500">
-                <FolderOpen className="h-3.5 w-3.5" />
-                {resultFiles.length} 个文件
-              </div>
+              {selectedFileIds.length > 0 ? (
+                <Button onClick={onExportSelected} className="h-8 rounded-xl bg-[#161FAD] px-3 text-[12px] text-white hover:bg-[#1724D8]">
+                  导出所选 ({selectedFileIds.length})
+                </Button>
+              ) : (
+                <div className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                  <FolderOpen className="h-3.5 w-3.5" />
+                  {filteredFiles.length} 个文件
+                </div>
+              )}
             </div>
 
             <div className="mb-4 rounded-[18px] border border-slate-200 bg-slate-50/90 px-3 py-2.5">
               <div className="flex items-center gap-2 text-slate-400">
                 <Search className="h-4 w-4" />
-                <input className="w-full border-0 bg-transparent text-[13px] outline-none placeholder:text-slate-400" placeholder="搜索文件" />
+                <input
+                  value={searchQuery}
+                  onChange={(event) => onSearchQueryChange(event.target.value)}
+                  className="w-full border-0 bg-transparent text-[13px] outline-none placeholder:text-slate-400"
+                  placeholder="搜索文件"
+                />
               </div>
             </div>
 
             <div className="space-y-4">
-              {Object.entries(groupedFiles).map(([group, files]) => (
-                <div key={group}>
-                  <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">{group}</p>
-                  <div className="space-y-2.5">
-                    {files.map((file) => {
-                      const active = selectedFileId === file.id;
-                      return (
-                        <button
-                          key={file.id}
-                          onClick={() => onSelectFile(file.id)}
-                          className={`flex w-full items-start gap-3 rounded-[18px] border px-3 py-3 text-left transition ${
-                            active
-                              ? "border-[rgba(23,36,216,0.14)] bg-[rgba(23,36,216,0.05)]"
-                              : "border-slate-100 bg-slate-50/90 hover:border-[rgba(23,36,216,0.14)] hover:bg-white"
-                          }`}
-                        >
-                          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
-                            <ResultTypeIcon type={file.type} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[13px] font-medium text-slate-800">{file.name}</p>
-                            <p className="mt-1 text-[11px] text-slate-400">{file.meta}</p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+              {Object.entries(groupedFiles).length === 0 ? (
+                <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-[12px] leading-6 text-slate-500">
+                  没有匹配的结果文件，请尝试其他关键词。
                 </div>
-              ))}
+              ) : (
+                Object.entries(groupedFiles).map(([group, files]) => (
+                  <div key={group}>
+                    <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">{group}</p>
+                    <div className="space-y-2.5">
+                      {files.map((file) => {
+                        const active = selectedFileId === file.id;
+                        const checked = selectedFileIds.includes(file.id);
+                        return (
+                          <div
+                            key={file.id}
+                            className={`group flex items-start gap-3 rounded-[18px] border px-3 py-3 transition ${
+                              active
+                                ? "border-[rgba(23,36,216,0.14)] bg-[rgba(23,36,216,0.05)]"
+                                : "border-slate-100 bg-slate-50/90 hover:border-[rgba(23,36,216,0.14)] hover:bg-white"
+                            }`}
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={() => onToggleFile(file.id)}
+                              className="mt-2"
+                              aria-label={`选择 ${file.name}`}
+                            />
+                            <button onClick={() => onSelectFile(file.id)} className="flex min-w-0 flex-1 items-start gap-3 text-left">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
+                                <ResultTypeIcon type={file.type} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-[13px] font-medium text-slate-800">{file.name}</p>
+                                <p className="mt-1 text-[11px] text-slate-400">{file.meta}</p>
+                              </div>
+                            </button>
+                            <button
+                              onClick={() => onDownloadFile(file)}
+                              className="mt-1 rounded-xl p-2 text-slate-300 opacity-0 transition group-hover:bg-white group-hover:text-[#161FAD] group-hover:opacity-100"
+                              aria-label={`下载 ${file.name}`}
+                            >
+                              <ArrowDownToLine className="h-4 w-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -907,14 +982,10 @@ export default function Home() {
   const [sideTab, setSideTab] = useState<SideTab>("plan");
   const [composerValue, setComposerValue] = useState("");
   const [selectedFileId, setSelectedFileId] = useState<string>("dataset");
+  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const selectedFile = resultFiles.find((file) => file.id === selectedFileId) ?? resultFiles[0];
-  const meta = screenMeta[activeView];
-
-  const handleScreenChange = (view: ViewMode) => {
-    setActiveView(view);
-    setSideTab(view === "result" ? "results" : "plan");
-  };
 
   const handlePromptPick = (value: string) => {
     setComposerValue(value);
@@ -925,26 +996,62 @@ export default function Home() {
     setSideTab("plan");
   };
 
-  const handlePrimaryAction = () => {
-    if (activeView === "new") {
-      handleStart();
-      return;
-    }
+  const handleNewConversation = () => {
+    setActiveView("new");
+    setSideTab("plan");
+    setComposerValue("");
+    setSelectedFileIds([]);
+    setSearchQuery("");
+  };
 
-    if (activeView === "running") {
-      setActiveView("result");
-      setSideTab("results");
-      return;
-    }
-
+  const handleSelectFile = (id: string) => {
+    setSelectedFileId(id);
     setSideTab("results");
+    setActiveView("result");
+  };
+
+  const handleToggleFile = (id: string) => {
+    setSelectedFileIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  };
+
+  const handleDownloadFile = (file: ResultFile) => {
+    downloadResultFile(file);
+    toast.success(`已开始下载 ${file.name}`);
+  };
+
+  const handleExportSelected = () => {
+    if (selectedFileIds.length === 0) {
+      toast.message("请先选择需要导出的文件");
+      return;
+    }
+
+    const selectedFiles = resultFiles.filter((file) => selectedFileIds.includes(file.id));
+    const payload = JSON.stringify(
+      {
+        exportedAt: new Date().toISOString(),
+        files: selectedFiles.map((file) => ({ name: file.name, step: file.step, meta: file.meta })),
+      },
+      null,
+      2,
+    );
+
+    const blob = new Blob([payload], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "ailux-selected-results.json";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast.success(`已导出 ${selectedFiles.length} 个文件`);
   };
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8faff_0%,#eef3ff_100%)] text-slate-900">
       <div className="mx-auto flex min-h-screen max-w-[1580px] flex-col p-4 lg:p-5">
-          <div className="grid flex-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_360px]">
-          <Sidebar activeView={activeView} />
+        <div className="grid flex-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_360px]">
+          <Sidebar activeView={activeView} onNewConversation={handleNewConversation} />
 
           {activeView === "new" ? (
             <NewTaskWorkspace
@@ -956,7 +1063,7 @@ export default function Home() {
           ) : activeView === "running" ? (
             <RunningWorkspace prompt={composerValue} onPromptChange={setComposerValue} />
           ) : (
-            <ResultWorkspace selectedFile={selectedFile} />
+            <ResultWorkspace selectedFile={selectedFile} onSelectFile={handleSelectFile} onDownloadFile={handleDownloadFile} />
           )}
 
           <SidePanel
@@ -964,7 +1071,13 @@ export default function Home() {
             sideTab={sideTab}
             onSideTabChange={setSideTab}
             selectedFileId={selectedFileId}
-            onSelectFile={setSelectedFileId}
+            selectedFileIds={selectedFileIds}
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            onSelectFile={handleSelectFile}
+            onToggleFile={handleToggleFile}
+            onDownloadFile={handleDownloadFile}
+            onExportSelected={handleExportSelected}
           />
         </div>
       </div>
