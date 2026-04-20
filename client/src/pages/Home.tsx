@@ -4,8 +4,9 @@ Design reminder for this file:
 - Preserve the Ailux blue system and restrained product feel from the UI specification
 - Keep the shell stable: left task rail + center primary workspace + right plan/result side panel
 - Prioritize clarity, traceability, and result consumption over decorative storytelling
+- Language switching should feel native rather than layered on top; avoid mixed-language headings in a single mode
 */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -19,6 +20,8 @@ import {
   FileSpreadsheet,
   FileText,
   FlaskConical,
+  Globe2,
+  LogOut,
   PanelRightOpen,
   Plus,
   Search,
@@ -31,59 +34,87 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+type Lang = "zh" | "en";
 type ViewMode = "new" | "running" | "result";
 type SideTab = "plan" | "results";
 type StepStatus = "done" | "running" | "waiting" | "failed";
 type ResultType = "csv" | "json" | "png" | "xlsx";
 
+type LocalizedText = {
+  zh: string;
+  en: string;
+};
+
 type PlanStep = {
   id: string;
-  title: string;
-  detail: string;
+  title: LocalizedText;
+  detail: LocalizedText;
   duration: string;
   status: StepStatus;
-  summary: string;
+  summary: LocalizedText;
 };
 
 type ResultFile = {
   id: string;
   name: string;
-  meta: string;
-  step: string;
+  meta: LocalizedText;
+  step: LocalizedText;
   type: ResultType;
 };
 
-const historyTasks = [
-  { id: "draft", title: "新对话", meta: "创建任务", isDraft: true },
-  { id: "t1", title: "双抗内化功能预测模型", meta: "当前任务" },
-  { id: "t2", title: "内化特征关联分析", meta: "3 分钟前" },
-  { id: "t3", title: "EGFR 抗体优化", meta: "昨天 18:20" },
-  { id: "t4", title: "CDR 区域内化影响评估", meta: "04-12 14:32" },
+type HistoryTask = {
+  id: string;
+  title: LocalizedText;
+  meta: LocalizedText;
+  isDraft?: boolean;
+};
+
+type RunningMessage = {
+  role: "user" | "agent";
+  content: LocalizedText;
+  time: string;
+};
+
+const l = (zh: string, en: string): LocalizedText => ({ zh, en });
+const pick = (lang: Lang, value: LocalizedText) => value[lang];
+
+const historyTasks: HistoryTask[] = [
+  { id: "draft", title: l("新对话", "New conversation"), meta: l("创建任务", "Create task"), isDraft: true },
+  { id: "t1", title: l("双抗内化功能预测模型", "Bispecific internalization prediction"), meta: l("当前任务", "Current task") },
+  { id: "t2", title: l("内化特征关联分析", "Internalization feature analysis"), meta: l("3 分钟前", "3 min ago") },
+  { id: "t3", title: l("EGFR 抗体优化", "EGFR antibody optimization"), meta: l("昨天 18:20", "Yesterday 18:20") },
+  { id: "t4", title: l("CDR 区域内化影响评估", "CDR region impact assessment"), meta: l("04-12 14:32", "04-12 14:32") },
 ];
 
 const recommendedPrompts = [
-  "上传实验数据，挖掘双表位双抗内化相关特征",
-  "给我一条 DLL3 双抗功能预测的固定分析流程，并说明每步输出",
-  "输入 PDB 与 CSV 后，帮我生成结构、特征和结果解释报告",
+  l("上传实验数据，挖掘双表位双抗内化相关特征", "Upload experimental data and identify features related to bispecific internalization."),
+  l("给我一条 DLL3 双抗功能预测的固定分析流程，并说明每步输出", "Give me a fixed DLL3 bispecific analysis workflow and explain the output of each step."),
+  l("输入 PDB 与 CSV 后，帮我生成结构、特征和结果解释报告", "After I provide PDB and CSV files, generate a structure, feature, and result interpretation report."),
 ];
 
-const runningMessages = [
+const runningMessages: RunningMessage[] = [
   {
     role: "user",
-    content:
+    content: l(
       "现在模拟一个流程，给你实验数据，分析双表位双抗内化功能与哪些特征有关，设计并构建一个针对双抗内化功能的预测模型。",
+      "Please simulate a workflow: given experimental data, analyze which features affect bispecific internalization and build a prediction model for internalization performance.",
+    ),
     time: "18:29",
   },
   {
     role: "agent",
-    content:
+    content: l(
       "好的，我将按照固定工作流完成数据生成、EDA、特征重要性分析、预测建模和生物学解释，并把中间结果沉淀到右侧 Results 中。",
+      "Understood. I will follow the standard workflow for data generation, EDA, feature importance analysis, predictive modeling, and biological interpretation, while writing intermediate outputs into the Results panel.",
+    ),
     time: "18:29",
   },
   {
     role: "agent",
-    content:
+    content: l(
       "当前正在执行探索性数据分析（EDA），已确认 KD 与内化率、靶点共定位与内化率存在显著关系，下一步会进入关键特征排序。",
+      "I am currently running exploratory data analysis (EDA). We have confirmed meaningful relationships between KD, target colocalization, and internalization rate. The next step is feature ranking.",
+    ),
     time: "18:30",
   },
 ];
@@ -91,51 +122,51 @@ const runningMessages = [
 const runningSteps: PlanStep[] = [
   {
     id: "step-1",
-    title: "生成模拟实验数据集",
-    detail: "生成 150 条双抗分子记录，覆盖靶点生物学、结合力学和结构特征。",
+    title: l("生成模拟实验数据集", "Generate simulated dataset"),
+    detail: l("生成 150 条双抗分子记录，覆盖靶点生物学、结合力学和结构特征。", "Generate 150 bispecific records covering target biology, binding kinetics, and structural features."),
     duration: "4s",
     status: "done",
-    summary: "已产出结构化数据集与概览统计。",
+    summary: l("已产出结构化数据集与概览统计。", "Structured dataset and summary statistics are ready."),
   },
   {
     id: "step-2",
-    title: "探索性数据分析（EDA）",
-    detail: "分析特征分布、相关矩阵、离群点与内化率之间的关系。",
+    title: l("探索性数据分析（EDA）", "Exploratory data analysis (EDA)"),
+    detail: l("分析特征分布、相关矩阵、离群点与内化率之间的关系。", "Analyze feature distributions, correlation matrices, outliers, and their relationship with internalization rate."),
     duration: "19s",
     status: "running",
-    summary: "正在写入分布图、热图与关键发现摘要。",
+    summary: l("正在写入分布图、热图与关键发现摘要。", "Writing distributions, heatmaps, and key findings now."),
   },
   {
     id: "step-3",
-    title: "特征重要性分析",
-    detail: "使用 SHAP 与随机森林重要性识别关键预测因子。",
+    title: l("特征重要性分析", "Feature importance analysis"),
+    detail: l("使用 SHAP 与随机森林重要性识别关键预测因子。", "Use SHAP and random forest importance to identify key predictive factors."),
     duration: "32s",
     status: "waiting",
-    summary: "等待上一步完成后启动。",
+    summary: l("等待上一步完成后启动。", "Waiting for the previous step to finish."),
   },
   {
     id: "step-4",
-    title: "构建预测模型",
-    detail: "比较 XGBoost、Random Forest 与 SVM 的预测性能。",
+    title: l("构建预测模型", "Build prediction models"),
+    detail: l("比较 XGBoost、Random Forest 与 SVM 的预测性能。", "Compare predictive performance across XGBoost, Random Forest, and SVM."),
     duration: "1m27s",
     status: "waiting",
-    summary: "将输出模型对比表与最佳模型说明。",
+    summary: l("将输出模型对比表与最佳模型说明。", "A model comparison table and best-model note will be generated."),
   },
   {
     id: "step-5",
-    title: "模型评估与可视化",
-    detail: "展示 R²、RMSE、ROC 及学习曲线等关键评估结果。",
+    title: l("模型评估与可视化", "Model evaluation and visualization"),
+    detail: l("展示 R²、RMSE、ROC 及学习曲线等关键评估结果。", "Present key metrics including R², RMSE, ROC, and learning curves."),
     duration: "25s",
     status: "waiting",
-    summary: "输出图表文件与结构化结果摘要。",
+    summary: l("输出图表文件与结构化结果摘要。", "Charts and structured summaries will be produced."),
   },
   {
     id: "step-6",
-    title: "生物学解释与总结",
-    detail: "汇总关键特征和设计建议，形成最终结论。",
+    title: l("生物学解释与总结", "Biological interpretation and summary"),
+    detail: l("汇总关键特征和设计建议，形成最终结论。", "Summarize key features and design suggestions into a final conclusion."),
     duration: "16s",
     status: "waiting",
-    summary: "最终输出面向科研用户的解释性结论。",
+    summary: l("最终输出面向科研用户的解释性结论。", "Deliver a final interpretive conclusion for research users."),
   },
 ];
 
@@ -143,36 +174,36 @@ const resultFiles: ResultFile[] = [
   {
     id: "dataset",
     name: "bsab_dataset.csv",
-    meta: "数据集 · 28.5 KB",
-    step: "步骤 1 · 数据生成",
+    meta: l("数据集 · 28.5 KB", "Dataset · 28.5 KB"),
+    step: l("步骤 1 · 数据生成", "Step 1 · Data generation"),
     type: "csv",
   },
   {
     id: "summary",
     name: "data_summary.json",
-    meta: "汇总结果 · 6.1 KB",
-    step: "步骤 1 · 数据生成",
+    meta: l("汇总结果 · 6.1 KB", "Summary · 6.1 KB"),
+    step: l("步骤 1 · 数据生成", "Step 1 · Data generation"),
     type: "json",
   },
   {
     id: "heatmap",
     name: "fig2_correlation_heatmap.png",
-    meta: "热图 · 293 KB",
-    step: "步骤 2 · EDA 分析",
+    meta: l("热图 · 293 KB", "Heatmap · 293 KB"),
+    step: l("步骤 2 · EDA 分析", "Step 2 · EDA"),
     type: "png",
   },
   {
     id: "importance",
     name: "fig3_key_feature_scatter.png",
-    meta: "散点图 · 319 KB",
-    step: "步骤 3 · 特征重要性",
+    meta: l("散点图 · 319 KB", "Scatter plot · 319 KB"),
+    step: l("步骤 3 · 特征重要性", "Step 3 · Feature importance"),
     type: "png",
   },
   {
     id: "comparison",
     name: "model_comparison.xlsx",
-    meta: "模型对比表 · 43 KB",
-    step: "步骤 4 · 预测模型",
+    meta: l("模型对比表 · 43 KB", "Model comparison · 43 KB"),
+    step: l("步骤 4 · 预测模型", "Step 4 · Prediction models"),
     type: "xlsx",
   },
 ];
@@ -201,6 +232,126 @@ const statusStyles: Record<StepStatus, { icon: string }> = {
   },
 };
 
+const copy = {
+  zh: {
+    platformSubtitle: "智能体平台",
+    newConversation: "新对话",
+    tasksLabel: "任务列表",
+    signedInRole: "已登录 · 项目成员",
+    userCenter: "用户中心",
+    networkDiagnostic: "网络检测工具",
+    switchLanguage: "切换语言",
+    switchLanguageHint: "切换到 English",
+    logout: "退出登录",
+    comingSoon: "该功能将在后续版本接入",
+    switchedToEnglish: "已切换为 English 模式",
+    switchedToChinese: "已切换为中文模式",
+    naturalLanguageTask: "自然语言发起任务",
+    newTaskTitle: "从目标描述开始，让 Agent 帮你完成模型、工具和执行流程的组织。",
+    newTaskBody:
+      "当前界面处于新任务工作态。中间区不展示旧任务内容，右侧也不会带入历史计划与结果。你可以直接输入研究目标，或先上传 CSV、PDB 等文件，再由 Agent 自动生成可追踪的执行路径。",
+    recommendedTasks: "推荐任务",
+    newTaskPlaceholder: "描述你的目标，或上传数据后提问…",
+    uploadFile: "上传文件",
+    send: "发送",
+    conversation: "对话",
+    runningTitle: "双抗内化功能预测模型",
+    runningPlaceholder: "继续向 Agent 追问，例如：请解释为什么共定位评分是最高贡献特征。",
+    fileTabHint: "从右侧结果文件列表打开一个文件后，会在这里显示当前文件标签。",
+    noOpenedFile:
+      "当前未打开任何结果文件。请从最右侧结果文件列表选择需要查看的文件，系统会在此区域展示对应预览，同时左侧对话区保持可追问。",
+    closeFile: "关闭",
+    downloadFile: "下载文件",
+    tableFooter: "仅展示前 100 行。下载文件可查看完整数据。",
+    modelSummary: "模型比较摘要",
+    conclusion: "结论建议",
+    conclusionBody: "推荐默认展示 XGBoost 作为最佳模型，并在结果页同步展示可解释特征与模型性能对比，帮助业务用户快速理解选择依据。",
+    chartCaption: "示意图：关键特征贡献或相关性结果预览。",
+    imageSummary: "图像结果摘要",
+    imageSummaryBullets: [
+      "靶点共定位评分在高内化组中显著更高。",
+      "KD 过高时内化率显著下降，呈现负相关趋势。",
+      "连接区柔性在中等区间时，模型表现更稳定。",
+    ],
+    plan: "计划",
+    results: "结果文件",
+    waitingPlan: "等待生成计划",
+    waitingPlanBody: "首条消息发送成功后，右侧会生成当前任务对应的步骤计划、进度条和每一步的执行摘要。当前新任务态不会展示旧任务数据。",
+    overallProgress: "整体进度",
+    emptyResults: "暂无结果文件",
+    emptyResultsBody: "当任务启动后，系统会按步骤将数据集、图像、日志、JSON 汇总等文件增量写入当前任务的结果区，并支持按文件名搜索。",
+    exportSelected: "导出所选",
+    searchFiles: "搜索文件",
+    noMatchedResults: "没有匹配的结果文件，请尝试其他关键词。",
+    selectFile: "选择",
+    download: "下载",
+    downloading: "已开始下载",
+    selectBeforeExport: "请先选择需要导出的文件",
+    exportedFiles: "已导出",
+    exportedSuffix: "个文件",
+  },
+  en: {
+    platformSubtitle: "Agent Workspace",
+    newConversation: "New conversation",
+    tasksLabel: "Task list",
+    signedInRole: "Signed in · Project member",
+    userCenter: "User center",
+    networkDiagnostic: "Network diagnostics",
+    switchLanguage: "Switch language",
+    switchLanguageHint: "Switch to 中文",
+    logout: "Log out",
+    comingSoon: "This feature will be connected in a later version.",
+    switchedToEnglish: "Switched to English mode",
+    switchedToChinese: "Switched to Chinese mode",
+    naturalLanguageTask: "Natural-language task kickoff",
+    newTaskTitle: "Start from the goal, and let the agent organize models, tools, and execution flow for you.",
+    newTaskBody:
+      "The workspace is in a new-task state. The center column does not show previous conversations, and the right panel does not carry over historical plans or files. You can enter a research objective directly or upload CSV and PDB files first, then let the agent generate a traceable execution path.",
+    recommendedTasks: "Suggested tasks",
+    newTaskPlaceholder: "Describe your goal, or upload files and ask a question…",
+    uploadFile: "Upload file",
+    send: "Send",
+    conversation: "Conversation",
+    runningTitle: "Bispecific internalization prediction",
+    runningPlaceholder: "Ask a follow-up, for example: explain why target colocalization is the top contributing feature.",
+    fileTabHint: "When you open a file from the right-side results list, its tab will appear here.",
+    noOpenedFile:
+      "No result file is currently open. Choose a file from the right-side results list to preview it here while keeping the conversation available on the left.",
+    closeFile: "Close",
+    downloadFile: "Download file",
+    tableFooter: "Showing the first 100 rows only. Download the file to inspect the full dataset.",
+    modelSummary: "Model comparison summary",
+    conclusion: "Recommendation",
+    conclusionBody:
+      "Recommend surfacing XGBoost as the default best model and pairing it with explainable features plus performance comparisons so users can understand the selection faster.",
+    chartCaption: "Illustration: preview of key feature contribution or correlation findings.",
+    imageSummary: "Image result summary",
+    imageSummaryBullets: [
+      "Target colocalization is clearly higher in the high-internalization group.",
+      "When KD becomes too large, internalization drops and shows a negative trend.",
+      "Medium linker flexibility yields more stable model performance.",
+    ],
+    plan: "Plan",
+    results: "Results",
+    waitingPlan: "Plan pending",
+    waitingPlanBody:
+      "After the first message is sent, the right panel will generate a step-by-step plan, progress indicator, and execution summaries. Historical task data stays hidden in the new-task state.",
+    overallProgress: "Overall progress",
+    emptyResults: "No result files yet",
+    emptyResultsBody:
+      "Once the task starts, datasets, charts, logs, and JSON summaries will be written incrementally into the current result area and remain searchable by filename.",
+    exportSelected: "Export selected",
+    searchFiles: "Search files",
+    noMatchedResults: "No result files match your query. Try another keyword.",
+    selectFile: "Select",
+    download: "Download",
+    downloading: "Started downloading",
+    selectBeforeExport: "Please select files to export first",
+    exportedFiles: "Exported",
+    exportedSuffix: "files",
+  },
+} as const;
+
 function ResultTypeIcon({ type }: { type: ResultType }) {
   if (type === "csv") return <Database className="h-4 w-4" />;
   if (type === "json") return <FileJson className="h-4 w-4" />;
@@ -208,7 +359,7 @@ function ResultTypeIcon({ type }: { type: ResultType }) {
   return <FileText className="h-4 w-4" />;
 }
 
-function getFilePayload(file: ResultFile) {
+function getFilePayload(file: ResultFile, lang: Lang) {
   if (file.type === "csv") {
     return {
       mime: "text/csv;charset=utf-8",
@@ -244,12 +395,15 @@ function getFilePayload(file: ResultFile) {
 
   return {
     mime: "text/plain;charset=utf-8",
-    content: `${file.name}\n\n该原型以示意内容展示图像结果，可在后续接入真实图片下载地址。`,
+    content:
+      lang === "zh"
+        ? `${file.name}\n\n该原型以示意内容展示图像结果，可在后续接入真实图片下载地址。`
+        : `${file.name}\n\nThis prototype shows an illustrative image result. A real image download URL can be connected later.`,
   };
 }
 
-function downloadResultFile(file: ResultFile) {
-  const payload = getFilePayload(file);
+function downloadResultFile(file: ResultFile, lang: Lang) {
+  const payload = getFilePayload(file, lang);
   const blob = new Blob([payload.content], { type: payload.mime });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -261,15 +415,66 @@ function downloadResultFile(file: ResultFile) {
   URL.revokeObjectURL(url);
 }
 
+function UserMenu({ lang, onAction }: { lang: Lang; onAction: (action: "profile" | "network" | "language" | "logout") => void }) {
+  const text = copy[lang];
+
+  return (
+    <div className="absolute bottom-[calc(100%+12px)] left-0 z-30 w-[218px] rounded-[20px] border border-slate-200 bg-white/96 p-2 shadow-[0_24px_60px_rgba(15,23,42,0.14)] backdrop-blur">
+      <button
+        onClick={() => onAction("profile")}
+        className="flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[13px] font-medium text-slate-700 transition hover:bg-slate-50 hover:text-[#161FAD]"
+      >
+        <UserCircle2 className="h-4 w-4" />
+        {text.userCenter}
+      </button>
+      <button
+        onClick={() => onAction("network")}
+        className="flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[13px] font-medium text-slate-700 transition hover:bg-slate-50 hover:text-[#161FAD]"
+      >
+        <Search className="h-4 w-4" />
+        {text.networkDiagnostic}
+      </button>
+      <button
+        onClick={() => onAction("language")}
+        className="flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[13px] font-medium text-slate-700 transition hover:bg-[rgba(23,36,216,0.06)] hover:text-[#161FAD]"
+      >
+        <Globe2 className="h-4 w-4" />
+        <div>
+          <p>{text.switchLanguage}</p>
+          <p className="mt-0.5 text-[11px] font-normal text-slate-400">{text.switchLanguageHint}</p>
+        </div>
+      </button>
+      <div className="my-1 h-px bg-slate-100" />
+      <button
+        onClick={() => onAction("logout")}
+        className="flex w-full items-center justify-center gap-2 rounded-[14px] px-3 py-3 text-[13px] font-medium text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+      >
+        <LogOut className="h-4 w-4" />
+        {text.logout}
+      </button>
+    </div>
+  );
+}
+
 function Sidebar({
   activeView,
+  lang,
+  userMenuOpen,
   onNewConversation,
+  onToggleUserMenu,
+  onUserMenuAction,
   collapsed = false,
 }: {
   activeView: ViewMode;
+  lang: Lang;
+  userMenuOpen: boolean;
   onNewConversation: () => void;
+  onToggleUserMenu: () => void;
+  onUserMenuAction: (action: "profile" | "network" | "language" | "logout") => void;
   collapsed?: boolean;
 }) {
+  const text = copy[lang];
+
   if (collapsed) {
     return (
       <aside className="flex min-h-[760px] flex-col items-center rounded-[24px] border border-white/70 bg-white/84 p-3 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
@@ -280,7 +485,7 @@ function Sidebar({
         <button
           onClick={onNewConversation}
           className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:bg-white hover:text-[#161FAD]"
-          aria-label="新对话"
+          aria-label={text.newConversation}
         >
           <Plus className="h-4 w-4" />
         </button>
@@ -290,26 +495,36 @@ function Sidebar({
         </div>
 
         <div className="flex flex-1 flex-col items-center gap-2">
-          {historyTasks.filter((task) => !task.isDraft).map((task) => {
-            const active = activeView !== "new" && task.id === "t1";
-            return (
-              <button
-                key={task.id}
-                className={`flex h-12 w-12 items-center justify-center rounded-2xl border text-[11px] font-semibold transition ${
-                  active
-                    ? "border-[rgba(23,36,216,0.12)] bg-[linear-gradient(180deg,rgba(23,36,216,0.08),rgba(132,140,254,0.08))] text-[#161FAD] shadow-[0_12px_28px_rgba(23,36,216,0.08)]"
-                    : "border-transparent bg-slate-50/80 text-slate-500 hover:border-slate-200 hover:bg-white"
-                }`}
-                aria-label={task.title}
-              >
-                {task.title.slice(0, 2)}
-              </button>
-            );
-          })}
+          {historyTasks
+            .filter((task) => !task.isDraft)
+            .map((task) => {
+              const active = activeView !== "new" && task.id === "t1";
+              const taskTitle = pick(lang, task.title);
+              return (
+                <button
+                  key={task.id}
+                  className={`flex h-12 w-12 items-center justify-center rounded-2xl border text-[11px] font-semibold transition ${
+                    active
+                      ? "border-[rgba(23,36,216,0.12)] bg-[linear-gradient(180deg,rgba(23,36,216,0.08),rgba(132,140,254,0.08))] text-[#161FAD] shadow-[0_12px_28px_rgba(23,36,216,0.08)]"
+                      : "border-transparent bg-slate-50/80 text-slate-500 hover:border-slate-200 hover:bg-white"
+                  }`}
+                  aria-label={taskTitle}
+                >
+                  {taskTitle.slice(0, 2)}
+                </button>
+              );
+            })}
         </div>
 
-        <div className="mt-4 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50/90 text-slate-400">
-          <UserCircle2 className="h-5 w-5" />
+        <div className="relative mt-4">
+          <button
+            onClick={onToggleUserMenu}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50/90 text-slate-400 transition hover:border-slate-200 hover:bg-white hover:text-[#161FAD]"
+            aria-label={text.userCenter}
+          >
+            <UserCircle2 className="h-5 w-5" />
+          </button>
+          {userMenuOpen ? <UserMenu lang={lang} onAction={onUserMenuAction} /> : null}
         </div>
       </aside>
     );
@@ -323,7 +538,7 @@ function Sidebar({
         </div>
         <div>
           <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Ailux Agent</p>
-          <p className="text-[14px] font-semibold text-[#070261]">智能体平台</p>
+          <p className="text-[14px] font-semibold text-[#070261]">{text.platformSubtitle}</p>
         </div>
       </div>
 
@@ -335,13 +550,14 @@ function Sidebar({
             : "border-transparent bg-slate-50 text-slate-700 hover:border-slate-200 hover:bg-white"
         }`}
       >
-        <Plus className="h-4 w-4" />新对话
+        <Plus className="h-4 w-4" />
+        {text.newConversation}
       </button>
 
       <div className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Tasks</p>
-          <h2 className="mt-1 text-[17px] font-semibold text-[#070261]">任务列表</h2>
+          <h2 className="mt-1 text-[17px] font-semibold text-[#070261]">{text.tasksLabel}</h2>
         </div>
         <button className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-50 hover:text-[#161FAD]">
           <PanelRightOpen className="h-4 w-4" />
@@ -349,49 +565,61 @@ function Sidebar({
       </div>
 
       <div className="flex-1 space-y-2">
-        {historyTasks.filter((task) => !task.isDraft).map((task) => {
-          const active = activeView !== "new" && task.id === "t1";
+        {historyTasks
+          .filter((task) => !task.isDraft)
+          .map((task) => {
+            const active = activeView !== "new" && task.id === "t1";
 
-          return (
-            <button
-              key={task.id}
-              className={`w-full rounded-[18px] border px-3.5 py-3 text-left transition ${
-                active
-                  ? "border-[rgba(23,36,216,0.12)] bg-[linear-gradient(180deg,rgba(23,36,216,0.08),rgba(132,140,254,0.08))] shadow-[0_12px_28px_rgba(23,36,216,0.08)]"
-                  : "border-transparent bg-slate-50/80 hover:border-slate-200 hover:bg-white"
-              }`}
-            >
-              <p className={`truncate text-[13px] ${active ? "font-semibold text-[#070261]" : "font-medium text-slate-700"}`}>
-                {task.title}
-              </p>
-              <p className="mt-1 text-[11px] text-slate-400">{task.meta}</p>
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={task.id}
+                className={`w-full rounded-[18px] border px-3.5 py-3 text-left transition ${
+                  active
+                    ? "border-[rgba(23,36,216,0.12)] bg-[linear-gradient(180deg,rgba(23,36,216,0.08),rgba(132,140,254,0.08))] shadow-[0_12px_28px_rgba(23,36,216,0.08)]"
+                    : "border-transparent bg-slate-50/80 hover:border-slate-200 hover:bg-white"
+                }`}
+              >
+                <p className={`truncate text-[13px] ${active ? "font-semibold text-[#070261]" : "font-medium text-slate-700"}`}>
+                  {pick(lang, task.title)}
+                </p>
+                <p className="mt-1 text-[11px] text-slate-400">{pick(lang, task.meta)}</p>
+              </button>
+            );
+          })}
       </div>
 
-      <div className="mt-4 flex items-center gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3">
-        <UserCircle2 className="h-8 w-8 text-slate-400" />
-        <div>
-          <p className="text-[13px] font-medium text-slate-700">Chen Lab</p>
-          <p className="text-[11px] text-slate-400">已登录 · 项目成员</p>
-        </div>
+      <div className="relative mt-4">
+        <button
+          onClick={onToggleUserMenu}
+          className="flex w-full items-center gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3 text-left transition hover:border-slate-200 hover:bg-white"
+        >
+          <UserCircle2 className="h-8 w-8 text-slate-400" />
+          <div>
+            <p className="text-[13px] font-medium text-slate-700">Chen Lab</p>
+            <p className="text-[11px] text-slate-400">{text.signedInRole}</p>
+          </div>
+        </button>
+        {userMenuOpen ? <UserMenu lang={lang} onAction={onUserMenuAction} /> : null}
       </div>
     </aside>
   );
 }
 
 function NewTaskWorkspace({
+  lang,
   prompt,
   onPromptChange,
   onPromptPick,
   onStart,
 }: {
+  lang: Lang;
   prompt: string;
   onPromptChange: (value: string) => void;
   onPromptPick: (value: string) => void;
   onStart: () => void;
 }) {
+  const text = copy[lang];
+
   return (
     <section className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className="flex flex-1 flex-col justify-between px-6 py-6">
@@ -399,30 +627,26 @@ function NewTaskWorkspace({
           <div className="rounded-[24px] border border-[rgba(23,36,216,0.08)] bg-[linear-gradient(180deg,rgba(248,250,255,0.98)_0%,rgba(236,241,255,0.95)_100%)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[rgba(23,36,216,0.08)] px-3 py-1 text-[11px] font-medium text-[#161FAD]">
               <WandSparkles className="h-3.5 w-3.5" />
-              自然语言发起任务
+              {text.naturalLanguageTask}
             </div>
-            <h3 className="text-[22px] font-semibold tracking-tight text-[#070261]">
-              从目标描述开始，让 Agent 帮你完成模型、工具和执行流程的组织。
-            </h3>
-            <p className="mt-3 max-w-[720px] text-[13px] leading-6 text-slate-600">
-              当前界面处于新任务工作态。中间区不展示旧任务内容，右侧也不会带入历史计划与结果。你可以直接输入研究目标，或先上传 CSV、PDB 等文件，再由 Agent 自动生成可追踪的执行路径。
-            </p>
+            <h3 className="text-[22px] font-semibold tracking-tight text-[#070261]">{text.newTaskTitle}</h3>
+            <p className="mt-3 max-w-[720px] text-[13px] leading-6 text-slate-600">{text.newTaskBody}</p>
           </div>
 
           <div className="mt-6">
             <div className="mb-3 flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-[#161FAD]" />
-              <p className="text-[13px] font-medium text-slate-700">推荐任务</p>
+              <p className="text-[13px] font-medium text-slate-700">{text.recommendedTasks}</p>
             </div>
             <div className="space-y-3">
               {recommendedPrompts.map((item) => (
                 <button
-                  key={item}
-                  onClick={() => onPromptPick(item)}
+                  key={pick(lang, item)}
+                  onClick={() => onPromptPick(pick(lang, item))}
                   className="flex w-full items-start justify-between gap-3 rounded-[18px] border border-slate-100 bg-slate-50/80 px-4 py-4 text-left transition hover:border-[rgba(23,36,216,0.14)] hover:bg-white"
                 >
                   <div>
-                    <p className="text-[13px] font-medium text-slate-700">{item}</p>
+                    <p className="text-[13px] font-medium text-slate-700">{pick(lang, item)}</p>
                   </div>
                   <ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
                 </button>
@@ -436,12 +660,13 @@ function NewTaskWorkspace({
             value={prompt}
             onChange={(event) => onPromptChange(event.target.value)}
             className="min-h-[52px] w-full resize-none border-0 bg-transparent text-[13px] leading-6 outline-none placeholder:text-slate-400"
-            placeholder="描述你的目标，或上传数据后提问…"
+            placeholder={text.newTaskPlaceholder}
           />
           <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-2.5">
             <div className="flex items-center gap-2">
               <button className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]">
-                <Upload className="mr-1.5 inline h-4 w-4" />上传文件
+                <Upload className="mr-1.5 inline h-4 w-4" />
+                {text.uploadFile}
               </button>
             </div>
             <Button
@@ -449,7 +674,7 @@ function NewTaskWorkspace({
               disabled={!prompt.trim()}
               className="h-9 rounded-xl bg-[#161FAD] px-4 text-[13px] text-white shadow-[0_10px_24px_rgba(22,31,173,0.18)] hover:bg-[#1724D8] disabled:cursor-not-allowed disabled:bg-slate-300"
             >
-              发送
+              {text.send}
               <SendHorizonal className="ml-2 h-4 w-4" />
             </Button>
           </div>
@@ -460,20 +685,24 @@ function NewTaskWorkspace({
 }
 
 function RunningWorkspace({
+  lang,
   prompt,
   onPromptChange,
   compact = false,
 }: {
+  lang: Lang;
   prompt: string;
   onPromptChange: (value: string) => void;
   compact?: boolean;
 }) {
+  const text = copy[lang];
+
   return (
     <section className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className={`border-b border-slate-200/80 ${compact ? "px-4 py-4" : "px-6 py-5"}`}>
         <div>
-          <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Conversation</p>
-          <h2 className="mt-1 text-[17px] font-semibold text-[#070261]">双抗内化功能预测模型</h2>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.conversation}</p>
+          <h2 className="mt-1 text-[17px] font-semibold text-[#070261]">{text.runningTitle}</h2>
         </div>
       </div>
 
@@ -484,8 +713,10 @@ function RunningWorkspace({
             return (
               <div key={`${message.role}-${index}`} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`rounded-[20px] px-4 py-3 text-[13px] leading-6 shadow-sm ${compact ? "max-w-[96%]" : "max-w-[88%]"} ${
-                    isUser ? "bg-[#1724D8] text-white" : "border border-slate-200 bg-slate-50 text-slate-700"
+                  className={`max-w-[86%] rounded-[22px] border px-4 py-4 text-[13px] leading-6 shadow-[0_10px_28px_rgba(15,23,42,0.04)] ${
+                    isUser
+                      ? "border-[rgba(23,36,216,0.12)] bg-[linear-gradient(135deg,#161FAD_0%,#2C36F4_100%)] text-white"
+                      : "border-slate-200 bg-white text-slate-700"
                   }`}
                 >
                   {!isUser ? (
@@ -493,7 +724,7 @@ function RunningWorkspace({
                       <Bot className="h-4 w-4" />Ailux Agent
                     </div>
                   ) : null}
-                  <p>{message.content}</p>
+                  <p>{pick(lang, message.content)}</p>
                   <p className={`mt-2 text-[10px] ${isUser ? "text-white/75" : "text-slate-400"}`}>{message.time}</p>
                 </div>
               </div>
@@ -508,7 +739,7 @@ function RunningWorkspace({
             value={prompt}
             onChange={(event) => onPromptChange(event.target.value)}
             className="min-h-[54px] w-full resize-none border-0 bg-transparent text-[13px] leading-6 outline-none placeholder:text-slate-400"
-            placeholder="继续向 Agent 追问，例如：请解释为什么共定位评分是最高贡献特征。"
+            placeholder={text.runningPlaceholder}
           />
           <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-2.5">
             <div className="flex items-center gap-2 text-slate-500">
@@ -520,7 +751,7 @@ function RunningWorkspace({
               </button>
             </div>
             <Button className="h-9 rounded-xl bg-[#161FAD] px-4 text-[13px] text-white hover:bg-[#1724D8]">
-              发送
+              {text.send}
               <SendHorizonal className="ml-2 h-4 w-4" />
             </Button>
           </div>
@@ -531,18 +762,22 @@ function RunningWorkspace({
 }
 
 function ResultWorkspace({
+  lang,
   openedFiles,
   selectedFile,
   onSelectFile,
   onCloseFile,
   onDownloadFile,
 }: {
+  lang: Lang;
   openedFiles: ResultFile[];
   selectedFile: ResultFile | null;
   onSelectFile: (id: string) => void;
   onCloseFile: (id: string) => void;
   onDownloadFile: (file: ResultFile) => void;
 }) {
+  const text = copy[lang];
+
   return (
     <section className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className="flex-1 overflow-y-auto px-4 py-4">
@@ -567,7 +802,7 @@ function ResultWorkspace({
                       <button
                         onClick={() => onCloseFile(file.id)}
                         className="rounded-full p-0.5 text-slate-400 transition hover:bg-white hover:text-slate-700"
-                        aria-label={`关闭 ${file.name}`}
+                        aria-label={`${text.closeFile} ${file.name}`}
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -575,7 +810,7 @@ function ResultWorkspace({
                   );
                 })
               ) : (
-                <p className="text-[12px] text-slate-400">从右侧结果文件列表打开一个文件后，会在这里显示当前文件标签。</p>
+                <p className="text-[12px] text-slate-400">{text.fileTabHint}</p>
               )}
             </div>
           </div>
@@ -583,7 +818,7 @@ function ResultWorkspace({
           <div className="px-4 py-4">
             {!selectedFile ? (
               <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-[12px] leading-6 text-slate-500">
-                当前未打开任何结果文件。请从最右侧结果文件列表选择需要查看的文件，系统会在此区域展示对应预览，同时左侧对话区保持可追问。
+                {text.noOpenedFile}
               </div>
             ) : (
               <>
@@ -594,7 +829,8 @@ function ResultWorkspace({
                     onClick={() => onDownloadFile(selectedFile)}
                     className="h-8 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-600 hover:bg-slate-50"
                   >
-                    <ArrowDownToLine className="mr-1.5 h-4 w-4" />下载文件
+                    <ArrowDownToLine className="mr-1.5 h-4 w-4" />
+                    {text.downloadFile}
                   </Button>
                 </div>
 
@@ -604,14 +840,7 @@ function ResultWorkspace({
                       <table className="min-w-full border-collapse text-left text-[12px]">
                         <thead>
                           <tr className="bg-slate-50 text-slate-500">
-                            {[
-                              "sample_id",
-                              "KD_arm1_nM",
-                              "KD_arm2_nM",
-                              "antibody_format",
-                              "epitope_pos_A",
-                              "epitope_pos_B",
-                            ].map((head) => (
+                            {["sample_id", "KD_arm1_nM", "KD_arm2_nM", "antibody_format", "epitope_pos_A", "epitope_pos_B"].map((head) => (
                               <th key={head} className="border-b border-slate-200 px-3 py-2.5 font-medium">
                                 {head}
                               </th>
@@ -631,7 +860,7 @@ function ResultWorkspace({
                         </tbody>
                       </table>
                     </div>
-                    <div className="bg-slate-50/70 px-3 py-2 text-[11px] text-slate-400">Showing first 100 rows. Download file to see all data.</div>
+                    <div className="bg-slate-50/70 px-3 py-2 text-[11px] text-slate-400">{text.tableFooter}</div>
                   </div>
                 ) : selectedFile.type === "json" ? (
                   <div className="rounded-[18px] border border-slate-200 bg-[#0f172a] p-4 font-mono text-[12px] leading-6 text-slate-200">
@@ -645,7 +874,7 @@ function ResultWorkspace({
                 ) : selectedFile.type === "xlsx" ? (
                   <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
                     <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 p-4">
-                      <p className="text-[12px] font-medium text-slate-700">模型比较摘要</p>
+                      <p className="text-[12px] font-medium text-slate-700">{text.modelSummary}</p>
                       <div className="mt-4 space-y-3">
                         {[
                           ["XGBoost", "R² 0.72", "RMSE 0.106"],
@@ -663,10 +892,8 @@ function ResultWorkspace({
                       </div>
                     </div>
                     <div className="rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,255,0.98),rgba(236,241,255,0.95))] p-4">
-                      <p className="text-[12px] font-medium text-slate-700">结论建议</p>
-                      <p className="mt-3 text-[12px] leading-6 text-slate-600">
-                        推荐默认展示 XGBoost 作为最佳模型，并在结果页同步展示可解释特征与模型性能对比，帮助业务用户快速理解选择依据。
-                      </p>
+                      <p className="text-[12px] font-medium text-slate-700">{text.conclusion}</p>
+                      <p className="mt-3 text-[12px] leading-6 text-slate-600">{text.conclusionBody}</p>
                     </div>
                   </div>
                 ) : (
@@ -683,14 +910,14 @@ function ResultWorkspace({
                           </div>
                         ))}
                       </div>
-                      <p className="mt-4 text-[11px] text-slate-400">示意图：关键特征贡献或相关性结果预览。</p>
+                      <p className="mt-4 text-[11px] text-slate-400">{text.chartCaption}</p>
                     </div>
                     <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 p-4">
-                      <p className="text-[12px] font-medium text-slate-700">图像结果摘要</p>
+                      <p className="text-[12px] font-medium text-slate-700">{text.imageSummary}</p>
                       <ul className="mt-3 space-y-3 text-[12px] leading-6 text-slate-600">
-                        <li>靶点共定位评分在高内化组中显著更高。</li>
-                        <li>KD 过高时内化率显著下降，呈现负相关趋势。</li>
-                        <li>连接区柔性在中等区间时，模型表现更稳定。</li>
+                        {text.imageSummaryBullets.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
                       </ul>
                     </div>
                   </div>
@@ -705,52 +932,58 @@ function ResultWorkspace({
 }
 
 function SidePanel({
+  lang,
   view,
   sideTab,
-  onSideTabChange,
   selectedFileId,
   selectedFileIds,
   searchQuery,
   onSearchQueryChange,
+  onSideTabChange,
   onSelectFile,
   onToggleFile,
   onDownloadFile,
   onExportSelected,
 }: {
+  lang: Lang;
   view: ViewMode;
   sideTab: SideTab;
-  onSideTabChange: (tab: SideTab) => void;
   selectedFileId: string;
   selectedFileIds: string[];
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
+  onSideTabChange: (tab: SideTab) => void;
   onSelectFile: (id: string) => void;
   onToggleFile: (id: string) => void;
   onDownloadFile: (file: ResultFile) => void;
   onExportSelected: () => void;
 }) {
+  const text = copy[lang];
   const showEmpty = view === "new";
   const progressPercent = view === "result" ? 100 : 42;
+
   const filteredFiles = useMemo(() => {
     const keyword = searchQuery.trim().toLowerCase();
     if (!keyword) return resultFiles;
-    return resultFiles.filter((file) => `${file.name} ${file.meta} ${file.step}`.toLowerCase().includes(keyword));
-  }, [searchQuery]);
+    return resultFiles.filter((file) => `${file.name} ${pick(lang, file.meta)} ${pick(lang, file.step)}`.toLowerCase().includes(keyword));
+  }, [lang, searchQuery]);
+
   const groupedFiles = useMemo(() => {
     return filteredFiles.reduce<Record<string, ResultFile[]>>((acc, file) => {
-      if (!acc[file.step]) acc[file.step] = [];
-      acc[file.step].push(file);
+      const key = pick(lang, file.step);
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(file);
       return acc;
     }, {});
-  }, [filteredFiles]);
+  }, [filteredFiles, lang]);
 
   return (
     <aside className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className="border-b border-slate-200/80 px-4 py-4">
         <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1">
           {[
-            { id: "plan" as SideTab, label: "计划" },
-            { id: "results" as SideTab, label: "结果文件" },
+            { id: "plan" as SideTab, label: text.plan },
+            { id: "results" as SideTab, label: text.results },
           ].map((tab) => {
             const active = sideTab === tab.id;
             return (
@@ -772,17 +1005,15 @@ function SidePanel({
         {sideTab === "plan" ? (
           showEmpty ? (
             <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 p-5">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Plan</p>
-              <h3 className="mt-1 text-[15px] font-semibold text-[#070261]">等待生成计划</h3>
-              <p className="mt-3 text-[12px] leading-6 text-slate-500">
-                首条消息发送成功后，右侧会生成当前任务对应的步骤计划、进度条和每一步的执行摘要。当前新任务态不会展示旧任务数据。
-              </p>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.plan}</p>
+              <h3 className="mt-1 text-[15px] font-semibold text-[#070261]">{text.waitingPlan}</h3>
+              <p className="mt-3 text-[12px] leading-6 text-slate-500">{text.waitingPlanBody}</p>
             </div>
           ) : (
             <div>
               <div className="mb-4 pt-1">
                 <div className="mb-1 flex items-center justify-between text-[11px] text-slate-400">
-                  <span>整体进度</span>
+                  <span>{text.overallProgress}</span>
                   <span>{progressPercent}%</span>
                 </div>
                 <div className="h-2 rounded-full bg-slate-100">
@@ -804,10 +1035,10 @@ function SidePanel({
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-3">
-                            <p className="text-[13px] font-semibold text-slate-800">{step.title}</p>
+                            <p className="text-[13px] font-semibold text-slate-800">{pick(lang, step.title)}</p>
                             <span className="text-[11px] text-slate-400">{step.duration}</span>
                           </div>
-                          <p className="mt-1 text-[11px] leading-5 text-slate-500">{step.summary}</p>
+                          <p className="mt-1 text-[11px] leading-5 text-slate-500">{pick(lang, step.summary)}</p>
                         </div>
                       </div>
                     </article>
@@ -818,18 +1049,16 @@ function SidePanel({
           )
         ) : showEmpty ? (
           <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 p-5">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Results</p>
-            <h3 className="mt-1 text-[15px] font-semibold text-[#070261]">暂无结果文件</h3>
-            <p className="mt-3 text-[12px] leading-6 text-slate-500">
-              当任务启动后，系统会按步骤将数据集、图像、日志、JSON 汇总等文件增量写入当前任务的结果区，并支持按文件名搜索。
-            </p>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.results}</p>
+            <h3 className="mt-1 text-[15px] font-semibold text-[#070261]">{text.emptyResults}</h3>
+            <p className="mt-3 text-[12px] leading-6 text-slate-500">{text.emptyResultsBody}</p>
           </div>
         ) : (
           <div>
-            <div className="mb-4 pt-1 flex items-center justify-end gap-3">
+            <div className="mb-4 flex items-center justify-end gap-3 pt-1">
               {selectedFileIds.length > 0 ? (
                 <Button onClick={onExportSelected} className="h-8 rounded-xl bg-[#161FAD] px-3 text-[12px] text-white hover:bg-[#1724D8]">
-                  导出所选 ({selectedFileIds.length})
+                  {text.exportSelected} ({selectedFileIds.length})
                 </Button>
               ) : null}
             </div>
@@ -841,7 +1070,7 @@ function SidePanel({
                   value={searchQuery}
                   onChange={(event) => onSearchQueryChange(event.target.value)}
                   className="w-full border-0 bg-transparent text-[13px] outline-none placeholder:text-slate-400"
-                  placeholder="搜索文件"
+                  placeholder={text.searchFiles}
                 />
               </div>
             </div>
@@ -849,7 +1078,7 @@ function SidePanel({
             <div className="space-y-4">
               {Object.entries(groupedFiles).length === 0 ? (
                 <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-[12px] leading-6 text-slate-500">
-                  没有匹配的结果文件，请尝试其他关键词。
+                  {text.noMatchedResults}
                 </div>
               ) : (
                 Object.entries(groupedFiles).map(([group, files]) => (
@@ -872,7 +1101,7 @@ function SidePanel({
                               checked={checked}
                               onCheckedChange={() => onToggleFile(file.id)}
                               className="mt-2"
-                              aria-label={`选择 ${file.name}`}
+                              aria-label={`${text.selectFile} ${file.name}`}
                             />
                             <button onClick={() => onSelectFile(file.id)} className="flex min-w-0 flex-1 items-start gap-3 text-left">
                               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
@@ -880,13 +1109,13 @@ function SidePanel({
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className="truncate text-[13px] font-medium text-slate-800">{file.name}</p>
-                                <p className="mt-1 text-[11px] text-slate-400">{file.meta}</p>
+                                <p className="mt-1 text-[11px] text-slate-400">{pick(lang, file.meta)}</p>
                               </div>
                             </button>
                             <button
                               onClick={() => onDownloadFile(file)}
                               className="mt-1 rounded-xl p-2 text-slate-300 opacity-0 transition group-hover:bg-white group-hover:text-[#161FAD] group-hover:opacity-100"
-                              aria-label={`下载 ${file.name}`}
+                              aria-label={`${text.download} ${file.name}`}
                             >
                               <ArrowDownToLine className="h-4 w-4" />
                             </button>
@@ -906,6 +1135,7 @@ function SidePanel({
 }
 
 export default function Home() {
+  const [lang, setLang] = useState<Lang>("zh");
   const [activeView, setActiveView] = useState<ViewMode>("new");
   const [sideTab, setSideTab] = useState<SideTab>("plan");
   const [composerValue, setComposerValue] = useState("");
@@ -913,6 +1143,31 @@ export default function Home() {
   const [openedFileIds, setOpenedFileIds] = useState<string[]>([]);
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const menuBoundaryRef = useRef<HTMLDivElement | null>(null);
+  const text = copy[lang];
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem("ailux-agent-lang");
+    if (stored === "zh" || stored === "en") {
+      setLang(stored);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("ailux-agent-lang", lang);
+  }, [lang]);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!menuBoundaryRef.current?.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
 
   const openedFiles = openedFileIds
     .map((id) => resultFiles.find((file) => file.id === id))
@@ -936,6 +1191,7 @@ export default function Home() {
     setOpenedFileIds([]);
     setSelectedFileIds([]);
     setSearchQuery("");
+    setUserMenuOpen(false);
   };
 
   const handleSelectFile = (id: string) => {
@@ -960,13 +1216,13 @@ export default function Home() {
   };
 
   const handleDownloadFile = (file: ResultFile) => {
-    downloadResultFile(file);
-    toast.success(`已开始下载 ${file.name}`);
+    downloadResultFile(file, lang);
+    toast.success(`${text.downloading} ${file.name}`);
   };
 
   const handleExportSelected = () => {
     if (selectedFileIds.length === 0) {
-      toast.message("请先选择需要导出的文件");
+      toast.message(text.selectBeforeExport);
       return;
     }
 
@@ -974,7 +1230,7 @@ export default function Home() {
     const payload = JSON.stringify(
       {
         exportedAt: new Date().toISOString(),
-        files: selectedFiles.map((file) => ({ name: file.name, step: file.step, meta: file.meta })),
+        files: selectedFiles.map((file) => ({ name: file.name, step: pick(lang, file.step), meta: pick(lang, file.meta) })),
       },
       null,
       2,
@@ -989,13 +1245,27 @@ export default function Home() {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-    toast.success(`已导出 ${selectedFiles.length} 个文件`);
+    toast.success(`${text.exportedFiles} ${selectedFiles.length} ${text.exportedSuffix}`);
+  };
+
+  const handleUserMenuAction = (action: "profile" | "network" | "language" | "logout") => {
+    if (action === "language") {
+      const nextLang: Lang = lang === "zh" ? "en" : "zh";
+      setLang(nextLang);
+      setUserMenuOpen(false);
+      toast.success(nextLang === "en" ? copy.zh.switchedToEnglish : copy.en.switchedToChinese);
+      return;
+    }
+
+    setUserMenuOpen(false);
+    toast.message(text.comingSoon);
   };
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8faff_0%,#eef3ff_100%)] text-slate-900">
       <div className="mx-auto flex min-h-screen max-w-[1680px] flex-col p-4 lg:p-5">
         <div
+          ref={menuBoundaryRef}
           className={`grid flex-1 gap-4 ${
             activeView === "new"
               ? "xl:grid-cols-[260px_minmax(0,1fr)]"
@@ -1004,21 +1274,31 @@ export default function Home() {
                 : "xl:grid-cols-[260px_minmax(0,1fr)_360px]"
           }`}
         >
-          <Sidebar activeView={activeView} onNewConversation={handleNewConversation} collapsed={activeView === "result"} />
+          <Sidebar
+            activeView={activeView}
+            lang={lang}
+            userMenuOpen={userMenuOpen}
+            onNewConversation={handleNewConversation}
+            onToggleUserMenu={() => setUserMenuOpen((current) => !current)}
+            onUserMenuAction={handleUserMenuAction}
+            collapsed={activeView === "result"}
+          />
 
           {activeView === "new" ? (
             <NewTaskWorkspace
+              lang={lang}
               prompt={composerValue}
               onPromptChange={setComposerValue}
               onPromptPick={handlePromptPick}
               onStart={handleStart}
             />
           ) : (
-            <RunningWorkspace prompt={composerValue} onPromptChange={setComposerValue} compact={activeView === "result"} />
+            <RunningWorkspace lang={lang} prompt={composerValue} onPromptChange={setComposerValue} compact={activeView === "result"} />
           )}
 
           {activeView === "result" ? (
             <ResultWorkspace
+              lang={lang}
               openedFiles={openedFiles}
               selectedFile={selectedFile}
               onSelectFile={handleSelectFile}
@@ -1029,13 +1309,14 @@ export default function Home() {
 
           {activeView !== "new" ? (
             <SidePanel
+              lang={lang}
               view={activeView}
               sideTab={sideTab}
-              onSideTabChange={setSideTab}
               selectedFileId={selectedFileId}
               selectedFileIds={selectedFileIds}
               searchQuery={searchQuery}
               onSearchQueryChange={setSearchQuery}
+              onSideTabChange={setSideTab}
               onSelectFile={handleSelectFile}
               onToggleFile={handleToggleFile}
               onDownloadFile={handleDownloadFile}
