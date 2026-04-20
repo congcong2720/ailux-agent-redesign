@@ -80,14 +80,14 @@ const pick = (lang: Lang, value: LocalizedText) => value[lang];
 
 const historyTasks: HistoryTask[] = [
   { id: "draft", title: l("新对话", "New conversation"), meta: l("创建任务", "Create task"), isDraft: true },
-  { id: "t1", title: l("双抗内化功能预测模型", "Bispecific internalization prediction"), meta: l("当前任务", "Current task") },
-  { id: "t2", title: l("内化特征关联分析", "Internalization feature analysis"), meta: l("3 分钟前", "3 min ago") },
+  { id: "t1", title: l("双抗内吞功能预测模型", "Bispecific endocytosis prediction"), meta: l("当前任务", "Current task") },
+  { id: "t2", title: l("内吞特征关联分析", "Endocytosis feature analysis"), meta: l("3 分钟前", "3 min ago") },
   { id: "t3", title: l("EGFR 抗体优化", "EGFR antibody optimization"), meta: l("昨天 18:20", "Yesterday 18:20") },
-  { id: "t4", title: l("CDR 区域内化影响评估", "CDR region impact assessment"), meta: l("04-12 14:32", "04-12 14:32") },
+  { id: "t4", title: l("CDR 区域内吞影响评估", "CDR region impact assessment"), meta: l("04-12 14:32", "04-12 14:32") },
 ];
 
 const recommendedPrompts = [
-  l("上传实验数据，挖掘双表位双抗内化相关特征", "Upload experimental data and identify features related to bispecific internalization."),
+  l("上传实验数据，挖掘双表位双抗内吞相关特征", "Upload experimental data and identify features related to bispecific endocytosis."),
   l("给我一条 DLL3 双抗功能预测的固定分析流程，并说明每步输出", "Give me a fixed DLL3 bispecific analysis workflow and explain the output of each step."),
   l("输入 PDB 与 CSV 后，帮我生成结构、特征和结果解释报告", "After I provide PDB and CSV files, generate a structure, feature, and result interpretation report."),
 ];
@@ -96,8 +96,8 @@ const runningMessages: RunningMessage[] = [
   {
     role: "user",
     content: l(
-      "现在模拟一个流程，给你实验数据，分析双表位双抗内化功能与哪些特征有关，设计并构建一个针对双抗内化功能的预测模型。",
-      "Please simulate a workflow: given experimental data, analyze which features affect bispecific internalization and build a prediction model for internalization performance.",
+      "现在模拟一个流程，给你实验数据，分析双表位双抗内吞功能与哪些特征有关，设计并构建一个针对双抗内吞功能的预测模型。",
+      "Please simulate a workflow: given experimental data, analyze which features affect bispecific endocytosis and build a prediction model for endocytosis performance.",
     ),
     time: "18:29",
   },
@@ -112,8 +112,8 @@ const runningMessages: RunningMessage[] = [
   {
     role: "agent",
     content: l(
-      "当前正在执行探索性数据分析（EDA），已确认 KD 与内化率、靶点共定位与内化率存在显著关系，下一步会进入关键特征排序。",
-      "I am currently running exploratory data analysis (EDA). We have confirmed meaningful relationships between KD, target colocalization, and internalization rate. The next step is feature ranking.",
+      "当前正在执行探索性数据分析（EDA），已确认 KD 与内吞率、靶点共定位与内吞率存在显著关系，下一步会进入关键特征排序。",
+      "I am currently running exploratory data analysis (EDA). We have confirmed meaningful relationships between KD, target colocalization, and endocytosis rate. The next step is feature ranking.",
     ),
     time: "18:30",
   },
@@ -131,7 +131,7 @@ const runningSteps: PlanStep[] = [
   {
     id: "step-2",
     title: l("探索性数据分析（EDA）", "Exploratory data analysis (EDA)"),
-    detail: l("分析特征分布、相关矩阵、离群点与内化率之间的关系。", "Analyze feature distributions, correlation matrices, outliers, and their relationship with internalization rate."),
+    detail: l("分析特征分布、相关矩阵、离群点与内吞率之间的关系。", "Analyze feature distributions, correlation matrices, outliers, and their relationship with endocytosis rate."),
     duration: "19s",
     status: "running",
     summary: l("正在写入分布图、热图与关键发现摘要。", "Writing distributions, heatmaps, and key findings now."),
@@ -255,7 +255,7 @@ const copy = {
     uploadFile: "上传文件",
     send: "发送",
     conversation: "对话",
-    runningTitle: "双抗内化功能预测模型",
+    runningTitle: "双抗内吞功能预测模型",
     runningPlaceholder: "继续向 Agent 追问，例如：请解释为什么共定位评分是最高贡献特征。",
     fileTabHint: "从右侧结果文件列表打开一个文件后，会在这里显示当前文件标签。",
     noOpenedFile:
@@ -269,8 +269,8 @@ const copy = {
     chartCaption: "示意图：关键特征贡献或相关性结果预览。",
     imageSummary: "图像结果摘要",
     imageSummaryBullets: [
-      "靶点共定位评分在高内化组中显著更高。",
-      "KD 过高时内化率显著下降，呈现负相关趋势。",
+      "靶点共定位评分在高内吞组中显著更高。",
+      "KD 过高时内吞率显著下降，呈现负相关趋势。",
       "连接区柔性在中等区间时，模型表现更稳定。",
     ],
     plan: "计划",
@@ -312,7 +312,7 @@ const copy = {
     uploadFile: "Upload file",
     send: "Send",
     conversation: "Conversation",
-    runningTitle: "Bispecific internalization prediction",
+    runningTitle: "Bispecific endocytosis prediction",
     runningPlaceholder: "Ask a follow-up, for example: explain why target colocalization is the top contributing feature.",
     fileTabHint: "When you open a file from the right-side results list, its tab will appear here.",
     noOpenedFile:
@@ -327,8 +327,8 @@ const copy = {
     chartCaption: "Illustration: preview of key feature contribution or correlation findings.",
     imageSummary: "Image result summary",
     imageSummaryBullets: [
-      "Target colocalization is clearly higher in the high-internalization group.",
-      "When KD becomes too large, internalization drops and shows a negative trend.",
+      "Target colocalization is clearly higher in the high-endocytosis group.",
+      "When KD becomes too large, endocytosis drops and shows a negative trend.",
       "Medium linker flexibility yields more stable model performance.",
     ],
     plan: "Plan",
