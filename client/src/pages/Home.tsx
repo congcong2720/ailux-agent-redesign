@@ -7,8 +7,10 @@ Design reminder for this file:
 - Language switching should feel native rather than layered on top; avoid mixed-language headings in a single mode
 */
 import { useEffect, useMemo, useRef, useState } from "react";
+import { PdbViewer } from "@/components/PdbViewer";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { demoPdbContent, demoPdbName } from "@/lib/demoPdb";
 import {
   ArrowDownToLine,
   ArrowUpRight,
@@ -38,7 +40,7 @@ type Lang = "zh" | "en";
 type ViewMode = "new" | "running" | "result";
 type SideTab = "plan" | "results";
 type StepStatus = "done" | "running" | "waiting" | "failed";
-type ResultType = "csv" | "json" | "png" | "xlsx";
+type ResultType = "csv" | "json" | "png" | "xlsx" | "pdb";
 
 type LocalizedText = {
   zh: string;
@@ -229,39 +231,53 @@ const runningSteps: PlanStep[] = [
 
 const resultFiles: ResultFile[] = [
   {
-    id: "dataset",
-    name: "bsab_dataset.csv",
-    meta: l("数据集 · 28.5 KB", "Dataset · 28.5 KB"),
-    step: l("步骤 1 · 数据生成", "Step 1 · Data generation"),
+    id: "structure-source",
+    name: demoPdbName,
+    meta: l("结构源文件", "Structure source file"),
+    step: l("步骤 2 · 结构预测", "Step 2 · Structure prediction"),
+    type: "pdb",
+  },
+  {
+    id: "interface-definition",
+    name: "interface.csv",
+    meta: l("接口定义文件", "Interface definition file"),
+    step: l("步骤 3 · 界面表征", "Step 3 · Interface characterization"),
     type: "csv",
   },
   {
-    id: "summary",
-    name: "data_summary.json",
-    meta: l("汇总结果 · 6.1 KB", "Summary · 6.1 KB"),
-    step: l("步骤 1 · 数据生成", "Step 1 · Data generation"),
-    type: "json",
+    id: "feature-importance-table",
+    name: "v3_importance_from_mcb008.csv",
+    meta: l("特征重要性表", "Feature-importance table"),
+    step: l("步骤 4 · 特征计算", "Step 4 · Feature calculation"),
+    type: "csv",
   },
   {
-    id: "heatmap",
-    name: "fig2_correlation_heatmap.png",
-    meta: l("热图 · 293 KB", "Heatmap · 293 KB"),
-    step: l("步骤 2 · EDA 分析", "Step 2 · EDA"),
+    id: "feature-importance-plot",
+    name: "importance_topk.png",
+    meta: l("特征重要性图", "Feature-importance plot"),
+    step: l("步骤 5 · 相关性分析与特征选择", "Step 5 · Correlation analysis and feature selection"),
     type: "png",
   },
   {
-    id: "importance",
-    name: "fig3_key_feature_scatter.png",
-    meta: l("散点图 · 319 KB", "Scatter plot · 319 KB"),
-    step: l("步骤 3 · 特征重要性", "Step 3 · Feature importance"),
-    type: "png",
+    id: "hit-table-all-features",
+    name: "top10_aug_regression_10nM_importance_analysis_result_all_features_importance.csv",
+    meta: l("命中表全特征文件", "Hit-table all-features file"),
+    step: l("步骤 6 · 模型可解释性", "Step 6 · Model explainability"),
+    type: "csv",
   },
   {
-    id: "comparison",
-    name: "model_comparison.xlsx",
-    meta: l("模型对比表 · 43 KB", "Model comparison · 43 KB"),
-    step: l("步骤 4 · 预测模型", "Step 4 · Prediction models"),
-    type: "xlsx",
+    id: "final-model-evaluation-table",
+    name: "all_ml_evaluation_results_stage2.csv",
+    meta: l("最终模型评估表", "Final model-evaluation table"),
+    step: l("步骤 7 · 预测模型评估", "Step 7 · Predictive model evaluation"),
+    type: "csv",
+  },
+  {
+    id: "evaluation-plot",
+    name: "regression_scatter.png",
+    meta: l("评估图", "Evaluation plot"),
+    step: l("步骤 7 · 预测模型评估", "Step 7 · Predictive model evaluation"),
+    type: "png",
   },
 ];
 
@@ -436,10 +452,18 @@ function ResultTypeIcon({ type }: { type: ResultType }) {
   if (type === "csv") return <Database className="h-4 w-4" />;
   if (type === "json") return <FileJson className="h-4 w-4" />;
   if (type === "xlsx") return <FileSpreadsheet className="h-4 w-4" />;
+  if (type === "pdb") return <FlaskConical className="h-4 w-4" />;
   return <FileText className="h-4 w-4" />;
 }
 
 function getFilePayload(file: ResultFile, lang: Lang) {
+  if (file.type === "pdb") {
+    return {
+      mime: "chemical/x-pdb;charset=utf-8",
+      content: demoPdbContent,
+    };
+  }
+
   if (file.type === "csv") {
     return {
       mime: "text/csv;charset=utf-8",
@@ -949,7 +973,9 @@ function ResultWorkspace({
                   </Button>
                 </div>
 
-                {selectedFile.type === "csv" ? (
+                {selectedFile.type === "pdb" ? (
+                  <PdbViewer lang={lang} pdbText={demoPdbContent} />
+                ) : selectedFile.type === "csv" ? (
                   <div className="overflow-hidden rounded-[18px] border border-slate-200">
                     <div className="overflow-x-auto">
                       <table className="min-w-full border-collapse text-left text-[12px]">
@@ -1086,7 +1112,7 @@ function SidePanel({
   const filteredFiles = useMemo(() => {
     const keyword = searchQuery.trim().toLowerCase();
     if (!keyword) return resultFiles;
-    return resultFiles.filter((file) => `${file.name} ${pick(lang, file.meta)} ${pick(lang, file.step)}`.toLowerCase().includes(keyword));
+    return resultFiles.filter((file) => `${file.name} ${pick(lang, file.step)}`.toLowerCase().includes(keyword));
   }, [lang, searchQuery]);
 
   const groupedFiles = useMemo(() => {
@@ -1243,7 +1269,6 @@ function SidePanel({
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className="truncate text-[13px] font-medium text-slate-800">{file.name}</p>
-                                <p className="mt-1 text-[11px] text-slate-400">{pick(lang, file.meta)}</p>
                               </div>
                             </button>
                             <button

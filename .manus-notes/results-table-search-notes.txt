@@ -1,0 +1,6 @@
+已检查两张上传图片：
+1. pasted_file_CEWTFb_image.png 为新任务页界面截图，标注了顶部“有什么我能帮你的？”区域，不包含 Results 输出文件替换表。
+2. pasted_file_IRhgrK_image.png 为 GitHub 仓库页面截图，不包含 Results 输出文件替换表。
+3. pasted_file_R7dQhx_image.png 为语言切换菜单截图，不包含 Results 输出文件替换表。
+4. pasted_file_YjdLSd_image.png 为旧版 AiluxOS 首页截图，不包含 Results 输出文件替换表。
+当前在 /home/ubuntu/upload 中尚未发现明确的 Results 输出文件替换表来源文件。
