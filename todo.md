@@ -40,3 +40,7 @@
 - [x] 新增 PDB 可视化区域，使用用户提供的 XF1_DLL3_Mcb028_000_SC_0.84.pdb 内容进行展示
 - [x] 为 PDB 可视化支持 cartoon、stick、sphere 三种模式切换
 - [x] 为 PDB 可视化增加自动旋转交互并完成类型检查与界面校验
+- [x] 将 PDB 结果文件展示名称替换为 Boltz2_DLL3_Mcb008_model_1.pdb，但继续使用当前提供的 PDB 内容进行可视化
+- [x] 下移 PDB 预览区域，避免遮挡顶部文件标签切换区域
+- [x] 修复 PDB 预览遮挡 cartoon、stick、sphere 模式切换控件的问题
+- [x] 自查 PDB 预览区是否存在其他布局或交互问题，并完成类型检查与构建校验

@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PdbViewer } from "@/components/PdbViewer";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { demoPdbContent, demoPdbName } from "@/lib/demoPdb";
+import { demoPdbContent } from "@/lib/demoPdb";
 import {
   ArrowDownToLine,
   ArrowUpRight,
@@ -232,7 +232,7 @@ const runningSteps: PlanStep[] = [
 const resultFiles: ResultFile[] = [
   {
     id: "structure-source",
-    name: demoPdbName,
+    name: "Boltz2_DLL3_Mcb008_model_1.pdb",
     meta: l("结构源文件", "Structure source file"),
     step: l("步骤 2 · 结构预测", "Step 2 · Structure prediction"),
     type: "pdb",
@@ -974,7 +974,7 @@ function ResultWorkspace({
                 </div>
 
                 {selectedFile.type === "pdb" ? (
-                  <PdbViewer lang={lang} pdbText={demoPdbContent} />
+                  <PdbViewer lang={lang} pdbText={demoPdbContent} fileName={selectedFile.name} />
                 ) : selectedFile.type === "csv" ? (
                   <div className="overflow-hidden rounded-[18px] border border-slate-200">
                     <div className="overflow-x-auto">
