@@ -10,15 +10,12 @@ type PdbRenderMode = "cartoon" | "stick" | "sphere";
 type PdbViewerProps = {
   lang: Lang;
   pdbText: string;
-  fileName: string;
 };
 
 const labels = {
   zh: {
     displayMode: "显示模式",
     autoRotate: "自动旋转",
-    caption: "基于当前输入 PDB 的三维结构预览，可用于演示结构结果卡片。",
-    structureSource: "结构源文件",
     modes: {
       cartoon: "Cartoon",
       stick: "Stick",
@@ -28,8 +25,6 @@ const labels = {
   en: {
     displayMode: "Display mode",
     autoRotate: "Auto-rotate",
-    caption: "Interactive 3D structure preview from the current input PDB for the structure result card demo.",
-    structureSource: "Structure source file",
     modes: {
       cartoon: "Cartoon",
       stick: "Stick",
@@ -50,7 +45,7 @@ function getStyle(mode: PdbRenderMode) {
   return { cartoon: { color: "spectrum" } };
 }
 
-export function PdbViewer({ lang, pdbText, fileName }: PdbViewerProps) {
+export function PdbViewer({ lang, pdbText }: PdbViewerProps) {
   const text = labels[lang];
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<$3Dmol.GLViewer | null>(null);
@@ -114,14 +109,7 @@ export function PdbViewer({ lang, pdbText, fileName }: PdbViewerProps) {
 
   return (
     <div className="isolate rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,255,0.98),rgba(255,255,255,1))] p-5">
-      <div className="relative z-10 space-y-4">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">{text.structureSource}</p>
-          <p className="mt-1 break-all text-[13px] font-semibold text-[#070261]">{fileName}</p>
-          <p className="mt-2 text-[11px] leading-5 text-slate-400">{text.caption}</p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="relative z-10 flex flex-wrap items-center gap-3">
           <div>
             <p className="mb-2 text-[12px] font-medium text-slate-700">{text.displayMode}</p>
             <ToggleGroup
@@ -149,10 +137,9 @@ export function PdbViewer({ lang, pdbText, fileName }: PdbViewerProps) {
             <Switch checked={autoRotate} onCheckedChange={setAutoRotate} />
             <span>{text.autoRotate}</span>
           </label>
-        </div>
       </div>
 
-      <div className="relative z-0 mt-6 overflow-hidden rounded-[18px] border border-slate-200 bg-[#F8FAFF] shadow-inner">
+      <div className="relative z-0 mt-5 overflow-hidden rounded-[18px] border border-slate-200 bg-[#F8FAFF] shadow-inner">
         <div ref={containerRef} className="relative h-[420px] w-full min-h-[420px] overflow-hidden" />
       </div>
     </div>

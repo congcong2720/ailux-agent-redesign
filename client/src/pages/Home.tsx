@@ -974,7 +974,7 @@ function ResultWorkspace({
                 </div>
 
                 {selectedFile.type === "pdb" ? (
-                  <PdbViewer lang={lang} pdbText={demoPdbContent} fileName={selectedFile.name} />
+                  <PdbViewer lang={lang} pdbText={demoPdbContent} />
                 ) : selectedFile.type === "csv" ? (
                   <div className="overflow-hidden rounded-[18px] border border-slate-200">
                     <div className="overflow-x-auto">
@@ -1383,6 +1383,7 @@ export default function Home() {
     setWorkflowCompleted(false);
     setActiveView("running");
     setSideTab("plan");
+    setComposerValue("");
   };
 
   const handleNewConversation = () => {
