@@ -337,6 +337,8 @@ const copy = {
       "以下是你应该如何阅读此表格：重点关注四列。较高的 test_r2_mean 意味着更好的回归拟合，较高的 test_spearman_mean 意味着更好的排名一致性，较低的 test_mse_mean 意味着较低的预测误差，而较高的 test_pearson_mean 意味着更强的线性一致性。",
     finalSummaryOutcome:
       "对于此演示页面，推荐文本固定为 all_ml_evaluation_results_stage2.csv 中的当前排名结果。AI 结论：任务完成。模型评估结果推荐使用 target_colocalization、KD_arm1_nM 与 XGBoost 模型的组合。",
+    workflowRunningLabel: "工作流运行中",
+    workflowRunningFallback: "系统正在按计划推进分析步骤，完成后将在此处追加最终总结。",
     chartCaption: "示意图：关键特征贡献或相关性结果预览。",
     imageSummary: "图像结果摘要",
     imageSummaryBullets: [
@@ -400,6 +402,8 @@ const copy = {
       "Here is how you should read this table: focus on four columns. Higher test_r2_mean means better regression fit, higher test_spearman_mean means better ranking consistency, lower test_mse_mean means lower prediction error, and higher test_pearson_mean means stronger linear agreement.",
     finalSummaryOutcome:
       "For this demo page, the recommendation text is fixed to the current ranked result in all_ml_evaluation_results_stage2.csv. AI conclusion: task completed. The model-evaluation result recommends the combination of target_colocalization, KD_arm1_nM, and the XGBoost model.",
+    workflowRunningLabel: "Workflow running",
+    workflowRunningFallback: "The system is advancing the plan step by step and will append the final summary here when all stages are complete.",
     chartCaption: "Illustration: preview of key feature contribution or correlation findings.",
     imageSummary: "Image result summary",
     imageSummaryBullets: [
@@ -764,14 +768,34 @@ function RunningWorkspace({
   lang,
   prompt,
   onPromptChange,
+  steps,
+  workflowCompleted,
   compact = false,
 }: {
   lang: Lang;
   prompt: string;
   onPromptChange: (value: string) => void;
+  steps: PlanStep[];
+  workflowCompleted: boolean;
   compact?: boolean;
 }) {
   const text = copy[lang];
+  const currentRunningStep = steps.find((step) => step.status === "running");
+  const runtimeMessages: RunningMessage[] = workflowCompleted
+    ? [
+        ...runningMessages,
+        {
+          role: "agent",
+          content: l(text.finalSummaryBody, text.finalSummaryBody),
+          time: "18:31",
+        },
+        {
+          role: "agent",
+          content: l(text.finalSummaryOutcome, text.finalSummaryOutcome),
+          time: "18:31",
+        },
+      ]
+    : runningMessages;
 
   return (
     <section className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
@@ -784,7 +808,7 @@ function RunningWorkspace({
 
       <div className={`flex-1 overflow-y-auto ${compact ? "px-4 py-4" : "px-6 py-6"}`}>
         <div className="space-y-4">
-          {runningMessages.map((message, index) => {
+          {runtimeMessages.map((message, index) => {
             const isUser = message.role === "user";
             return (
               <div key={`${message.role}-${index}`} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -802,6 +826,21 @@ function RunningWorkspace({
                   ) : null}
                   <p>{pick(lang, message.content)}</p>
                   <p className={`mt-2 text-[10px] ${isUser ? "text-white/75" : "text-slate-400"}`}>{message.time}</p>
+                  {!isUser && index === 1 && !workflowCompleted ? (
+                    <div className="mt-3 rounded-[16px] border border-[rgba(255,201,151,0.38)] bg-[rgba(255,201,151,0.16)] px-3 py-2.5 text-[#8a5216]">
+                      <div className="flex items-start gap-2">
+                        <CircleDashed className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
+                        <div>
+                          <p className="text-[11px] font-semibold">{text.workflowRunningLabel}</p>
+                          <p className="mt-1 text-[11px] leading-5 text-[#8a5216]">
+                            {currentRunningStep
+                              ? `${pick(lang, currentRunningStep.title)} · ${pick(lang, currentRunningStep.detail)}`
+                              : text.workflowRunningFallback}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             );
@@ -1012,7 +1051,6 @@ function SidePanel({
   view,
   sideTab,
   steps,
-  showFinalSummary,
   selectedFileId,
   selectedFileIds,
   searchQuery,
@@ -1027,7 +1065,6 @@ function SidePanel({
   view: ViewMode;
   sideTab: SideTab;
   steps: PlanStep[];
-  showFinalSummary: boolean;
   selectedFileId: string;
   selectedFileIds: string[];
   searchQuery: string;
@@ -1142,15 +1179,6 @@ function SidePanel({
                 })}
               </div>
 
-              {showFinalSummary ? (
-                <div className="mt-4 rounded-[18px] border border-[rgba(23,36,216,0.12)] bg-[linear-gradient(180deg,rgba(245,247,255,0.96),rgba(255,255,255,0.98))] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#6b76d8]">{text.finalSummaryTitle}</p>
-                  <p className="mt-2 text-[12px] leading-6 text-slate-600">{text.finalSummaryBody}</p>
-                  <p className="mt-3 rounded-[14px] border border-[rgba(23,36,216,0.08)] bg-white/85 px-3 py-3 text-[12px] leading-6 text-[#070261]">
-                    {text.finalSummaryOutcome}
-                  </p>
-                </div>
-              ) : null}
             </div>
           )
         ) : showEmpty ? (
@@ -1448,7 +1476,14 @@ export default function Home() {
               onStart={handleStart}
             />
           ) : (
-            <RunningWorkspace lang={lang} prompt={composerValue} onPromptChange={setComposerValue} compact={activeView === "result"} />
+            <RunningWorkspace
+              lang={lang}
+              prompt={composerValue}
+              onPromptChange={setComposerValue}
+              steps={runtimeSteps}
+              workflowCompleted={workflowCompleted}
+              compact={activeView === "result"}
+            />
           )}
 
           {activeView === "result" ? (
@@ -1468,7 +1503,6 @@ export default function Home() {
               view={activeView}
               sideTab={sideTab}
               steps={runtimeSteps}
-              showFinalSummary={workflowCompleted}
               selectedFileId={selectedFileId}
               selectedFileIds={selectedFileIds}
               searchQuery={searchQuery}
