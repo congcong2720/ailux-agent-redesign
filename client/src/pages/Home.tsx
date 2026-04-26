@@ -80,14 +80,21 @@ const pick = (lang: Lang, value: LocalizedText) => value[lang];
 
 const historyTasks: HistoryTask[] = [
   { id: "draft", title: l("新对话", "New conversation"), meta: l("创建任务", "Create task"), isDraft: true },
-  { id: "t1", title: l("双抗内吞功能预测模型", "Bispecific endocytosis prediction"), meta: l("当前任务", "Current task") },
+  {
+    id: "t1",
+    title: l("内化预测建模工作流程", "Internalization Predictive Modeling Workflow"),
+    meta: l("当前任务", "Current task"),
+  },
   { id: "t2", title: l("内吞特征关联分析", "Endocytosis feature analysis"), meta: l("3 分钟前", "3 min ago") },
   { id: "t3", title: l("EGFR 抗体优化", "EGFR antibody optimization"), meta: l("昨天 18:20", "Yesterday 18:20") },
   { id: "t4", title: l("CDR 区域内吞影响评估", "CDR region impact assessment"), meta: l("04-12 14:32", "04-12 14:32") },
 ];
 
 const recommendedPrompts = [
-  l("上传实验数据，挖掘双表位双抗内吞相关特征", "Upload experimental data and identify features related to bispecific endocytosis."),
+  l(
+    "基于输入的实验数据，分析与双表位抗体内化（内吞作用）相关的特征。设计并构建一个预测模型，对这种内化活性进行评分。",
+    "Based on input experimental data, analyze the features correlated with biparatopic antibody internalization (endocytosis). Design and build a predictive model to score this internalization activity.",
+  ),
   l("给我一条 DLL3 双抗功能预测的固定分析流程，并说明每步输出", "Give me a fixed DLL3 bispecific analysis workflow and explain the output of each step."),
   l("输入 PDB 与 CSV 后，帮我生成结构、特征和结果解释报告", "After I provide PDB and CSV files, generate a structure, feature, and result interpretation report."),
 ];
@@ -96,24 +103,24 @@ const runningMessages: RunningMessage[] = [
   {
     role: "user",
     content: l(
-      "现在模拟一个流程，给你实验数据，分析双表位双抗内吞功能与哪些特征有关，设计并构建一个针对双抗内吞功能的预测模型。",
-      "Please simulate a workflow: given experimental data, analyze which features affect bispecific endocytosis and build a prediction model for endocytosis performance.",
+      "基于输入的实验数据，分析与双表位抗体内化（内吞作用）相关的特征。设计并构建一个预测模型，对这种内化活性进行评分。",
+      "Based on input experimental data, analyze the features correlated with biparatopic antibody internalization (endocytosis). Design and build a predictive model to score this internalization activity.",
     ),
     time: "18:29",
   },
   {
     role: "agent",
     content: l(
-      "好的，我将按照固定工作流完成数据生成、EDA、特征重要性分析、预测建模和生物学解释，并把中间结果沉淀到右侧 Results 中。",
-      "Understood. I will follow the standard workflow for data generation, EDA, feature importance analysis, predictive modeling, and biological interpretation, while writing intermediate outputs into the Results panel.",
+      "启动内部化预测建模工作流程。我将从输入数据中提取结构证据、界面表征、特征计算和特征选择输出、可解释性工件以及预测模型评估结果。",
+      "Starting the internalization predictive-modeling workflow. I will surface structure evidence, interface characterization, feature-calculation and feature-selection outputs, explainability artifacts, and predictive model evaluation results from the input data.",
     ),
     time: "18:29",
   },
   {
     role: "agent",
     content: l(
-      "当前正在执行探索性数据分析（EDA），已确认 KD 与内吞率、靶点共定位与内吞率存在显著关系，下一步会进入关键特征排序。",
-      "I am currently running exploratory data analysis (EDA). We have confirmed meaningful relationships between KD, target colocalization, and endocytosis rate. The next step is feature ranking.",
+      "工作流已建立数据摄取上下文，并为下游分析准备了带标签的建模输入。",
+      "The workflow has established data-intake context and prepared labeled modeling inputs for downstream analysis.",
     ),
     time: "18:30",
   },
@@ -122,51 +129,92 @@ const runningMessages: RunningMessage[] = [
 const runningSteps: PlanStep[] = [
   {
     id: "step-1",
-    title: l("生成模拟实验数据集", "Generate simulated dataset"),
-    detail: l("生成 150 条双抗分子记录，覆盖靶点生物学、结合力学和结构特征。", "Generate 150 bispecific records covering target biology, binding kinetics, and structural features."),
-    duration: "4s",
+    title: l("数据摄取与准备", "Data Intake And Preparation"),
+    detail: l(
+      "加载记录的证据包，建立数据摄取上下文，并为下游分析准备带标签的建模输入。",
+      "Load the recorded evidence bundle, establish data-intake context, and prepare labeled modeling inputs for downstream analysis.",
+    ),
+    duration: "12s",
     status: "done",
-    summary: l("已产出结构化数据集与概览统计。", "Structured dataset and summary statistics are ready."),
+    summary: l(
+      "工作流已建立数据摄取上下文，并为下游分析准备了带标签的建模输入。",
+      "The workflow has established data-intake context and prepared labeled modeling inputs for downstream analysis.",
+    ),
   },
   {
     id: "step-2",
-    title: l("探索性数据分析（EDA）", "Exploratory data analysis (EDA)"),
-    detail: l("分析特征分布、相关矩阵、离群点与内吞率之间的关系。", "Analyze feature distributions, correlation matrices, outliers, and their relationship with endocytosis rate."),
-    duration: "19s",
-    status: "running",
-    summary: l("正在写入分布图、热图与关键发现摘要。", "Writing distributions, heatmaps, and key findings now."),
+    title: l("结构预测", "Structure Prediction"),
+    detail: l(
+      "关联源 PDB 文件并生成 Molstar 结构视图，准备结构证据。",
+      "Link the source PDB file, generate the Molstar structure view, and prepare structure evidence.",
+    ),
+    duration: "26s",
+    status: "done",
+    summary: l(
+      "结构证据已准备就绪。工作流程已关联源 PDB 文件并生成了 Molstar 结构视图。",
+      "Structure evidence is ready. The workflow has linked the source PDB file and generated the Molstar structure view.",
+    ),
   },
   {
     id: "step-3",
-    title: l("特征重要性分析", "Feature importance analysis"),
-    detail: l("使用 SHAP 与随机森林重要性识别关键预测因子。", "Use SHAP and random forest importance to identify key predictive factors."),
-    duration: "32s",
-    status: "waiting",
-    summary: l("等待上一步完成后启动。", "Waiting for the previous step to finish."),
+    title: l("界面表征", "Interface Characterization"),
+    detail: l(
+      "从 interface.csv 加载接口定义并渲染界面表征结果。",
+      "Load interface definitions from interface.csv and render interface characterization.",
+    ),
+    duration: "18s",
+    status: "done",
+    summary: l(
+      "接口定义已从 interface.csv 加载，接口特征正在渲染中。",
+      "Interface definition has been loaded from interface.csv, and interface characterization is being rendered.",
+    ),
   },
   {
     id: "step-4",
-    title: l("构建预测模型", "Build prediction models"),
-    detail: l("比较 XGBoost、Random Forest 与 SVM 的预测性能。", "Compare predictive performance across XGBoost, Random Forest, and SVM."),
-    duration: "1m27s",
-    status: "waiting",
-    summary: l("将输出模型对比表与最佳模型说明。", "A model comparison table and best-model note will be generated."),
+    title: l("特征计算", "Feature Calculation"),
+    detail: l(
+      "计算模型特征，并从组合特征源中组装紧凑分析表。",
+      "Calculate model features and assemble the compact analysis table from the combined feature source.",
+    ),
+    duration: "31s",
+    status: "running",
+    summary: l(
+      "工作流正在计算模型特征，并从组合特征源中组装紧凑分析表。",
+      "The workflow is calculating model features and assembling the compact analysis table from the combined feature source.",
+    ),
   },
   {
     id: "step-5",
-    title: l("模型评估与可视化", "Model evaluation and visualization"),
-    detail: l("展示 R²、RMSE、ROC 及学习曲线等关键评估结果。", "Present key metrics including R², RMSE, ROC, and learning curves."),
-    duration: "25s",
+    title: l("相关性分析与特征选择", "Correlation Analysis And Feature Selection"),
+    detail: l(
+      "执行相关性分析与特征选择，输出前 k 个重要性图和转换后的重要性表。",
+      "Run correlation analysis and feature selection, then output the top-k importance plot and transformed importance table.",
+    ),
+    duration: "24s",
     status: "waiting",
-    summary: l("输出图表文件与结构化结果摘要。", "Charts and structured summaries will be produced."),
+    summary: l("等待特征计算完成后启动。", "Waiting for feature calculation to finish."),
   },
   {
     id: "step-6",
-    title: l("生物学解释与总结", "Biological interpretation and summary"),
-    detail: l("汇总关键特征和设计建议，形成最终结论。", "Summarize key features and design suggestions into a final conclusion."),
-    duration: "16s",
+    title: l("模型可解释性", "Model Explainability"),
+    detail: l(
+      "加载可解释性模型工件并记录可解释性输出，供后续展示和解读。",
+      "Load explainability model artifacts and record explainability outputs for downstream display and interpretation.",
+    ),
+    duration: "17s",
     status: "waiting",
-    summary: l("最终输出面向科研用户的解释性结论。", "Deliver a final interpretive conclusion for research users."),
+    summary: l("等待相关性分析输出后启动。", "Waiting for correlation-analysis outputs."),
+  },
+  {
+    id: "step-7",
+    title: l("预测模型评估", "Predictive Model Evaluation"),
+    detail: l(
+      "通过将 psc 映射为标签字段、将 ranking_score 映射为预测字段来评估预测结果。",
+      "Evaluate predictions by mapping psc as the label field and ranking_score as the prediction field.",
+    ),
+    duration: "22s",
+    status: "waiting",
+    summary: l("将输出预测值与观测值散点图和残差分布图。", "Predicted-vs-observed scatter and residual distribution outputs will be generated."),
   },
 ];
 
@@ -254,8 +302,8 @@ const copy = {
     newTaskPlaceholder: "描述你的目标，或上传数据后提问…",
     uploadFile: "上传文件",
     send: "发送",
-    conversation: "对话",
-    runningTitle: "双抗内吞功能预测模型",
+    conversation: "聊天",
+    runningTitle: "内化预测建模工作流程",
     runningPlaceholder: "继续向 Agent 追问，例如：请解释为什么共定位评分是最高贡献特征。",
     fileTabHint: "从右侧结果文件列表打开一个文件后，会在这里显示当前文件标签。",
     noOpenedFile:
@@ -274,7 +322,7 @@ const copy = {
       "连接区柔性在中等区间时，模型表现更稳定。",
     ],
     plan: "计划",
-    results: "结果文件",
+    results: "结果",
     waitingPlan: "等待生成计划",
     waitingPlanBody: "首条消息发送成功后，右侧会生成当前任务对应的步骤计划、进度条和每一步的执行摘要。当前新任务态不会展示旧任务数据。",
     overallProgress: "整体进度",
@@ -311,8 +359,8 @@ const copy = {
     newTaskPlaceholder: "Describe your goal, or upload files and ask a question…",
     uploadFile: "Upload file",
     send: "Send",
-    conversation: "Conversation",
-    runningTitle: "Bispecific endocytosis prediction",
+    conversation: "Chat",
+    runningTitle: "Internalization Predictive Modeling Workflow",
     runningPlaceholder: "Ask a follow-up, for example: explain why target colocalization is the top contributing feature.",
     fileTabHint: "When you open a file from the right-side results list, its tab will appear here.",
     noOpenedFile:
