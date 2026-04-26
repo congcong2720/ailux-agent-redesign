@@ -48,6 +48,7 @@ type LocalizedText = {
 type PlanStep = {
   id: string;
   title: LocalizedText;
+  waiting: LocalizedText;
   detail: LocalizedText;
   duration: string;
   status: StepStatus;
@@ -116,26 +117,19 @@ const runningMessages: RunningMessage[] = [
     ),
     time: "18:29",
   },
-  {
-    role: "agent",
-    content: l(
-      "工作流已建立数据摄取上下文，并为下游分析准备了带标签的建模输入。",
-      "The workflow has established data-intake context and prepared labeled modeling inputs for downstream analysis.",
-    ),
-    time: "18:30",
-  },
 ];
 
 const runningSteps: PlanStep[] = [
   {
     id: "step-1",
     title: l("数据摄取与准备", "Data Intake And Preparation"),
+    waiting: l("等待工作流启动。", "Waiting for the workflow to start."),
     detail: l(
-      "加载记录的证据包，建立数据摄取上下文，并为下游分析准备带标签的建模输入。",
-      "Load the recorded evidence bundle, establish data-intake context, and prepare labeled modeling inputs for downstream analysis.",
+      "页面正在加载记录的证据包，并初始化内部化预测建模工作流程。",
+      "The page is loading the recorded evidence bundle and initializing the internalization predictive-modeling workflow.",
     ),
     duration: "12s",
-    status: "done",
+    status: "waiting",
     summary: l(
       "工作流已建立数据摄取上下文，并为下游分析准备了带标签的建模输入。",
       "The workflow has established data-intake context and prepared labeled modeling inputs for downstream analysis.",
@@ -144,12 +138,13 @@ const runningSteps: PlanStep[] = [
   {
     id: "step-2",
     title: l("结构预测", "Structure Prediction"),
+    waiting: l("等待数据摄取与准备完成后启动。", "Waiting for data intake and preparation to finish."),
     detail: l(
-      "关联源 PDB 文件并生成 Molstar 结构视图，准备结构证据。",
-      "Link the source PDB file, generate the Molstar structure view, and prepare structure evidence.",
+      "工作流正在关联源 PDB 文件并生成 Molstar 结构视图。",
+      "The workflow is linking the source PDB file and generating the Molstar structure view.",
     ),
     duration: "26s",
-    status: "done",
+    status: "waiting",
     summary: l(
       "结构证据已准备就绪。工作流程已关联源 PDB 文件并生成了 Molstar 结构视图。",
       "Structure evidence is ready. The workflow has linked the source PDB file and generated the Molstar structure view.",
@@ -158,12 +153,13 @@ const runningSteps: PlanStep[] = [
   {
     id: "step-3",
     title: l("界面表征", "Interface Characterization"),
+    waiting: l("等待结构预测完成后启动。", "Waiting for structure prediction to finish."),
     detail: l(
-      "从 interface.csv 加载接口定义并渲染界面表征结果。",
-      "Load interface definitions from interface.csv and render interface characterization.",
+      "工作流正在从 interface.csv 加载接口定义，并渲染界面表征结果。",
+      "The workflow is loading interface definitions from interface.csv and rendering interface characterization.",
     ),
     duration: "18s",
-    status: "done",
+    status: "waiting",
     summary: l(
       "接口定义已从 interface.csv 加载，接口特征正在渲染中。",
       "Interface definition has been loaded from interface.csv, and interface characterization is being rendered.",
@@ -172,49 +168,62 @@ const runningSteps: PlanStep[] = [
   {
     id: "step-4",
     title: l("特征计算", "Feature Calculation"),
+    waiting: l("等待界面表征完成后启动。", "Waiting for interface characterization to finish."),
     detail: l(
-      "计算模型特征，并从组合特征源中组装紧凑分析表。",
-      "Calculate model features and assemble the compact analysis table from the combined feature source.",
-    ),
-    duration: "31s",
-    status: "running",
-    summary: l(
       "工作流正在计算模型特征，并从组合特征源中组装紧凑分析表。",
       "The workflow is calculating model features and assembling the compact analysis table from the combined feature source.",
+    ),
+    duration: "31s",
+    status: "waiting",
+    summary: l(
+      "相关性分析和特征选择的输出已准备好，包括前 k 个重要性图和转换后的重要性表。",
+      "Correlation analysis and feature-selection outputs are ready, including the top-k importance plot and transformed importance table.",
     ),
   },
   {
     id: "step-5",
     title: l("相关性分析与特征选择", "Correlation Analysis And Feature Selection"),
+    waiting: l("等待特征计算完成后启动。", "Waiting for feature calculation to finish."),
     detail: l(
-      "执行相关性分析与特征选择，输出前 k 个重要性图和转换后的重要性表。",
-      "Run correlation analysis and feature selection, then output the top-k importance plot and transformed importance table.",
+      "可解释性模型工件已加载，可解释性输出正在被记录以便展示。",
+      "Explainability model artifacts are loaded, and explainability outputs are being recorded for display.",
     ),
     duration: "24s",
     status: "waiting",
-    summary: l("等待特征计算完成后启动。", "Waiting for feature calculation to finish."),
+    summary: l(
+      "模型可解释性已就绪。模型工件元数据和可解释性状态在本阶段可用。",
+      "Model explainability is ready. Model artifact metadata and explainability status are available in this stage.",
+    ),
   },
   {
     id: "step-6",
     title: l("模型可解释性", "Model Explainability"),
+    waiting: l("等待相关性分析与特征选择完成后启动。", "Waiting for correlation analysis and feature selection to finish."),
     detail: l(
-      "加载可解释性模型工件并记录可解释性输出，供后续展示和解读。",
-      "Load explainability model artifacts and record explainability outputs for downstream display and interpretation.",
+      "该工作流通过将 psc 映射为标签字段、将 ranking_score 映射为预测字段来评估预测结果。",
+      "The workflow is evaluating predictions by mapping psc as the label field and ranking_score as the prediction field.",
     ),
     duration: "17s",
     status: "waiting",
-    summary: l("等待相关性分析输出后启动。", "Waiting for correlation-analysis outputs."),
+    summary: l(
+      "预测模型评估已完成，输出预测值与观测值散点图和残差分布图。",
+      "Predictive model evaluation is ready with predicted-vs-observed scatter and residual distribution outputs.",
+    ),
   },
   {
     id: "step-7",
     title: l("预测模型评估", "Predictive Model Evaluation"),
+    waiting: l("等待模型可解释性完成后启动。", "Waiting for model explainability to finish."),
     detail: l(
-      "通过将 psc 映射为标签字段、将 ranking_score 映射为预测字段来评估预测结果。",
-      "Evaluate predictions by mapping psc as the label field and ranking_score as the prediction field.",
+      "正在汇总命中表与模型比较结果，生成最终运行总结。",
+      "The workflow is consolidating the hit table and model-comparison outputs to generate the final run summary.",
     ),
     duration: "22s",
     status: "waiting",
-    summary: l("将输出预测值与观测值散点图和残差分布图。", "Predicted-vs-observed scatter and residual distribution outputs will be generated."),
+    summary: l(
+      "运行总结结果：命中表确认了排名靠前的内化特征以及模型比较中表现最佳的 AI 模型。",
+      "Run summary result: the hit table confirms the top-ranked internalization features and the best-performing AI model from model comparison.",
+    ),
   },
 ];
 
@@ -280,6 +289,14 @@ const statusStyles: Record<StepStatus, { icon: string }> = {
   },
 };
 
+const runningStepDurationsMs = [1400, 1500, 1400, 1700, 1500, 1600, 1600];
+
+const createRuntimeSteps = (): PlanStep[] =>
+  runningSteps.map((step, index): PlanStep => ({
+    ...step,
+    status: index === 0 ? "running" : "waiting",
+  }));
+
 const copy = {
   zh: {
     platformSubtitle: "智能体平台",
@@ -313,7 +330,13 @@ const copy = {
     tableFooter: "仅展示前 100 行。下载文件可查看完整数据。",
     modelSummary: "模型比较摘要",
     conclusion: "结论建议",
-    conclusionBody: "推荐默认展示 XGBoost 作为最佳模型，并在结果页同步展示可解释特征与模型性能对比，帮助业务用户快速理解选择依据。",
+    conclusionBody:
+      "以下是你应该如何阅读此表格：重点关注四列。较高的 test_r2_mean 意味着更好的回归拟合，较高的 test_spearman_mean 意味着更好的排名一致性，较低的 test_mse_mean 意味着较低的预测误差，而较高的 test_pearson_mean 意味着更强的线性一致性。",
+    finalSummaryTitle: "最终总结",
+    finalSummaryBody:
+      "以下是你应该如何阅读此表格：重点关注四列。较高的 test_r2_mean 意味着更好的回归拟合，较高的 test_spearman_mean 意味着更好的排名一致性，较低的 test_mse_mean 意味着较低的预测误差，而较高的 test_pearson_mean 意味着更强的线性一致性。",
+    finalSummaryOutcome:
+      "对于此演示页面，推荐文本固定为 all_ml_evaluation_results_stage2.csv 中的当前排名结果。AI 结论：任务完成。模型评估结果推荐使用 target_colocalization、KD_arm1_nM 与 XGBoost 模型的组合。",
     chartCaption: "示意图：关键特征贡献或相关性结果预览。",
     imageSummary: "图像结果摘要",
     imageSummaryBullets: [
@@ -371,7 +394,12 @@ const copy = {
     modelSummary: "Model comparison summary",
     conclusion: "Recommendation",
     conclusionBody:
-      "Recommend surfacing XGBoost as the default best model and pairing it with explainable features plus performance comparisons so users can understand the selection faster.",
+      "Here is how you should read this table: focus on four columns. Higher test_r2_mean means better regression fit, higher test_spearman_mean means better ranking consistency, lower test_mse_mean means lower prediction error, and higher test_pearson_mean means stronger linear agreement.",
+    finalSummaryTitle: "Final summary",
+    finalSummaryBody:
+      "Here is how you should read this table: focus on four columns. Higher test_r2_mean means better regression fit, higher test_spearman_mean means better ranking consistency, lower test_mse_mean means lower prediction error, and higher test_pearson_mean means stronger linear agreement.",
+    finalSummaryOutcome:
+      "For this demo page, the recommendation text is fixed to the current ranked result in all_ml_evaluation_results_stage2.csv. AI conclusion: task completed. The model-evaluation result recommends the combination of target_colocalization, KD_arm1_nM, and the XGBoost model.",
     chartCaption: "Illustration: preview of key feature contribution or correlation findings.",
     imageSummary: "Image result summary",
     imageSummaryBullets: [
@@ -983,6 +1011,8 @@ function SidePanel({
   lang,
   view,
   sideTab,
+  steps,
+  showFinalSummary,
   selectedFileId,
   selectedFileIds,
   searchQuery,
@@ -996,6 +1026,8 @@ function SidePanel({
   lang: Lang;
   view: ViewMode;
   sideTab: SideTab;
+  steps: PlanStep[];
+  showFinalSummary: boolean;
   selectedFileId: string;
   selectedFileIds: string[];
   searchQuery: string;
@@ -1008,7 +1040,11 @@ function SidePanel({
 }) {
   const text = copy[lang];
   const showEmpty = view === "new";
-  const progressPercent = view === "result" ? 100 : 42;
+  const progressPercent = useMemo(() => {
+    const doneCount = steps.filter((step) => step.status === "done").length;
+    const hasRunning = steps.some((step) => step.status === "running");
+    return Math.round(((doneCount + (hasRunning ? 0.55 : 0)) / steps.length) * 100);
+  }, [steps]);
 
   const filteredFiles = useMemo(() => {
     const keyword = searchQuery.trim().toLowerCase();
@@ -1072,9 +1108,21 @@ function SidePanel({
                 </div>
               </div>
               <div className="space-y-3">
-                {runningSteps.map((step) => {
-                  const style = statusStyles[view === "result" && step.status === "waiting" ? "done" : step.status];
-                  const iconDone = view === "result" || step.status === "done";
+                {steps.map((step) => {
+                  const style = statusStyles[step.status];
+                  const iconDone = step.status === "done";
+                  const message =
+                    step.status === "done"
+                      ? pick(lang, step.summary)
+                      : step.status === "running"
+                        ? pick(lang, step.detail)
+                        : pick(lang, step.waiting);
+                  const messageTone =
+                    step.status === "running"
+                      ? "text-[#8a5216]"
+                      : step.status === "done"
+                        ? "text-slate-500"
+                        : "text-slate-400";
                   return (
                     <article key={step.id} className="rounded-[18px] border border-slate-100 bg-slate-50/90 p-3.5">
                       <div className="flex items-start gap-3">
@@ -1086,13 +1134,23 @@ function SidePanel({
                             <p className="text-[13px] font-semibold text-slate-800">{pick(lang, step.title)}</p>
                             <span className="text-[11px] text-slate-400">{step.duration}</span>
                           </div>
-                          <p className="mt-1 text-[11px] leading-5 text-slate-500">{pick(lang, step.summary)}</p>
+                          <p className={`mt-1 text-[11px] leading-5 ${messageTone}`}>{message}</p>
                         </div>
                       </div>
                     </article>
                   );
                 })}
               </div>
+
+              {showFinalSummary ? (
+                <div className="mt-4 rounded-[18px] border border-[rgba(23,36,216,0.12)] bg-[linear-gradient(180deg,rgba(245,247,255,0.96),rgba(255,255,255,0.98))] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#6b76d8]">{text.finalSummaryTitle}</p>
+                  <p className="mt-2 text-[12px] leading-6 text-slate-600">{text.finalSummaryBody}</p>
+                  <p className="mt-3 rounded-[14px] border border-[rgba(23,36,216,0.08)] bg-white/85 px-3 py-3 text-[12px] leading-6 text-[#070261]">
+                    {text.finalSummaryOutcome}
+                  </p>
+                </div>
+              ) : null}
             </div>
           )
         ) : showEmpty ? (
@@ -1192,7 +1250,12 @@ export default function Home() {
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [runtimeSteps, setRuntimeSteps] = useState<PlanStep[]>(() =>
+    runningSteps.map((step): PlanStep => ({ ...step, status: "waiting" })),
+  );
+  const [workflowCompleted, setWorkflowCompleted] = useState(false);
   const menuBoundaryRef = useRef<HTMLDivElement | null>(null);
+  const workflowTimerRef = useRef<number | null>(null);
   const text = copy[lang];
 
   useEffect(() => {
@@ -1217,6 +1280,42 @@ export default function Home() {
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
 
+  useEffect(() => {
+    if (activeView === "new" || workflowCompleted) {
+      if (workflowTimerRef.current) {
+        window.clearTimeout(workflowTimerRef.current);
+        workflowTimerRef.current = null;
+      }
+      return;
+    }
+
+    const currentStepIndex = runtimeSteps.findIndex((step) => step.status === "running");
+    if (currentStepIndex === -1) return;
+
+    workflowTimerRef.current = window.setTimeout(() => {
+      const isLastStep = currentStepIndex === runtimeSteps.length - 1;
+      setRuntimeSteps((current) =>
+        current.map((step, index) => {
+          if (index < currentStepIndex) return { ...step, status: "done" };
+          if (index === currentStepIndex) return { ...step, status: "done" };
+          if (!isLastStep && index === currentStepIndex + 1) return { ...step, status: "running" };
+          return { ...step, status: step.status === "done" ? "done" : "waiting" };
+        }),
+      );
+
+      if (isLastStep) {
+        setWorkflowCompleted(true);
+      }
+    }, runningStepDurationsMs[currentStepIndex] ?? 1500);
+
+    return () => {
+      if (workflowTimerRef.current) {
+        window.clearTimeout(workflowTimerRef.current);
+        workflowTimerRef.current = null;
+      }
+    };
+  }, [activeView, runtimeSteps, workflowCompleted]);
+
   const openedFiles = openedFileIds
     .map((id) => resultFiles.find((file) => file.id === id))
     .filter((file): file is ResultFile => Boolean(file));
@@ -1227,11 +1326,19 @@ export default function Home() {
   };
 
   const handleStart = () => {
+    setRuntimeSteps(createRuntimeSteps());
+    setWorkflowCompleted(false);
     setActiveView("running");
     setSideTab("plan");
   };
 
   const handleNewConversation = () => {
+    if (workflowTimerRef.current) {
+      window.clearTimeout(workflowTimerRef.current);
+      workflowTimerRef.current = null;
+    }
+    setRuntimeSteps(runningSteps.map((step): PlanStep => ({ ...step, status: "waiting" })));
+    setWorkflowCompleted(false);
     setActiveView("new");
     setSideTab("plan");
     setComposerValue("");
@@ -1360,6 +1467,8 @@ export default function Home() {
               lang={lang}
               view={activeView}
               sideTab={sideTab}
+              steps={runtimeSteps}
+              showFinalSummary={workflowCompleted}
               selectedFileId={selectedFileId}
               selectedFileIds={selectedFileIds}
               searchQuery={searchQuery}
