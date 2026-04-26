@@ -347,12 +347,12 @@ const copy = {
     modelSummary: "模型比较摘要",
     conclusion: "结论建议",
     conclusionBody:
-      "以下是你应该如何阅读此表格：重点关注四列。较高的 test_r2_mean 意味着更好的回归拟合，较高的 test_spearman_mean 意味着更好的排名一致性，较低的 test_mse_mean 意味着较低的预测误差，而较高的 test_pearson_mean 意味着更强的线性一致性。",
+      "请重点关注以下 4 项关键指标：\ntest_r2_mean：越高说明模型回归拟合效果越好\ntest_spearman_mean：越高说明模型对结果的排名预测越准确\ntest_mse_mean：越低说明模型的预测误差越小\ntest_pearson_mean：越高说明模型预测值与真实值的线性相关性越强",
     finalSummaryTitle: "最终总结",
     finalSummaryBody:
-      "以下是你应该如何阅读此表格：重点关注四列。较高的 test_r2_mean 意味着更好的回归拟合，较高的 test_spearman_mean 意味着更好的排名一致性，较低的 test_mse_mean 意味着较低的预测误差，而较高的 test_pearson_mean 意味着更强的线性一致性。",
+      "请重点关注以下 4 项关键指标：\ntest_r2_mean：越高说明模型回归拟合效果越好\ntest_spearman_mean：越高说明模型对结果的排名预测越准确\ntest_mse_mean：越低说明模型的预测误差越小\ntest_pearson_mean：越高说明模型预测值与真实值的线性相关性越强",
     finalSummaryOutcome:
-      "对于此演示页面，推荐文本固定为 all_ml_evaluation_results_stage2.csv 中的当前排名结果。AI 结论：任务完成。模型评估结果推荐使用 target_colocalization、KD_arm1_nM 与 XGBoost 模型的组合。",
+      "推荐文本固定为 all_ml_evaluation_results_stage2.csv 中的当前排名结果。AI 结论：任务完成。模型评估结果推荐使用 target_colocalization、KD_arm1_nM 与 XGBoost 模型的组合。",
     workflowRunningLabel: "工作流运行中",
     workflowRunningFallback: "系统正在按计划推进分析步骤，完成后将在此处追加最终总结。",
     chartCaption: "示意图：关键特征贡献或相关性结果预览。",
@@ -412,12 +412,12 @@ const copy = {
     modelSummary: "Model comparison summary",
     conclusion: "Recommendation",
     conclusionBody:
-      "Here is how you should read this table: focus on four columns. Higher test_r2_mean means better regression fit, higher test_spearman_mean means better ranking consistency, lower test_mse_mean means lower prediction error, and higher test_pearson_mean means stronger linear agreement.",
+      "Please focus on these 4 key metrics:\ntest_r2_mean: higher values indicate better regression fit\ntest_spearman_mean: higher values indicate more accurate ranking predictions\ntest_mse_mean: lower values indicate smaller prediction errors\ntest_pearson_mean: higher values indicate a stronger linear correlation between predicted and true values",
     finalSummaryTitle: "Final summary",
     finalSummaryBody:
-      "Here is how you should read this table: focus on four columns. Higher test_r2_mean means better regression fit, higher test_spearman_mean means better ranking consistency, lower test_mse_mean means lower prediction error, and higher test_pearson_mean means stronger linear agreement.",
+      "Please focus on these 4 key metrics:\ntest_r2_mean: higher values indicate better regression fit\ntest_spearman_mean: higher values indicate more accurate ranking predictions\ntest_mse_mean: lower values indicate smaller prediction errors\ntest_pearson_mean: higher values indicate a stronger linear correlation between predicted and true values",
     finalSummaryOutcome:
-      "For this demo page, the recommendation text is fixed to the current ranked result in all_ml_evaluation_results_stage2.csv. AI conclusion: task completed. The model-evaluation result recommends the combination of target_colocalization, KD_arm1_nM, and the XGBoost model.",
+      "The recommendation text is fixed to the current ranked result in all_ml_evaluation_results_stage2.csv. AI conclusion: task completed. The model-evaluation result recommends the combination of target_colocalization, KD_arm1_nM, and the XGBoost model.",
     workflowRunningLabel: "Workflow running",
     workflowRunningFallback: "The system is advancing the plan step by step and will append the final summary here when all stages are complete.",
     chartCaption: "Illustration: preview of key feature contribution or correlation findings.",
