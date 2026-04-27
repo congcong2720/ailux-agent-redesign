@@ -114,8 +114,8 @@ const runningMessages: RunningMessage[] = [
   {
     role: "agent",
     content: l(
-      "启动内部化预测建模工作流程。我将从输入数据中提取结构证据、界面表征、特征计算和特征选择输出、可解释性工件以及预测模型评估结果。",
-      "Starting the internalization predictive-modeling workflow. I will surface structure evidence, interface characterization, feature-calculation and feature-selection outputs, explainability artifacts, and predictive model evaluation results from the input data.",
+      "好的，我将基于输入的实验数据，围绕双表位抗体内化活性建立分析与建模流程。\n\n分析计划\n数据摄取与准备\n建立数据摄取上下文，整理实验数据、样本标签和建模所需输入，为后续分析准备标准化数据集。\n\n结构预测\n关联源 PDB 文件，生成 Molstar 结构视图，为抗体结构相关特征分析提供结构证据。\n\n特征计算\n计算与内化活性相关的候选特征，并生成可用于建模的特征矩阵。\n\n相关性分析与特征选择\n分析特征与内化活性的关系，筛选关键特征，并输出重要性图和重要性表。\n\n预测模型评估\n训练并比较多个预测模型，评估模型表现，确认排名靠前的内化特征以及表现最佳的 AI 模型。",
+      "Sure, I will build an analysis and modeling pipeline for biparatopic antibody internalization activity based on the input experimental data.\n\nAnalysis Plan\nData Intake & Preparation\nEstablish data-intake context, organize experimental data, sample labels, and modeling inputs, and prepare a standardized dataset for downstream analysis.\n\nStructure Prediction\nLink the source PDB file and generate a Molstar structure view to provide structural evidence for antibody feature analysis.\n\nFeature Calculation\nCalculate candidate features correlated with internalization activity and generate a feature matrix ready for modeling.\n\nCorrelation Analysis & Feature Selection\nAnalyze the relationship between features and internalization activity, select key features, and output importance plots and tables.\n\nPredictive Model Evaluation\nTrain and compare multiple predictive models, evaluate model performance, and confirm the top-ranked internalization features and the best-performing AI model.",
     ),
     time: "18:29",
   },
@@ -154,28 +154,28 @@ const runningSteps: PlanStep[] = [
   },
   {
     id: "step-3",
-    title: l("界面表征", "Interface Characterization"),
-    waiting: l("等待结构预测完成后启动。", "Waiting for structure prediction to finish."),
-    detail: l(
-      "工作流正在从 interface.csv 加载接口定义，并渲染界面表征结果。",
-      "The workflow is loading interface definitions from interface.csv and rendering interface characterization.",
-    ),
-    duration: "18s",
-    status: "waiting",
-    summary: l(
-      "接口定义已从 interface.csv 加载，接口特征正在渲染中。",
-      "Interface definition has been loaded from interface.csv, and interface characterization is being rendered.",
-    ),
-  },
-  {
-    id: "step-4",
     title: l("特征计算", "Feature Calculation"),
-    waiting: l("等待界面表征完成后启动。", "Waiting for interface characterization to finish."),
+    waiting: l("等待结构预测完成后启动。", "Waiting for structure prediction to finish."),
     detail: l(
       "工作流正在计算模型特征，并从组合特征源中组装紧凑分析表。",
       "The workflow is calculating model features and assembling the compact analysis table from the combined feature source.",
     ),
     duration: "31s",
+    status: "waiting",
+    summary: l(
+      "特征计算已完成，可用于建模的特征矩阵已生成。",
+      "Feature calculation is complete and the feature matrix for modeling has been generated.",
+    ),
+  },
+  {
+    id: "step-4",
+    title: l("相关性分析与特征选择", "Correlation Analysis And Feature Selection"),
+    waiting: l("等待特征计算完成后启动。", "Waiting for feature calculation to finish."),
+    detail: l(
+      "工作流正在分析特征与内化活性的相关性，并筛选关键特征。",
+      "The workflow is analyzing feature correlations with internalization activity and selecting key features.",
+    ),
+    duration: "24s",
     status: "waiting",
     summary: l(
       "相关性分析和特征选择的输出已准备好，包括前 k 个重要性图和转换后的重要性表。",
@@ -184,38 +184,8 @@ const runningSteps: PlanStep[] = [
   },
   {
     id: "step-5",
-    title: l("相关性分析与特征选择", "Correlation Analysis And Feature Selection"),
-    waiting: l("等待特征计算完成后启动。", "Waiting for feature calculation to finish."),
-    detail: l(
-      "可解释性模型工件已加载，可解释性输出正在被记录以便展示。",
-      "Explainability model artifacts are loaded, and explainability outputs are being recorded for display.",
-    ),
-    duration: "24s",
-    status: "waiting",
-    summary: l(
-      "模型可解释性已就绪。模型工件元数据和可解释性状态在本阶段可用。",
-      "Model explainability is ready. Model artifact metadata and explainability status are available in this stage.",
-    ),
-  },
-  {
-    id: "step-6",
-    title: l("模型可解释性", "Model Explainability"),
-    waiting: l("等待相关性分析与特征选择完成后启动。", "Waiting for correlation analysis and feature selection to finish."),
-    detail: l(
-      "该工作流通过将 psc 映射为标签字段、将 ranking_score 映射为预测字段来评估预测结果。",
-      "The workflow is evaluating predictions by mapping psc as the label field and ranking_score as the prediction field.",
-    ),
-    duration: "17s",
-    status: "waiting",
-    summary: l(
-      "预测模型评估已完成，输出预测值与观测值散点图和残差分布图。",
-      "Predictive model evaluation is ready with predicted-vs-observed scatter and residual distribution outputs.",
-    ),
-  },
-  {
-    id: "step-7",
     title: l("预测模型评估", "Predictive Model Evaluation"),
-    waiting: l("等待模型可解释性完成后启动。", "Waiting for model explainability to finish."),
+    waiting: l("等待相关性分析与特征选择完成后启动。", "Waiting for correlation analysis and feature selection to finish."),
     detail: l(
       "正在汇总命中表与模型比较结果，生成最终运行总结。",
       "The workflow is consolidating the hit table and model-comparison outputs to generate the final run summary.",
@@ -241,42 +211,42 @@ const resultFiles: ResultFile[] = [
     id: "interface-definition",
     name: "interface.csv",
     meta: l("接口定义文件", "Interface definition file"),
-    step: l("步骤 3 · 界面表征", "Step 3 · Interface characterization"),
+    step: l("步骤 3 · 特征计算", "Step 3 · Feature calculation"),
     type: "csv",
   },
   {
     id: "feature-importance-table",
     name: "v3_importance_from_mcb008.csv",
     meta: l("特征重要性表", "Feature-importance table"),
-    step: l("步骤 4 · 特征计算", "Step 4 · Feature calculation"),
+    step: l("步骤 4 · 相关性分析与特征选择", "Step 4 · Correlation analysis and feature selection"),
     type: "csv",
   },
   {
     id: "feature-importance-plot",
     name: "importance_topk.png",
     meta: l("特征重要性图", "Feature-importance plot"),
-    step: l("步骤 5 · 相关性分析与特征选择", "Step 5 · Correlation analysis and feature selection"),
+    step: l("步骤 5 · 预测模型评估", "Step 5 · Predictive model evaluation"),
     type: "png",
   },
   {
     id: "hit-table-all-features",
     name: "top10_aug_regression_10nM_importance_analysis_result_all_features_importance.csv",
     meta: l("命中表全特征文件", "Hit-table all-features file"),
-    step: l("步骤 6 · 模型可解释性", "Step 6 · Model explainability"),
+    step: l("步骤 5 · 预测模型评估", "Step 5 · Predictive model evaluation"),
     type: "csv",
   },
   {
     id: "final-model-evaluation-table",
     name: "all_ml_evaluation_results_stage2.csv",
     meta: l("最终模型评估表", "Final model-evaluation table"),
-    step: l("步骤 7 · 预测模型评估", "Step 7 · Predictive model evaluation"),
+    step: l("步骤 5 · 预测模型评估", "Step 5 · Predictive model evaluation"),
     type: "csv",
   },
   {
     id: "evaluation-plot",
     name: "regression_scatter.png",
     meta: l("评估图", "Evaluation plot"),
-    step: l("步骤 7 · 预测模型评估", "Step 7 · Predictive model evaluation"),
+    step: l("步骤 5 · 预测模型评估", "Step 5 · Predictive model evaluation"),
     type: "png",
   },
 ];
@@ -305,7 +275,7 @@ const statusStyles: Record<StepStatus, { icon: string }> = {
   },
 };
 
-const runningStepDurationsMs = [1400, 1500, 1400, 1700, 1500, 1600, 1600];
+const runningStepDurationsMs = [1400, 1500, 1700, 1500, 1600];
 
 const createRuntimeSteps = (): PlanStep[] =>
   runningSteps.map((step, index): PlanStep => ({
