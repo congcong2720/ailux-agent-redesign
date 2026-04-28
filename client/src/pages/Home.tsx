@@ -80,7 +80,7 @@ type RunningMessage = {
 
 const l = (zh: string, en: string): LocalizedText => ({ zh, en });
 const pick = (lang: Lang, value: LocalizedText) => value[lang];
-const MODEL_RANKING_IMAGE_URL = "/manus-storage/ailux-model-ranking-table-compact-v3_6d402bd7.svg";
+const MODEL_RANKING_IMAGE_URL = "/manus-storage/ailux-model-ranking-user-final_84bafec6.png";
 const FEATURE_SCATTER_IMAGE_URL = "/manus-storage/feature_scatter_relationship_2a6adde1.png";
 
 const firstReplyIntro = l(
