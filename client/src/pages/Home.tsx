@@ -80,7 +80,7 @@ type RunningMessage = {
 
 const l = (zh: string, en: string): LocalizedText => ({ zh, en });
 const pick = (lang: Lang, value: LocalizedText) => value[lang];
-const MODEL_RANKING_IMAGE_URL = "/manus-storage/ailux-model-ranking-top5-v2_23be405f.svg";
+const MODEL_RANKING_IMAGE_URL = "/manus-storage/ailux-model-ranking-table-clean_f22a0be9.svg";
 const FEATURE_SCATTER_IMAGE_URL = "/manus-storage/feature_scatter_relationship_2a6adde1.png";
 
 const firstReplyIntro = l(
@@ -598,7 +598,7 @@ function Sidebar({
 
   if (collapsed) {
     return (
-      <aside className="flex min-h-[760px] flex-col items-center rounded-[24px] border border-white/70 bg-white/84 p-3 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
+      <aside className="flex h-full min-h-0 flex-col items-center rounded-[24px] border border-white/70 bg-white/84 p-3 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#161FAD_0%,#848CFE_100%)] text-white shadow-[0_10px_22px_rgba(22,31,173,0.2)]">
           <FlaskConical className="h-5 w-5" />
         </div>
@@ -652,7 +652,7 @@ function Sidebar({
   }
 
   return (
-    <aside className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
+    <aside className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className="mb-5 flex items-center gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#161FAD_0%,#848CFE_100%)] text-white shadow-[0_10px_22px_rgba(22,31,173,0.2)]">
           <FlaskConical className="h-5 w-5" />
@@ -685,7 +685,7 @@ function Sidebar({
         </button>
       </div>
 
-      <div className="flex-1 space-y-2">
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
         {historyTasks
           .filter((task) => !task.isDraft)
           .map((task) => {
@@ -742,8 +742,8 @@ function NewTaskWorkspace({
   const text = copy[lang];
 
   return (
-    <section className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
-      <div className="flex flex-1 flex-col justify-between px-6 py-6">
+    <section className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
+      <div className="flex min-h-0 flex-1 flex-col justify-between px-6 py-6">
         <div>
           <div className="rounded-[24px] border border-[rgba(23,36,216,0.08)] bg-[linear-gradient(180deg,rgba(248,250,255,0.98)_0%,rgba(236,241,255,0.95)_100%)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[rgba(23,36,216,0.08)] px-3 py-1 text-[11px] font-medium text-[#161FAD]">
@@ -825,7 +825,7 @@ function RunningWorkspace({
   const runtimeMessages: RunningMessage[] = runningMessages;
 
   return (
-    <section className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
+    <section className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className={`border-b border-slate-200/80 ${compact ? "px-4 py-4" : "px-6 py-5"}`}>
         <div>
           <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.conversation}</p>
@@ -833,8 +833,8 @@ function RunningWorkspace({
         </div>
       </div>
 
-      <div className={`flex-1 overflow-y-auto ${compact ? "px-4 py-4" : "px-6 py-6"}`}>
-        <div className="space-y-4">
+      <div className={`min-h-0 flex-1 overflow-y-auto ${compact ? "px-4 py-4" : "px-6 py-6"}`}>
+        <div className="space-y-4 pb-1">
           {runtimeMessages.map((message, index) => {
             const isUser = message.role === "user";
             return (
@@ -852,28 +852,19 @@ function RunningWorkspace({
                     </div>
                   ) : null}
                   {!isUser && index === 1 ? (
-                    <div className="space-y-4">
-                      <div className="rounded-[18px] border border-[rgba(23,36,216,0.08)] bg-[linear-gradient(180deg,rgba(243,246,255,0.88),rgba(255,255,255,0.98))] px-4 py-4">
-                        <p className="text-[14px] font-semibold leading-7 text-[#0B1454]">{pick(lang, firstReplyIntro)}</p>
-                      </div>
-                      <div className="inline-flex items-center rounded-full border border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.06)] px-3 py-1 text-[11px] font-semibold tracking-[0.08em] text-[#161FAD]">
-                        {pick(lang, firstReplyPlanTitle)}
-                      </div>
-                      <div className="space-y-3">
+                    <div className="rounded-[18px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(248,250,255,0.96),rgba(255,255,255,0.98))] px-4 py-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.035)]">
+                      <p className="text-[13px] font-semibold leading-6 text-[#0B1454]">{pick(lang, firstReplyIntro)}</p>
+                      <div className="mt-3 space-y-2.5 text-[12px] leading-5 text-slate-700">
+                        <p className="text-[12px] font-semibold tracking-[0.02em] text-[#161FAD]">{pick(lang, firstReplyPlanTitle)}</p>
                         {firstReplySections.map((section, sectionIndex) => (
-                          <div
-                            key={`${pick(lang, section.title)}-${sectionIndex}`}
-                            className="rounded-[18px] border border-slate-200/90 bg-white px-4 py-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)]"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(23,36,216,0.08)] text-[11px] font-bold text-[#161FAD]">
-                                {sectionIndex + 1}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-[13px] font-semibold leading-6 text-[#0B1454]">{pick(lang, section.title)}</p>
-                                <p className="mt-1 text-[12px] leading-6 text-slate-600">{pick(lang, section.body)}</p>
-                              </div>
-                            </div>
+                          <div key={`${pick(lang, section.title)}-${sectionIndex}`} className="flex items-start gap-2.5">
+                            <span className="mt-[2px] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgba(23,36,216,0.08)] text-[10px] font-bold text-[#161FAD]">
+                              {sectionIndex + 1}
+                            </span>
+                            <p className="min-w-0 text-[12px] leading-5 text-slate-600">
+                              <span className="mr-1.5 font-semibold text-[#0B1454]">{pick(lang, section.title)}</span>
+                              <span>{pick(lang, section.body)}</span>
+                            </p>
                           </div>
                         ))}
                       </div>
@@ -911,13 +902,11 @@ function RunningWorkspace({
                 <p className="text-[14px] font-semibold text-[#070261]">{text.finalSummaryTitle}</p>
                 <div className="mt-3 rounded-[20px] border border-[rgba(23,36,216,0.1)] bg-[linear-gradient(180deg,rgba(248,250,255,0.96),rgba(255,255,255,1))] p-4">
                   <p className="text-[13px] leading-6 text-slate-700">{text.finalSummaryBody}</p>
-                  <div className="mt-4 overflow-hidden rounded-[20px] border border-[rgba(23,36,216,0.08)] bg-[radial-gradient(circle_at_top_left,rgba(242,245,255,0.95),rgba(255,255,255,1))] p-3 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
-                    <img
-                      src={MODEL_RANKING_IMAGE_URL}
-                      alt={lang === "zh" ? "模型排名摘要图" : "Model ranking summary"}
-                      className="h-auto w-full rounded-[14px] object-contain"
-                    />
-                  </div>
+                  <img
+                    src={MODEL_RANKING_IMAGE_URL}
+                    alt={lang === "zh" ? "模型排名表格" : "Model ranking table"}
+                    className="mt-4 block h-auto w-full object-contain"
+                  />
                   <p className="mt-4 text-[13px] leading-6 text-slate-600">{text.finalSummaryOutcome}</p>
                 </div>
                 <p className="mt-2 text-[10px] text-slate-400">18:31</p>
@@ -973,8 +962,8 @@ function ResultWorkspace({
   const text = copy[lang];
 
   return (
-    <section className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+    <section className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         <div className="rounded-[22px] border border-slate-100 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           <div className="border-b border-slate-200/80 px-4 py-3">
             <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
@@ -1198,7 +1187,7 @@ function SidePanel({
   }, [filteredFiles, lang]);
 
   return (
-    <aside className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
+    <aside className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className="border-b border-slate-200/80 px-4 py-4">
         <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1">
           {[
@@ -1221,7 +1210,7 @@ function SidePanel({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {sideTab === "plan" ? (
           showEmpty ? (
             <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 p-5">
@@ -1544,11 +1533,11 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f8faff_0%,#eef3ff_100%)] text-slate-900">
-      <div className="mx-auto flex min-h-screen max-w-[1680px] flex-col p-4 lg:p-5">
+    <div className="h-screen overflow-hidden bg-[linear-gradient(180deg,#f8faff_0%,#eef3ff_100%)] text-slate-900">
+      <div className="mx-auto flex h-full max-w-[1680px] flex-col p-4 lg:p-5">
         <div
           ref={menuBoundaryRef}
-          className={`grid flex-1 gap-4 ${
+          className={`grid min-h-0 flex-1 gap-4 ${
             activeView === "new"
               ? "xl:grid-cols-[260px_minmax(0,1fr)]"
               : activeView === "result"
