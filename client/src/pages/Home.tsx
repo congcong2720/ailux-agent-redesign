@@ -80,8 +80,53 @@ type RunningMessage = {
 
 const l = (zh: string, en: string): LocalizedText => ({ zh, en });
 const pick = (lang: Lang, value: LocalizedText) => value[lang];
-const MODEL_RANKING_IMAGE_URL = "/manus-storage/ailux-model-ranking-top5_dd305ab0.svg";
+const MODEL_RANKING_IMAGE_URL = "/manus-storage/ailux-model-ranking-top5-v2_23be405f.svg";
 const FEATURE_SCATTER_IMAGE_URL = "/manus-storage/feature_scatter_relationship_2a6adde1.png";
+
+const firstReplyIntro = l(
+  "好的，我将基于输入的实验数据，围绕双表位抗体内化活性建立分析与建模流程。",
+  "Understood. I will build an analysis and modeling workflow around biparatopic antibody internalization activity from the input experimental data.",
+);
+
+const firstReplyPlanTitle = l("分析计划", "Analysis plan");
+
+const firstReplySections = [
+  {
+    title: l("数据摄取与准备", "Data intake and preparation"),
+    body: l(
+      "建立数据摄取上下文，整理实验数据、样本标签和建模所需输入，为后续分析准备标准化数据集。",
+      "Establish the intake context, organize experimental data, sample labels, and model inputs, and prepare a standardized dataset for downstream analysis.",
+    ),
+  },
+  {
+    title: l("结构预测", "Structure prediction"),
+    body: l(
+      "关联源 PDB 文件，生成 Molstar 结构视图，为抗体结构相关特征分析提供结构证据。",
+      "Link the source PDB file and generate a Molstar structure view to provide structural evidence for antibody-related feature analysis.",
+    ),
+  },
+  {
+    title: l("特征计算", "Feature calculation"),
+    body: l(
+      "计算与内化活性相关的候选特征，并生成可用于建模的特征矩阵。",
+      "Compute candidate features related to internalization activity and assemble a feature matrix for modeling.",
+    ),
+  },
+  {
+    title: l("相关性分析与特征选择", "Correlation analysis and feature selection"),
+    body: l(
+      "分析特征与内化活性的关系，筛选关键特征，并输出重要性图和重要性表。",
+      "Analyze the relationship between features and internalization activity, select key features, and output the importance plot and importance table.",
+    ),
+  },
+  {
+    title: l("预测模型评估", "Predictive model evaluation"),
+    body: l(
+      "训练并比较多个预测模型，评估模型表现，确认排名靠前的内化特征以及表现最佳的 AI 模型。",
+      "Train and compare multiple predictive models, assess model performance, and identify the top-ranked internalization features and the best-performing AI model.",
+    ),
+  },
+];
 
 const historyTasks: HistoryTask[] = [
   { id: "draft", title: l("新对话", "New conversation"), meta: l("创建任务", "Create task"), isDraft: true },
@@ -225,8 +270,8 @@ const resultFiles: ResultFile[] = [
   },
   {
     id: "feature-importance-plot",
-    name: "importance_topk.png",
-    meta: l("特征重要性图", "Feature-importance plot"),
+    name: "feature1_vs_experiment_label_corr_plot",
+    meta: l("单特征相关性图", "Single-feature correlation plot"),
     step: l("步骤 4 · 相关性分析与特征选择", "Step 4 · Correlation analysis and feature selection"),
     type: "png",
   },
@@ -806,8 +851,37 @@ function RunningWorkspace({
                       <Bot className="h-4 w-4" />Ailux Agent
                     </div>
                   ) : null}
-                  <p className="whitespace-pre-line">{pick(lang, message.content)}</p>
-                  <p className={`mt-2 text-[10px] ${isUser ? "text-white/75" : "text-slate-400"}`}>{message.time}</p>
+                  {!isUser && index === 1 ? (
+                    <div className="space-y-4">
+                      <div className="rounded-[18px] border border-[rgba(23,36,216,0.08)] bg-[linear-gradient(180deg,rgba(243,246,255,0.88),rgba(255,255,255,0.98))] px-4 py-4">
+                        <p className="text-[14px] font-semibold leading-7 text-[#0B1454]">{pick(lang, firstReplyIntro)}</p>
+                      </div>
+                      <div className="inline-flex items-center rounded-full border border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.06)] px-3 py-1 text-[11px] font-semibold tracking-[0.08em] text-[#161FAD]">
+                        {pick(lang, firstReplyPlanTitle)}
+                      </div>
+                      <div className="space-y-3">
+                        {firstReplySections.map((section, sectionIndex) => (
+                          <div
+                            key={`${pick(lang, section.title)}-${sectionIndex}`}
+                            className="rounded-[18px] border border-slate-200/90 bg-white px-4 py-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)]"
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(23,36,216,0.08)] text-[11px] font-bold text-[#161FAD]">
+                                {sectionIndex + 1}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-[13px] font-semibold leading-6 text-[#0B1454]">{pick(lang, section.title)}</p>
+                                <p className="mt-1 text-[12px] leading-6 text-slate-600">{pick(lang, section.body)}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-line">{pick(lang, message.content)}</p>
+                  )}
+                  <p className={`mt-3 text-[10px] ${isUser ? "text-white/75" : "text-slate-400"}`}>{message.time}</p>
                   {!isUser && index === 1 && !workflowCompleted ? (
                     <div className="mt-3 rounded-[16px] border border-[rgba(255,201,151,0.38)] bg-[rgba(255,201,151,0.16)] px-3 py-2.5 text-[#8a5216]">
                       <div className="flex items-start gap-2">
@@ -837,14 +911,14 @@ function RunningWorkspace({
                 <p className="text-[14px] font-semibold text-[#070261]">{text.finalSummaryTitle}</p>
                 <div className="mt-3 rounded-[20px] border border-[rgba(23,36,216,0.1)] bg-[linear-gradient(180deg,rgba(248,250,255,0.96),rgba(255,255,255,1))] p-4">
                   <p className="text-[13px] leading-6 text-slate-700">{text.finalSummaryBody}</p>
-                  <p className="mt-3 text-[13px] leading-6 text-slate-600">{text.finalSummaryOutcome}</p>
-                  <div className="mt-4 overflow-hidden rounded-[18px] border border-slate-200 bg-white">
+                  <div className="mt-4 overflow-hidden rounded-[20px] border border-[rgba(23,36,216,0.08)] bg-[radial-gradient(circle_at_top_left,rgba(242,245,255,0.95),rgba(255,255,255,1))] p-3 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
                     <img
                       src={MODEL_RANKING_IMAGE_URL}
                       alt={lang === "zh" ? "模型排名摘要图" : "Model ranking summary"}
-                      className="h-auto w-full object-cover"
+                      className="h-auto w-full rounded-[14px] object-contain"
                     />
                   </div>
+                  <p className="mt-4 text-[13px] leading-6 text-slate-600">{text.finalSummaryOutcome}</p>
                 </div>
                 <p className="mt-2 text-[10px] text-slate-400">18:31</p>
               </article>
@@ -956,15 +1030,8 @@ function ResultWorkspace({
 
                 {selectedFile.type === "pdb" ? (
                   <PdbViewer lang={lang} pdbText={demoPdbContent} />
-                ) : selectedFile.id === "hit-table-all-features" ? (
-                  <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-                    <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-white">
-                      <img
-                        src={FEATURE_SCATTER_IMAGE_URL}
-                        alt={lang === "zh" ? "单个特征与实验特征关系散点图" : "Scatter plot of a single feature against experimental measurements"}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
+                ) : selectedFile.id === "feature-importance-plot" ? (
+                  <div className="space-y-4">
                     <div className="rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,255,0.98),rgba(236,241,255,0.95))] p-4">
                       <p className="text-[12px] font-medium text-slate-700">{lang === "zh" ? "结果说明" : "Result description"}</p>
                       <p className="mt-3 text-[12px] leading-6 text-slate-600">
@@ -972,6 +1039,13 @@ function ResultWorkspace({
                           ? "这是单个feature和实验特征之间的关系散点图。"
                           : "This scatter plot shows the relationship between a single feature and the experimental feature."}
                       </p>
+                    </div>
+                    <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-white p-3">
+                      <img
+                        src={FEATURE_SCATTER_IMAGE_URL}
+                        alt={lang === "zh" ? "单个特征与实验特征关系散点图" : "Scatter plot of a single feature against experimental measurements"}
+                        className="h-auto w-full rounded-[12px] object-contain"
+                      />
                     </div>
                   </div>
                 ) : selectedFile.type === "csv" ? (
