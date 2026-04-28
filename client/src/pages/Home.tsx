@@ -895,48 +895,46 @@ function RunningWorkspace({
 
           {workflowCompleted ? (
             <div className="flex justify-start">
-              <article className="max-w-[92%] rounded-[24px] border border-slate-200 bg-white p-4 text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
+              <article className="w-full max-w-[980px] rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.06)] sm:px-5">
                 <div className="mb-2 flex items-center gap-2 text-[11px] font-medium text-[#161FAD]">
                   <Bot className="h-4 w-4" />Ailux Agent
                 </div>
                 <p className="text-[14px] font-semibold text-[#070261]">{text.finalSummaryTitle}</p>
-                <div className="mt-3 rounded-[20px] border border-[rgba(23,36,216,0.1)] bg-[linear-gradient(180deg,rgba(248,250,255,0.96),rgba(255,255,255,1))] p-4">
-                  <p className="text-[13px] leading-6 text-slate-700">{text.finalSummaryBody}</p>
-                  <img
-                    src={MODEL_RANKING_IMAGE_URL}
-                    alt={lang === "zh" ? "模型排名表格" : "Model ranking table"}
-                    className="mt-4 block h-auto w-full object-contain"
-                  />
-                  <p className="mt-4 text-[13px] leading-6 text-slate-600">{text.finalSummaryOutcome}</p>
-                </div>
+                <p className="mt-3 text-[13px] leading-6 text-slate-700">{text.finalSummaryBody}</p>
+                <img
+                  src={MODEL_RANKING_IMAGE_URL}
+                  alt={lang === "zh" ? "模型排名表格" : "Model ranking table"}
+                  className="mt-4 block h-auto w-full rounded-[16px]"
+                />
+                <p className="mt-4 text-[13px] leading-6 text-slate-600">{text.finalSummaryOutcome}</p>
                 <p className="mt-2 text-[10px] text-slate-400">18:31</p>
               </article>
             </div>
           ) : null}
-        </div>
-      </div>
 
-      <div className={`border-t border-slate-200/80 ${compact ? "px-4 py-3" : "px-6 py-4"}`}>
-        <div className="rounded-[18px] border border-slate-200 bg-slate-50/90 p-3">
-          <textarea
-            value={prompt}
-            onChange={(event) => onPromptChange(event.target.value)}
-            className="min-h-[54px] w-full resize-none border-0 bg-transparent text-[13px] leading-6 outline-none placeholder:text-slate-400"
-            placeholder={text.runningPlaceholder}
-          />
-          <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-2.5">
-            <div className="flex items-center gap-2 text-slate-500">
-              <button className="rounded-xl p-2 transition hover:bg-white hover:text-[#161FAD]">
-                <Upload className="h-4 w-4" />
-              </button>
-              <button className="rounded-xl p-2 transition hover:bg-white hover:text-[#161FAD]">
-                <Database className="h-4 w-4" />
-              </button>
+          <div className="pt-2">
+            <div className="rounded-[18px] border border-slate-200 bg-slate-50/90 px-3 py-2.5">
+              <textarea
+                value={prompt}
+                onChange={(event) => onPromptChange(event.target.value)}
+                className="min-h-[40px] w-full resize-none border-0 bg-transparent text-[13px] leading-5 outline-none placeholder:text-slate-400"
+                placeholder={text.runningPlaceholder}
+              />
+              <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-2">
+                <div className="flex items-center gap-1.5 text-slate-500">
+                  <button className="rounded-xl p-1.5 transition hover:bg-white hover:text-[#161FAD]">
+                    <Upload className="h-4 w-4" />
+                  </button>
+                  <button className="rounded-xl p-1.5 transition hover:bg-white hover:text-[#161FAD]">
+                    <Database className="h-4 w-4" />
+                  </button>
+                </div>
+                <Button className="h-8 rounded-xl bg-[#161FAD] px-3.5 text-[12px] text-white hover:bg-[#1724D8]">
+                  {text.send}
+                  <SendHorizonal className="ml-1.5 h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
-            <Button className="h-9 rounded-xl bg-[#161FAD] px-4 text-[13px] text-white hover:bg-[#1724D8]">
-              {text.send}
-              <SendHorizonal className="ml-2 h-4 w-4" />
-            </Button>
           </div>
         </div>
       </div>
@@ -1541,7 +1539,7 @@ export default function Home() {
             activeView === "new"
               ? "xl:grid-cols-[260px_minmax(0,1fr)]"
               : activeView === "result"
-                ? "xl:grid-cols-[88px_minmax(320px,0.82fr)_minmax(500px,1.18fr)_360px]"
+                ? "xl:grid-cols-[88px_minmax(420px,0.96fr)_minmax(480px,1.04fr)_360px]"
                 : "xl:grid-cols-[260px_minmax(0,1fr)_360px]"
           }`}
         >
