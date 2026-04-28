@@ -80,6 +80,8 @@ type RunningMessage = {
 
 const l = (zh: string, en: string): LocalizedText => ({ zh, en });
 const pick = (lang: Lang, value: LocalizedText) => value[lang];
+const MODEL_RANKING_IMAGE_URL = "/manus-storage/ailux-model-ranking-top5_dd305ab0.svg";
+const FEATURE_SCATTER_IMAGE_URL = "/manus-storage/feature_scatter_relationship_2a6adde1.png";
 
 const historyTasks: HistoryTask[] = [
   { id: "draft", title: l("新对话", "New conversation"), meta: l("创建任务", "Create task"), isDraft: true },
@@ -114,8 +116,8 @@ const runningMessages: RunningMessage[] = [
   {
     role: "agent",
     content: l(
-      "启动内部化预测建模工作流程。我将从输入数据中提取结构证据、界面表征、特征计算和特征选择输出、可解释性工件以及预测模型评估结果。",
-      "Starting the internalization predictive-modeling workflow. I will surface structure evidence, interface characterization, feature-calculation and feature-selection outputs, explainability artifacts, and predictive model evaluation results from the input data.",
+      "好的，我将基于输入的实验数据，围绕双表位抗体内化活性建立分析与建模流程。\n分析计划\n数据摄取与准备\n建立数据摄取上下文，整理实验数据、样本标签和建模所需输入，为后续分析准备标准化数据集。\n结构预测\n关联源 PDB 文件，生成 Molstar 结构视图，为抗体结构相关特征分析提供结构证据。\n特征计算\n计算与内化活性相关的候选特征，并生成可用于建模的特征矩阵。\n相关性分析与特征选择\n分析特征与内化活性的关系，筛选关键特征，并输出重要性图和重要性表。\n预测模型评估\n训练并比较多个预测模型，评估模型表现，确认排名靠前的内化特征以及表现最佳的 AI 模型。",
+      "Understood. I will build an analysis and modeling workflow around biparatopic antibody internalization activity from the input experimental data.\nAnalysis plan\nData intake and preparation\nEstablish the intake context, organize experimental data, sample labels, and model inputs, and prepare a standardized dataset for downstream analysis.\nStructure prediction\nLink the source PDB file and generate a Molstar structure view to provide structural evidence for antibody-related feature analysis.\nFeature calculation\nCompute candidate features related to internalization activity and assemble a feature matrix for modeling.\nCorrelation analysis and feature selection\nAnalyze the relationship between features and internalization activity, select key features, and output the importance plot and importance table.\nPredictive model evaluation\nTrain and compare multiple predictive models, assess model performance, and identify the top-ranked internalization features and the best-performing AI model.",
     ),
     time: "18:29",
   },
@@ -127,14 +129,14 @@ const runningSteps: PlanStep[] = [
     title: l("数据摄取与准备", "Data Intake And Preparation"),
     waiting: l("等待工作流启动。", "Waiting for the workflow to start."),
     detail: l(
-      "页面正在加载记录的证据包，并初始化内部化预测建模工作流程。",
-      "The page is loading the recorded evidence bundle and initializing the internalization predictive-modeling workflow.",
+      "正在建立数据摄取上下文，并整理实验数据、样本标签与建模输入。",
+      "Establishing the data-intake context and organizing experimental data, sample labels, and modeling inputs.",
     ),
     duration: "12s",
     status: "waiting",
     summary: l(
-      "工作流已建立数据摄取上下文，并为下游分析准备了带标签的建模输入。",
-      "The workflow has established data-intake context and prepared labeled modeling inputs for downstream analysis.",
+      "标准化数据集已准备完成，可用于后续结构分析与建模。",
+      "The standardized dataset is ready for downstream structural analysis and modeling.",
     ),
   },
   {
@@ -142,89 +144,59 @@ const runningSteps: PlanStep[] = [
     title: l("结构预测", "Structure Prediction"),
     waiting: l("等待数据摄取与准备完成后启动。", "Waiting for data intake and preparation to finish."),
     detail: l(
-      "工作流正在关联源 PDB 文件并生成 Molstar 结构视图。",
-      "The workflow is linking the source PDB file and generating the Molstar structure view.",
+      "正在关联源 PDB 文件并生成 Molstar 结构视图，为结构特征分析提供证据。",
+      "Linking the source PDB file and generating a Molstar structure view to provide structural evidence.",
     ),
     duration: "26s",
     status: "waiting",
     summary: l(
-      "结构证据已准备就绪。工作流程已关联源 PDB 文件并生成了 Molstar 结构视图。",
-      "Structure evidence is ready. The workflow has linked the source PDB file and generated the Molstar structure view.",
+      "结构预测已完成，结构源文件与结构视图均已可用。",
+      "Structure prediction is complete, and both the source PDB file and structure view are available.",
     ),
   },
   {
     id: "step-3",
-    title: l("界面表征", "Interface Characterization"),
+    title: l("特征计算", "Feature Calculation"),
     waiting: l("等待结构预测完成后启动。", "Waiting for structure prediction to finish."),
     detail: l(
-      "工作流正在从 interface.csv 加载接口定义，并渲染界面表征结果。",
-      "The workflow is loading interface definitions from interface.csv and rendering interface characterization.",
-    ),
-    duration: "18s",
-    status: "waiting",
-    summary: l(
-      "接口定义已从 interface.csv 加载，接口特征正在渲染中。",
-      "Interface definition has been loaded from interface.csv, and interface characterization is being rendered.",
-    ),
-  },
-  {
-    id: "step-4",
-    title: l("特征计算", "Feature Calculation"),
-    waiting: l("等待界面表征完成后启动。", "Waiting for interface characterization to finish."),
-    detail: l(
-      "工作流正在计算模型特征，并从组合特征源中组装紧凑分析表。",
-      "The workflow is calculating model features and assembling the compact analysis table from the combined feature source.",
+      "正在计算与内化活性相关的候选特征，并生成用于建模的特征矩阵。",
+      "Computing candidate features related to internalization activity and generating the modeling feature matrix.",
     ),
     duration: "31s",
     status: "waiting",
     summary: l(
-      "相关性分析和特征选择的输出已准备好，包括前 k 个重要性图和转换后的重要性表。",
-      "Correlation analysis and feature-selection outputs are ready, including the top-k importance plot and transformed importance table.",
+      "特征矩阵已生成，关键输入特征可供后续相关性分析与模型训练使用。",
+      "The feature matrix has been generated and is ready for downstream correlation analysis and model training.",
     ),
   },
   {
-    id: "step-5",
+    id: "step-4",
     title: l("相关性分析与特征选择", "Correlation Analysis And Feature Selection"),
     waiting: l("等待特征计算完成后启动。", "Waiting for feature calculation to finish."),
     detail: l(
-      "可解释性模型工件已加载，可解释性输出正在被记录以便展示。",
-      "Explainability model artifacts are loaded, and explainability outputs are being recorded for display.",
+      "正在分析特征与内化活性的关系，并输出重要性图、重要性表与筛选结果。",
+      "Analyzing the relationship between features and internalization activity, then exporting importance plots, tables, and selected features.",
     ),
     duration: "24s",
     status: "waiting",
     summary: l(
-      "模型可解释性已就绪。模型工件元数据和可解释性状态在本阶段可用。",
-      "Model explainability is ready. Model artifact metadata and explainability status are available in this stage.",
+      "相关性分析与特征选择已完成，关键特征和重要性输出已准备就绪。",
+      "Correlation analysis and feature selection are complete, with key features and importance outputs ready.",
     ),
   },
   {
-    id: "step-6",
-    title: l("模型可解释性", "Model Explainability"),
+    id: "step-5",
+    title: l("预测模型评估", "Predictive Model Evaluation"),
     waiting: l("等待相关性分析与特征选择完成后启动。", "Waiting for correlation analysis and feature selection to finish."),
     detail: l(
-      "该工作流通过将 psc 映射为标签字段、将 ranking_score 映射为预测字段来评估预测结果。",
-      "The workflow is evaluating predictions by mapping psc as the label field and ranking_score as the prediction field.",
-    ),
-    duration: "17s",
-    status: "waiting",
-    summary: l(
-      "预测模型评估已完成，输出预测值与观测值散点图和残差分布图。",
-      "Predictive model evaluation is ready with predicted-vs-observed scatter and residual distribution outputs.",
-    ),
-  },
-  {
-    id: "step-7",
-    title: l("预测模型评估", "Predictive Model Evaluation"),
-    waiting: l("等待模型可解释性完成后启动。", "Waiting for model explainability to finish."),
-    detail: l(
-      "正在汇总命中表与模型比较结果，生成最终运行总结。",
-      "The workflow is consolidating the hit table and model-comparison outputs to generate the final run summary.",
+      "正在训练并比较多个预测模型，汇总模型排名、相关指标与最终推荐配置。",
+      "Training and comparing multiple predictive models, then consolidating rankings, key metrics, and the final recommended configuration.",
     ),
     duration: "22s",
     status: "waiting",
     summary: l(
-      "运行总结结果：命中表确认了排名靠前的内化特征以及模型比较中表现最佳的 AI 模型。",
-      "Run summary result: the hit table confirms the top-ranked internalization features and the best-performing AI model from model comparison.",
+      "预测模型评估已完成，已确认排名靠前的配置组合和表现最佳的 AI 模型。",
+      "Predictive model evaluation is complete, and the top-ranked configurations and best-performing AI model have been identified.",
     ),
   },
 ];
@@ -241,42 +213,42 @@ const resultFiles: ResultFile[] = [
     id: "interface-definition",
     name: "interface.csv",
     meta: l("接口定义文件", "Interface definition file"),
-    step: l("步骤 3 · 界面表征", "Step 3 · Interface characterization"),
+    step: l("步骤 2 · 结构预测", "Step 2 · Structure prediction"),
     type: "csv",
   },
   {
     id: "feature-importance-table",
     name: "v3_importance_from_mcb008.csv",
     meta: l("特征重要性表", "Feature-importance table"),
-    step: l("步骤 4 · 特征计算", "Step 4 · Feature calculation"),
+    step: l("步骤 3 · 特征计算", "Step 3 · Feature calculation"),
     type: "csv",
   },
   {
     id: "feature-importance-plot",
     name: "importance_topk.png",
     meta: l("特征重要性图", "Feature-importance plot"),
-    step: l("步骤 5 · 相关性分析与特征选择", "Step 5 · Correlation analysis and feature selection"),
+    step: l("步骤 4 · 相关性分析与特征选择", "Step 4 · Correlation analysis and feature selection"),
     type: "png",
   },
   {
     id: "hit-table-all-features",
     name: "top10_aug_regression_10nM_importance_analysis_result_all_features_importance.csv",
     meta: l("命中表全特征文件", "Hit-table all-features file"),
-    step: l("步骤 6 · 模型可解释性", "Step 6 · Model explainability"),
+    step: l("步骤 4 · 相关性分析与特征选择", "Step 4 · Correlation analysis and feature selection"),
     type: "csv",
   },
   {
     id: "final-model-evaluation-table",
     name: "all_ml_evaluation_results_stage2.csv",
     meta: l("最终模型评估表", "Final model-evaluation table"),
-    step: l("步骤 7 · 预测模型评估", "Step 7 · Predictive model evaluation"),
+    step: l("步骤 5 · 预测模型评估", "Step 5 · Predictive model evaluation"),
     type: "csv",
   },
   {
     id: "evaluation-plot",
     name: "regression_scatter.png",
     meta: l("评估图", "Evaluation plot"),
-    step: l("步骤 7 · 预测模型评估", "Step 7 · Predictive model evaluation"),
+    step: l("步骤 5 · 预测模型评估", "Step 5 · Predictive model evaluation"),
     type: "png",
   },
 ];
@@ -305,7 +277,7 @@ const statusStyles: Record<StepStatus, { icon: string }> = {
   },
 };
 
-const runningStepDurationsMs = [1400, 1500, 1400, 1700, 1500, 1600, 1600];
+const runningStepDurationsMs = [1400, 1500, 1600, 1700, 1800];
 
 const createRuntimeSteps = (): PlanStep[] =>
   runningSteps.map((step, index): PlanStep => ({
@@ -350,9 +322,9 @@ const copy = {
       "请重点关注以下 4 项关键指标：\ntest_r2_mean：越高说明模型回归拟合效果越好\ntest_spearman_mean：越高说明模型对结果的排名预测越准确\ntest_mse_mean：越低说明模型的预测误差越小\ntest_pearson_mean：越高说明模型预测值与真实值的线性相关性越强",
     finalSummaryTitle: "最终总结",
     finalSummaryBody:
-      "请重点关注以下 4 项关键指标：\ntest_r2_mean：越高说明模型回归拟合效果越好\ntest_spearman_mean：越高说明模型对结果的排名预测越准确\ntest_mse_mean：越低说明模型的预测误差越小\ntest_pearson_mean：越高说明模型预测值与真实值的线性相关性越强",
+      "在 216 种模型组合（结构模型×表位×特征集×算法）中，测试皮尔逊相关性排名前 5 的均超过 0.829，证实内化活性具有稳健的可预测性。",
     finalSummaryOutcome:
-      "推荐文本固定为 all_ml_evaluation_results_stage2.csv 中的当前排名结果。AI 结论：任务完成。模型评估结果推荐使用 target_colocalization、KD_arm1_nM 与 XGBoost 模型的组合。",
+      "根据决策背景选择配置。为实现最高预测准确率，优先选择 XtalFold Ultra + 科学家推荐表位 + 完整特征集 + 算法 1（皮尔逊相关系数 0.854）。当排名一致性更为重要时（例如早期筛选中的命中优先级排序），使用 XtalFold Standard + 代理选择的前 10 个表位 + 物理与能量特征 + 算法 2（斯皮尔曼相关系数 0.950），该配置还具有更精简的特征占用。",
     workflowRunningLabel: "工作流运行中",
     workflowRunningFallback: "系统正在按计划推进分析步骤，完成后将在此处追加最终总结。",
     chartCaption: "示意图：关键特征贡献或相关性结果预览。",
@@ -415,9 +387,9 @@ const copy = {
       "Please focus on these 4 key metrics:\ntest_r2_mean: higher values indicate better regression fit\ntest_spearman_mean: higher values indicate more accurate ranking predictions\ntest_mse_mean: lower values indicate smaller prediction errors\ntest_pearson_mean: higher values indicate a stronger linear correlation between predicted and true values",
     finalSummaryTitle: "Final summary",
     finalSummaryBody:
-      "Please focus on these 4 key metrics:\ntest_r2_mean: higher values indicate better regression fit\ntest_spearman_mean: higher values indicate more accurate ranking predictions\ntest_mse_mean: lower values indicate smaller prediction errors\ntest_pearson_mean: higher values indicate a stronger linear correlation between predicted and true values",
+      "Across 216 model combinations (structure model × epitope × feature set × algorithm), the top 5 by test Pearson all score above 0.829, confirming that internalization activity is robustly predictable.",
     finalSummaryOutcome:
-      "The recommendation text is fixed to the current ranked result in all_ml_evaluation_results_stage2.csv. AI conclusion: task completed. The model-evaluation result recommends the combination of target_colocalization, KD_arm1_nM, and the XGBoost model.",
+      "Choose the configuration based on the decision context. For the highest predictive accuracy, prioritize XtalFold Ultra + scientist-recommended epitopes + the full feature set + Algorithm 1 (Pearson 0.854). When ranking consistency matters more, such as early hit prioritization, use XtalFold Standard + agent-selected top-10 epitopes + physical-and-energy features + Algorithm 2 (Spearman 0.950), which also uses a leaner feature footprint.",
     workflowRunningLabel: "Workflow running",
     workflowRunningFallback: "The system is advancing the plan step by step and will append the final summary here when all stages are complete.",
     chartCaption: "Illustration: preview of key feature contribution or correlation findings.",
@@ -805,21 +777,7 @@ function RunningWorkspace({
 }) {
   const text = copy[lang];
   const currentRunningStep = steps.find((step) => step.status === "running");
-  const runtimeMessages: RunningMessage[] = workflowCompleted
-    ? [
-        ...runningMessages,
-        {
-          role: "agent",
-          content: l(text.finalSummaryBody, text.finalSummaryBody),
-          time: "18:31",
-        },
-        {
-          role: "agent",
-          content: l(text.finalSummaryOutcome, text.finalSummaryOutcome),
-          time: "18:31",
-        },
-      ]
-    : runningMessages;
+  const runtimeMessages: RunningMessage[] = runningMessages;
 
   return (
     <section className="flex min-h-[760px] flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
@@ -848,7 +806,7 @@ function RunningWorkspace({
                       <Bot className="h-4 w-4" />Ailux Agent
                     </div>
                   ) : null}
-                  <p>{pick(lang, message.content)}</p>
+                  <p className="whitespace-pre-line">{pick(lang, message.content)}</p>
                   <p className={`mt-2 text-[10px] ${isUser ? "text-white/75" : "text-slate-400"}`}>{message.time}</p>
                   {!isUser && index === 1 && !workflowCompleted ? (
                     <div className="mt-3 rounded-[16px] border border-[rgba(255,201,151,0.38)] bg-[rgba(255,201,151,0.16)] px-3 py-2.5 text-[#8a5216]">
@@ -869,6 +827,29 @@ function RunningWorkspace({
               </div>
             );
           })}
+
+          {workflowCompleted ? (
+            <div className="flex justify-start">
+              <article className="max-w-[92%] rounded-[24px] border border-slate-200 bg-white p-4 text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
+                <div className="mb-2 flex items-center gap-2 text-[11px] font-medium text-[#161FAD]">
+                  <Bot className="h-4 w-4" />Ailux Agent
+                </div>
+                <p className="text-[14px] font-semibold text-[#070261]">{text.finalSummaryTitle}</p>
+                <div className="mt-3 rounded-[20px] border border-[rgba(23,36,216,0.1)] bg-[linear-gradient(180deg,rgba(248,250,255,0.96),rgba(255,255,255,1))] p-4">
+                  <p className="text-[13px] leading-6 text-slate-700">{text.finalSummaryBody}</p>
+                  <p className="mt-3 text-[13px] leading-6 text-slate-600">{text.finalSummaryOutcome}</p>
+                  <div className="mt-4 overflow-hidden rounded-[18px] border border-slate-200 bg-white">
+                    <img
+                      src={MODEL_RANKING_IMAGE_URL}
+                      alt={lang === "zh" ? "模型排名摘要图" : "Model ranking summary"}
+                      className="h-auto w-full object-cover"
+                    />
+                  </div>
+                </div>
+                <p className="mt-2 text-[10px] text-slate-400">18:31</p>
+              </article>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -975,6 +956,24 @@ function ResultWorkspace({
 
                 {selectedFile.type === "pdb" ? (
                   <PdbViewer lang={lang} pdbText={demoPdbContent} />
+                ) : selectedFile.id === "hit-table-all-features" ? (
+                  <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+                    <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-white">
+                      <img
+                        src={FEATURE_SCATTER_IMAGE_URL}
+                        alt={lang === "zh" ? "单个特征与实验特征关系散点图" : "Scatter plot of a single feature against experimental measurements"}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,255,0.98),rgba(236,241,255,0.95))] p-4">
+                      <p className="text-[12px] font-medium text-slate-700">{lang === "zh" ? "结果说明" : "Result description"}</p>
+                      <p className="mt-3 text-[12px] leading-6 text-slate-600">
+                        {lang === "zh"
+                          ? "这是单个feature和实验特征之间的关系散点图。"
+                          : "This scatter plot shows the relationship between a single feature and the experimental feature."}
+                      </p>
+                    </div>
+                  </div>
                 ) : selectedFile.type === "csv" ? (
                   <div className="overflow-hidden rounded-[18px] border border-slate-200">
                     <div className="overflow-x-auto">
