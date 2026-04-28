@@ -249,7 +249,7 @@ const runningSteps: PlanStep[] = [
 const resultFiles: ResultFile[] = [
   {
     id: "structure-source",
-    name: "Boltz2_DLL3_Mcb008_model_1.pdb",
+    name: "DLL3_Mcb008_model_1.pdb",
     meta: l("结构源文件", "Structure source file"),
     step: l("步骤 2 · 结构预测", "Step 2 · Structure prediction"),
     type: "pdb",
@@ -263,7 +263,7 @@ const resultFiles: ResultFile[] = [
   },
   {
     id: "feature-importance-table",
-    name: "v3_importance_from_mcb008.csv",
+    name: "physical_energy_combined_features.csv",
     meta: l("特征重要性表", "Feature-importance table"),
     step: l("步骤 3 · 特征计算", "Step 3 · Feature calculation"),
     type: "csv",
