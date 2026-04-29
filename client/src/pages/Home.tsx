@@ -80,7 +80,7 @@ type RunningMessage = {
 
 const l = (zh: string, en: string): LocalizedText => ({ zh, en });
 const pick = (lang: Lang, value: LocalizedText) => value[lang];
-const MODEL_RANKING_IMAGE_URL = "/manus-storage/ailux-model-ranking-user-final_84bafec6.png";
+const MODEL_RANKING_IMAGE_URL = "/manus-storage/ailux-model-ranking-user-final-v2_2de81eaf.png";
 const FEATURE_SCATTER_IMAGE_URL = "/manus-storage/feature_scatter_relationship_2a6adde1.png";
 
 const firstReplyIntro = l(
@@ -367,9 +367,9 @@ const copy = {
       "请重点关注以下 4 项关键指标：\ntest_r2_mean：越高说明模型回归拟合效果越好\ntest_spearman_mean：越高说明模型对结果的排名预测越准确\ntest_mse_mean：越低说明模型的预测误差越小\ntest_pearson_mean：越高说明模型预测值与真实值的线性相关性越强",
     finalSummaryTitle: "最终总结",
     finalSummaryBody:
-      "在 216 种模型组合（结构模型×表位×特征集×算法）中，测试皮尔逊相关性排名前 5 的均超过 0.829，证实内化活性具有稳健的可预测性。",
+      "在 216 种模型组合（结构模型×表位×特征集×算法）中，测试皮尔逊相关性排名前 5 的均超过0.824，证实内化活性具有稳健的可预测性。",
     finalSummaryOutcome:
-      "根据决策背景选择配置。为实现最高预测准确率，优先选择 XtalFold Ultra + 科学家推荐表位 + 完整特征集 + 算法 1（皮尔逊相关系数 0.854）。当排名一致性更为重要时（例如早期筛选中的命中优先级排序），使用 XtalFold Standard + 代理选择的前 10 个表位 + 物理与能量特征 + 算法 2（斯皮尔曼相关系数 0.950），该配置还具有更精简的特征占用。",
+      "请根据决策场景选择配置。若追求最高预测准确率，优先选择 XtalFold Ultra + 科学家推荐表位 + 完整特征集 + Algorithm1（Pearson 0.854）。当你更看重排序一致性时——例如早期筛选中的命中优先级排序——可使用 XtalFold Standard + 代理选择的前10个表位 + 物理与能量特征 + 双特异性抗体特征 + Algorithm2（Spearman 0.949）；同时，该方案的特征占用也更精简。",
     workflowRunningLabel: "工作流运行中",
     workflowRunningFallback: "系统正在按计划推进分析步骤，完成后将在此处追加最终总结。",
     chartCaption: "示意图：关键特征贡献或相关性结果预览。",
@@ -432,9 +432,9 @@ const copy = {
       "Please focus on these 4 key metrics:\ntest_r2_mean: higher values indicate better regression fit\ntest_spearman_mean: higher values indicate more accurate ranking predictions\ntest_mse_mean: lower values indicate smaller prediction errors\ntest_pearson_mean: higher values indicate a stronger linear correlation between predicted and true values",
     finalSummaryTitle: "Final summary",
     finalSummaryBody:
-      "Across 216 model combinations (structure model × epitope × feature set × algorithm), the top 5 by test Pearson all score above 0.829, confirming that internalization activity is robustly predictable.",
+      "Across 216 model combinations (structure model × epitope × feature set × algorithm), the top 5 by test Pearson all score above 0.824, confirming that internalization activity is robustly predictable.",
     finalSummaryOutcome:
-      "Choose the configuration based on the decision context. For the highest predictive accuracy, prioritize XtalFold Ultra + scientist-recommended epitopes + the full feature set + Algorithm 1 (Pearson 0.854). When ranking consistency matters more, such as early hit prioritization, use XtalFold Standard + agent-selected top-10 epitopes + physical-and-energy features + Algorithm 2 (Spearman 0.950), which also uses a leaner feature footprint.",
+      "Choose configuration by decision context. For maximum prediction accuracy, prioritize XtalFold Ultra + Scientist-Recommended epitopes + full feature set + Algorithm1 (Pearson 0.854). When rank consistency matters more — e.g., hit-prioritization in early screening — use XtalFold Standard + Agent-Selected top10 epitopes + Physical & Energy features & bispecific Ab features + Algorithm2 (Spearman 0.949), which also offers a leaner feature footprint.",
     workflowRunningLabel: "Workflow running",
     workflowRunningFallback: "The system is advancing the plan step by step and will append the final summary here when all stages are complete.",
     chartCaption: "Illustration: preview of key feature contribution or correlation findings.",
