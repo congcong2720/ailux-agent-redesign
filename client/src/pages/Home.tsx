@@ -35,6 +35,9 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ProjectSwitcher } from "@/components/ProjectSwitcher";
+import { ProjectPanel } from "@/components/ProjectPanel";
+import { useProject } from "@/contexts/ProjectContext";
 
 type Lang = "zh" | "en";
 type ViewMode = "new" | "running" | "result";
@@ -595,6 +598,7 @@ function Sidebar({
   collapsed?: boolean;
 }) {
   const text = copy[lang];
+  const { setProjectPanelOpen, setProjectDetailView } = useProject();
 
   if (collapsed) {
     return (
@@ -653,7 +657,8 @@ function Sidebar({
 
   return (
     <aside className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
-      <div className="mb-5 flex items-center gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3">
+      {/* Global header: Ailux Agent branding */}
+      <div className="mb-3 flex items-center gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#161FAD_0%,#848CFE_100%)] text-white shadow-[0_10px_22px_rgba(22,31,173,0.2)]">
           <FlaskConical className="h-5 w-5" />
         </div>
@@ -663,9 +668,40 @@ function Sidebar({
         </div>
       </div>
 
+      {/* Project switcher */}
+      <div className="mb-3">
+        <p className="mb-1.5 px-1 text-[10px] uppercase tracking-[0.18em] text-slate-400">
+          {lang === "zh" ? "项目" : "Project"}
+        </p>
+        <ProjectSwitcher lang={lang} />
+        {/* Project quick-access tabs */}
+        <div className="mt-2 flex gap-1">
+          {(["apps", "data", "members"] as const).map((view) => {
+            const labels = {
+              apps: { zh: "应用", en: "Apps" },
+              data: { zh: "数据", en: "Data" },
+              members: { zh: "成员", en: "Members" },
+            };
+            return (
+              <button
+                key={view}
+                onClick={() => { setProjectDetailView(view); setProjectPanelOpen(true); }}
+                className="flex flex-1 items-center justify-center rounded-[12px] border border-slate-100 bg-slate-50/80 py-1.5 text-[11px] font-medium text-slate-500 transition hover:border-[rgba(23,36,216,0.12)] hover:bg-white hover:text-[#161FAD]"
+              >
+                {labels[view][lang]}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="mb-3 h-px bg-slate-100" />
+
+      {/* New conversation */}
       <button
         onClick={onNewConversation}
-        className={`mb-4 flex w-full items-center gap-2 rounded-[18px] border px-3.5 py-3 text-left text-[13px] font-medium transition ${
+        className={`mb-3 flex w-full items-center gap-2 rounded-[18px] border px-3.5 py-3 text-left text-[13px] font-medium transition ${
           activeView === "new"
             ? "border-[rgba(23,36,216,0.12)] bg-[linear-gradient(180deg,rgba(23,36,216,0.08),rgba(132,140,254,0.08))] text-[#161FAD] shadow-[0_12px_28px_rgba(23,36,216,0.08)]"
             : "border-transparent bg-slate-50 text-slate-700 hover:border-slate-200 hover:bg-white"
@@ -675,10 +711,11 @@ function Sidebar({
         {text.newConversation}
       </button>
 
-      <div className="mb-3 flex items-center justify-between">
+      {/* Tasks section */}
+      <div className="mb-2 flex items-center justify-between">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Tasks</p>
-          <h2 className="mt-1 text-[17px] font-semibold text-[#070261]">{text.tasksLabel}</h2>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Tasks</p>
+          <h2 className="mt-0.5 text-[15px] font-semibold text-[#070261]">{text.tasksLabel}</h2>
         </div>
         <button className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-50 hover:text-[#161FAD]">
           <PanelRightOpen className="h-4 w-4" />
@@ -709,6 +746,7 @@ function Sidebar({
           })}
       </div>
 
+      {/* User menu */}
       <div className="relative mt-4">
         <button
           onClick={onToggleUserMenu}
@@ -1602,6 +1640,8 @@ export default function Home() {
           ) : null}
         </div>
       </div>
+      {/* Project detail panel (slides in from right) */}
+      <ProjectPanel lang={lang} />
     </div>
   );
 }

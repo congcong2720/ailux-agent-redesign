@@ -1,0 +1,152 @@
+import { createContext, useContext, useState, ReactNode } from "react";
+
+export type ProjectMember = {
+  id: string;
+  name: string;
+  email: string;
+  role: "owner" | "admin" | "member" | "viewer";
+  avatar?: string;
+};
+
+export type ProjectDataAsset = {
+  id: string;
+  name: string;
+  type: "csv" | "json" | "pdb" | "png" | "xlsx" | "pdf";
+  size: string;
+  updatedAt: string;
+  source: "uploaded" | "run-saved";
+  tags?: string[];
+};
+
+export type ProjectApp = {
+  id: string;
+  name: string;
+  type: "agent" | "report" | "pipeline";
+  description: string;
+  lastRun?: string;
+  status: "active" | "draft" | "archived";
+};
+
+export type Project = {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  isDefault?: boolean;
+  members: ProjectMember[];
+  data: ProjectDataAsset[];
+  apps: ProjectApp[];
+  createdAt: string;
+};
+
+const defaultMembers: ProjectMember[] = [
+  { id: "m1", name: "Chen Lab", email: "chen@ailux.ai", role: "owner" },
+  { id: "m2", name: "Li Wei", email: "liwei@ailux.ai", role: "admin" },
+  { id: "m3", name: "Zhang Min", email: "zhangmin@ailux.ai", role: "member" },
+];
+
+const defaultData: ProjectDataAsset[] = [
+  { id: "d1", name: "DLL3_Mcb008_model_1.pdb", type: "pdb", size: "2.4 MB", updatedAt: "2026-04-29", source: "run-saved", tags: ["structure"] },
+  { id: "d2", name: "physical_energy_combined_features.csv", type: "csv", size: "128 KB", updatedAt: "2026-04-29", source: "run-saved", tags: ["features"] },
+  { id: "d3", name: "all_ml_evaluation_results_stage2.csv", type: "csv", size: "64 KB", updatedAt: "2026-04-28", source: "run-saved", tags: ["model", "evaluation"] },
+  { id: "d4", name: "internalization_experiment_raw.csv", type: "csv", size: "48 KB", updatedAt: "2026-04-20", source: "uploaded", tags: ["raw-data"] },
+];
+
+const defaultApps: ProjectApp[] = [
+  { id: "a1", name: "内化预测建模工作流程", type: "pipeline", description: "双表位抗体内化活性预测完整流程", lastRun: "2026-04-29", status: "active" },
+  { id: "a2", name: "内吞特征关联分析", type: "agent", description: "特征相关性分析 Agent", lastRun: "2026-04-28", status: "active" },
+  { id: "a3", name: "模型评估报告", type: "report", description: "ML 模型对比评估报告模板", lastRun: "2026-04-27", status: "draft" },
+];
+
+export const SAMPLE_PROJECTS: Project[] = [
+  {
+    id: "proj-default",
+    name: "DLL3 抗体研究",
+    description: "双表位抗体内化活性预测与特征分析",
+    color: "#161FAD",
+    isDefault: true,
+    members: defaultMembers,
+    data: defaultData,
+    apps: defaultApps,
+    createdAt: "2026-03-01",
+  },
+  {
+    id: "proj-2",
+    name: "EGFR 靶向优化",
+    description: "EGFR 抗体 CDR 区域优化项目",
+    color: "#0891b2",
+    members: [defaultMembers[0], defaultMembers[1]],
+    data: [defaultData[3]],
+    apps: [],
+    createdAt: "2026-04-01",
+  },
+  {
+    id: "proj-3",
+    name: "PD-L1 结合分析",
+    description: "PD-L1 抗体结合亲和力分析",
+    color: "#7c3aed",
+    members: [defaultMembers[0]],
+    data: [],
+    apps: [],
+    createdAt: "2026-04-15",
+  },
+];
+
+type ProjectContextType = {
+  projects: Project[];
+  activeProject: Project;
+  setActiveProject: (project: Project) => void;
+  createProject: (name: string, description: string) => Project;
+  projectPanelOpen: boolean;
+  setProjectPanelOpen: (open: boolean) => void;
+  projectDetailView: "apps" | "data" | "members" | null;
+  setProjectDetailView: (view: "apps" | "data" | "members" | null) => void;
+};
+
+const ProjectContext = createContext<ProjectContextType | null>(null);
+
+export function ProjectProvider({ children }: { children: ReactNode }) {
+  const [projects, setProjects] = useState<Project[]>(SAMPLE_PROJECTS);
+  const [activeProject, setActiveProject] = useState<Project>(SAMPLE_PROJECTS[0]);
+  const [projectPanelOpen, setProjectPanelOpen] = useState(false);
+  const [projectDetailView, setProjectDetailView] = useState<"apps" | "data" | "members" | null>(null);
+
+  const createProject = (name: string, description: string): Project => {
+    const colors = ["#161FAD", "#0891b2", "#7c3aed", "#059669", "#dc2626", "#d97706"];
+    const newProject: Project = {
+      id: `proj-${Date.now()}`,
+      name,
+      description,
+      color: colors[projects.length % colors.length],
+      members: [defaultMembers[0]],
+      data: [],
+      apps: [],
+      createdAt: new Date().toISOString().slice(0, 10),
+    };
+    setProjects((prev) => [...prev, newProject]);
+    return newProject;
+  };
+
+  return (
+    <ProjectContext.Provider
+      value={{
+        projects,
+        activeProject,
+        setActiveProject,
+        createProject,
+        projectPanelOpen,
+        setProjectPanelOpen,
+        projectDetailView,
+        setProjectDetailView,
+      }}
+    >
+      {children}
+    </ProjectContext.Provider>
+  );
+}
+
+export function useProject() {
+  const ctx = useContext(ProjectContext);
+  if (!ctx) throw new Error("useProject must be used within ProjectProvider");
+  return ctx;
+}
