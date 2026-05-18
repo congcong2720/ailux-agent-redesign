@@ -37,6 +37,7 @@ import {
 import { toast } from "sonner";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { ProjectPanel } from "@/components/ProjectPanel";
+import { ResourcePanel } from "@/components/ResourcePanel";
 import { useProject } from "@/contexts/ProjectContext";
 
 type Lang = "zh" | "en";
@@ -598,7 +599,7 @@ function Sidebar({
   collapsed?: boolean;
 }) {
   const text = copy[lang];
-  const { setProjectPanelOpen, setProjectDetailView } = useProject();
+  const { setMainView, mainView } = useProject();
 
   if (collapsed) {
     return (
@@ -668,31 +669,34 @@ function Sidebar({
         </div>
       </div>
 
+      {/* Global Resource entry */}
+      <button
+        onClick={() => setMainView(mainView === "resource" ? "workspace" : "resource")}
+        className={`mb-2 flex w-full items-center gap-2.5 rounded-[16px] border px-3 py-2.5 text-left transition ${
+          mainView === "resource"
+            ? "border-emerald-200 bg-emerald-50/80 text-emerald-700"
+            : "border-slate-100 bg-slate-50/80 text-slate-600 hover:border-slate-200 hover:bg-white"
+        }`}
+      >
+        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white text-[11px] ${
+          mainView === "resource"
+            ? "bg-[linear-gradient(135deg,#059669_0%,#34d399_100%)]"
+            : "bg-[linear-gradient(135deg,#64748b_0%,#94a3b8_100%)]"
+        }`}>
+          <Database className="h-3.5 w-3.5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-semibold">{lang === "zh" ? "全局资源" : "Resources"}</p>
+          <p className="text-[10px] text-slate-400">{lang === "zh" ? "数据 · Skill · 模版" : "Data · Skills · Templates"}</p>
+        </div>
+      </button>
+
       {/* Project switcher */}
       <div className="mb-3">
         <p className="mb-1.5 px-1 text-[10px] uppercase tracking-[0.18em] text-slate-400">
           {lang === "zh" ? "项目" : "Project"}
         </p>
         <ProjectSwitcher lang={lang} />
-        {/* Project quick-access tabs */}
-        <div className="mt-2 flex gap-1">
-          {(["apps", "data", "members"] as const).map((view) => {
-            const labels = {
-              apps: { zh: "应用", en: "Apps" },
-              data: { zh: "数据", en: "Data" },
-              members: { zh: "成员", en: "Members" },
-            };
-            return (
-              <button
-                key={view}
-                onClick={() => { setProjectDetailView(view); setProjectPanelOpen(true); }}
-                className="flex flex-1 items-center justify-center rounded-[12px] border border-slate-100 bg-slate-50/80 py-1.5 text-[11px] font-medium text-slate-500 transition hover:border-[rgba(23,36,216,0.12)] hover:bg-white hover:text-[#161FAD]"
-              >
-                {labels[view][lang]}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       {/* Divider */}
@@ -1394,6 +1398,7 @@ function SidePanel({
 export default function Home() {
   const [lang, setLang] = useState<Lang>("zh");
   const [activeView, setActiveView] = useState<ViewMode>("new");
+  const { mainView, setMainView } = useProject();
   const [sideTab, setSideTab] = useState<SideTab>("plan");
   const [composerValue, setComposerValue] = useState("");
   const [selectedFileId, setSelectedFileId] = useState<string>("");
@@ -1574,24 +1579,31 @@ export default function Home() {
         <div
           ref={menuBoundaryRef}
           className={`grid min-h-0 flex-1 gap-4 ${
-            activeView === "new"
+            mainView !== "workspace"
               ? "xl:grid-cols-[260px_minmax(0,1fr)]"
-              : activeView === "result"
-                ? "xl:grid-cols-[88px_minmax(420px,0.96fr)_minmax(480px,1.04fr)_360px]"
-                : "xl:grid-cols-[260px_minmax(0,1fr)_360px]"
+              : activeView === "new"
+                ? "xl:grid-cols-[260px_minmax(0,1fr)]"
+                : activeView === "result"
+                  ? "xl:grid-cols-[88px_minmax(420px,0.96fr)_minmax(480px,1.04fr)_360px]"
+                  : "xl:grid-cols-[260px_minmax(0,1fr)_360px]"
           }`}
         >
           <Sidebar
             activeView={activeView}
             lang={lang}
             userMenuOpen={userMenuOpen}
-            onNewConversation={handleNewConversation}
+            onNewConversation={() => { setMainView("workspace"); handleNewConversation(); }}
             onToggleUserMenu={() => setUserMenuOpen((current) => !current)}
             onUserMenuAction={handleUserMenuAction}
-            collapsed={activeView === "result"}
+            collapsed={mainView === "workspace" && activeView === "result"}
           />
 
-          {activeView === "new" ? (
+          {/* Main content area — switches based on mainView */}
+          {mainView === "project-detail" ? (
+            <ProjectPanel lang={lang} />
+          ) : mainView === "resource" ? (
+            <ResourcePanel lang={lang} />
+          ) : activeView === "new" ? (
             <NewTaskWorkspace
               lang={lang}
               prompt={composerValue}
@@ -1610,7 +1622,7 @@ export default function Home() {
             />
           )}
 
-          {activeView === "result" ? (
+          {mainView === "workspace" && activeView === "result" ? (
             <ResultWorkspace
               lang={lang}
               openedFiles={openedFiles}
@@ -1621,7 +1633,7 @@ export default function Home() {
             />
           ) : null}
 
-          {activeView !== "new" ? (
+          {mainView === "workspace" && activeView !== "new" ? (
             <SidePanel
               lang={lang}
               view={activeView}
@@ -1640,8 +1652,6 @@ export default function Home() {
           ) : null}
         </div>
       </div>
-      {/* Project detail panel (slides in from right) */}
-      <ProjectPanel lang={lang} />
     </div>
   );
 }

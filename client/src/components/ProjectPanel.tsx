@@ -1,11 +1,10 @@
 /*
- * ProjectPanel — 右侧滑出的项目详情面板
- * 包含三个 tab：Products/Apps、Data、Members
- * 设计语言：与现有 Ailux 蓝色系保持一致，HarmonyOS Sans SC 字体
+ * ProjectPanel — 项目详情内嵌视图（替换原弹窗，直接渲染在主区域）
+ * Tabs: 应用 / 数据 / 成员
+ * 设计语言：Ailux 蓝色系，HarmonyOS Sans SC
  */
 import { useState } from "react";
 import {
-  X,
   LayoutGrid,
   Database,
   Users,
@@ -28,8 +27,10 @@ import {
   Circle,
   Archive,
   UserPlus,
+  ArrowLeft,
+  Settings2,
 } from "lucide-react";
-import { useProject, Project, ProjectDataAsset, ProjectApp, ProjectMember } from "@/contexts/ProjectContext";
+import { useProject, Project } from "@/contexts/ProjectContext";
 import { toast } from "sonner";
 
 type Lang = "zh" | "en";
@@ -84,8 +85,8 @@ function AppsTab({ project, lang }: { project: Project; lang: Lang }) {
       </div>
 
       {apps.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 py-10 text-center">
-          <LayoutGrid className="mb-3 h-8 w-8 text-slate-300" />
+        <div className="flex flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 py-14 text-center">
+          <LayoutGrid className="mb-3 h-9 w-9 text-slate-300" />
           <p className="text-[13px] text-slate-400">{lang === "zh" ? "暂无应用" : "No apps yet"}</p>
           <p className="mt-1 text-[11px] text-slate-300">{lang === "zh" ? "创建 Agent、工作流或报告" : "Create an Agent, pipeline, or report"}</p>
         </div>
@@ -110,7 +111,9 @@ function AppsTab({ project, lang }: { project: Project; lang: Lang }) {
                       {lang === "zh" ? status.label : status.labelEn}
                     </span>
                   </div>
-                  <p className="mt-0.5 truncate text-[11px] text-slate-400">{appTypeLabel[app.type]?.[lang]} · {app.description}</p>
+                  <p className="mt-0.5 truncate text-[11px] text-slate-400">
+                    {appTypeLabel[app.type]?.[lang]} · {app.description}
+                  </p>
                   {app.lastRun && (
                     <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-300">
                       <Clock className="h-3 w-3" />
@@ -131,7 +134,6 @@ function AppsTab({ project, lang }: { project: Project; lang: Lang }) {
 function DataTab({ project, lang }: { project: Project; lang: Lang }) {
   const assets = project.data;
   const [filter, setFilter] = useState<"all" | "uploaded" | "run-saved">("all");
-
   const filtered = filter === "all" ? assets : assets.filter((a) => a.source === filter);
 
   return (
@@ -167,10 +169,12 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 py-10 text-center">
-          <Database className="mb-3 h-8 w-8 text-slate-300" />
+        <div className="flex flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 py-14 text-center">
+          <Database className="mb-3 h-9 w-9 text-slate-300" />
           <p className="text-[13px] text-slate-400">{lang === "zh" ? "暂无数据资产" : "No data assets"}</p>
-          <p className="mt-1 text-[11px] text-slate-300">{lang === "zh" ? "上传文件或从 Run 产物中保存" : "Upload files or save from Run outputs"}</p>
+          <p className="mt-1 text-[11px] text-slate-300">
+            {lang === "zh" ? "上传文件或从 Run 产物中保存" : "Upload files or save from Run outputs"}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -189,7 +193,9 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
                   <span className="text-[10px] text-slate-400">{asset.size}</span>
                   <span className="text-[10px] text-slate-300">·</span>
                   <span className={`text-[10px] ${asset.source === "uploaded" ? "text-blue-500" : "text-emerald-500"}`}>
-                    {asset.source === "uploaded" ? (lang === "zh" ? "已上传" : "Uploaded") : (lang === "zh" ? "Run 产物" : "Run output")}
+                    {asset.source === "uploaded"
+                      ? lang === "zh" ? "已上传" : "Uploaded"
+                      : lang === "zh" ? "Run 产物" : "Run output"}
                   </span>
                   <span className="text-[10px] text-slate-300">·</span>
                   <span className="text-[10px] text-slate-400">{asset.updatedAt}</span>
@@ -218,7 +224,9 @@ function MembersTab({ project, lang }: { project: Project; lang: Lang }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <p className="text-[12px] text-slate-400">{lang === "zh" ? `${members.length} 位成员` : `${members.length} members`}</p>
+        <p className="text-[12px] text-slate-400">
+          {lang === "zh" ? `${members.length} 位成员` : `${members.length} members`}
+        </p>
         <button
           onClick={() => toast.message(lang === "zh" ? "邀请成员 — 即将上线" : "Invite member — coming soon")}
           className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.2)] hover:text-[#161FAD]"
@@ -256,10 +264,9 @@ function MembersTab({ project, lang }: { project: Project; lang: Lang }) {
   );
 }
 
+/** 内嵌项目详情视图（直接渲染在主区域，无 overlay） */
 export function ProjectPanel({ lang }: { lang: Lang }) {
-  const { activeProject, projectPanelOpen, setProjectPanelOpen, projectDetailView, setProjectDetailView } = useProject();
-
-  if (!projectPanelOpen) return null;
+  const { activeProject, projectDetailView, setProjectDetailView, setMainView } = useProject();
 
   const tabs: { key: "apps" | "data" | "members"; label: string; labelEn: string; icon: React.ReactNode }[] = [
     { key: "apps", label: "应用", labelEn: "Apps", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
@@ -267,75 +274,72 @@ export function ProjectPanel({ lang }: { lang: Lang }) {
     { key: "members", label: "成员", labelEn: "Members", icon: <Users className="h-3.5 w-3.5" /> },
   ];
 
-  const activeTab = projectDetailView ?? "apps";
-
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[2px]"
-        onClick={() => setProjectPanelOpen(false)}
-      />
-
-      {/* Panel */}
-      <div className="fixed right-0 top-0 z-50 flex h-full w-[420px] flex-col rounded-l-[24px] border-l border-white/70 bg-white/96 shadow-[−24px_0_60px_rgba(15,23,42,0.12)] backdrop-blur">
-        {/* Header */}
-        <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-4">
-          <div
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white text-[13px] font-bold"
-            style={{ background: `linear-gradient(135deg, ${activeProject.color} 0%, ${activeProject.color}99 100%)` }}
-          >
-            {activeProject.name.slice(0, 1)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[14px] font-semibold text-[#070261]">{activeProject.name}</p>
-            <p className="truncate text-[11px] text-slate-400">{activeProject.description}</p>
-          </div>
-          <button
-            onClick={() => setProjectPanelOpen(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-          >
-            <X className="h-4 w-4" />
-          </button>
+    <div className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3.5 shrink-0">
+        <button
+          onClick={() => setMainView("workspace")}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+          title={lang === "zh" ? "返回工作区" : "Back to workspace"}
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white text-[12px] font-bold"
+          style={{ background: `linear-gradient(135deg, ${activeProject.color} 0%, ${activeProject.color}99 100%)` }}
+        >
+          {activeProject.name.slice(0, 1)}
         </div>
-
-        {/* Tabs */}
-        <div className="flex gap-1 border-b border-slate-100 px-5 py-2">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setProjectDetailView(tab.key)}
-              className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-medium transition ${
-                activeTab === tab.key
-                  ? "bg-[rgba(23,36,216,0.08)] text-[#161FAD]"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-              }`}
-            >
-              {tab.icon}
-              {lang === "zh" ? tab.label : tab.labelEn}
-            </button>
-          ))}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] font-semibold text-[#070261]">{activeProject.name}</p>
+          <p className="truncate text-[11px] text-slate-400">{activeProject.description}</p>
         </div>
-
-        {/* Content */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          {activeTab === "apps" && <AppsTab project={activeProject} lang={lang} />}
-          {activeTab === "data" && <DataTab project={activeProject} lang={lang} />}
-          {activeTab === "members" && <MembersTab project={activeProject} lang={lang} />}
-        </div>
-
-        {/* Footer */}
-        <div className="border-t border-slate-100 px-5 py-3">
-          <p className="text-[11px] text-slate-400">
-            {lang === "zh" ? `创建于 ${activeProject.createdAt}` : `Created ${activeProject.createdAt}`}
-            {activeProject.isDefault && (
-              <span className="ml-2 rounded-full bg-[rgba(23,36,216,0.08)] px-2 py-0.5 text-[10px] text-[#161FAD]">
-                {lang === "zh" ? "默认项目" : "Default"}
-              </span>
-            )}
-          </p>
-        </div>
+        <button
+          onClick={() => toast.message(lang === "zh" ? "项目设置 — 即将上线" : "Project settings — coming soon")}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-[#161FAD]"
+          title={lang === "zh" ? "项目设置" : "Project settings"}
+        >
+          <Settings2 className="h-4 w-4" />
+        </button>
       </div>
-    </>
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-slate-100 px-4 py-2 shrink-0">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setProjectDetailView(tab.key)}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-medium transition ${
+              projectDetailView === tab.key
+                ? "bg-[rgba(23,36,216,0.08)] text-[#161FAD]"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+            }`}
+          >
+            {tab.icon}
+            {lang === "zh" ? tab.label : tab.labelEn}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        {projectDetailView === "apps" && <AppsTab project={activeProject} lang={lang} />}
+        {projectDetailView === "data" && <DataTab project={activeProject} lang={lang} />}
+        {projectDetailView === "members" && <MembersTab project={activeProject} lang={lang} />}
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-slate-100 px-4 py-2.5 shrink-0">
+        <p className="text-[10px] text-slate-400">
+          {lang === "zh" ? `创建于 ${activeProject.createdAt}` : `Created ${activeProject.createdAt}`}
+          {activeProject.isDefault && (
+            <span className="ml-2 rounded-full bg-[rgba(23,36,216,0.08)] px-2 py-0.5 text-[10px] text-[#161FAD]">
+              {lang === "zh" ? "默认项目" : "Default"}
+            </span>
+          )}
+        </p>
+      </div>
+    </div>
   );
 }

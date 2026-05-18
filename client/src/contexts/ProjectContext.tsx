@@ -92,15 +92,23 @@ export const SAMPLE_PROJECTS: Project[] = [
   },
 ];
 
+export type MainView = "workspace" | "project-detail" | "resource";
+
 type ProjectContextType = {
   projects: Project[];
   activeProject: Project;
   setActiveProject: (project: Project) => void;
   createProject: (name: string, description: string) => Project;
+  // Legacy (kept for backward compat, now unused)
   projectPanelOpen: boolean;
   setProjectPanelOpen: (open: boolean) => void;
-  projectDetailView: "apps" | "data" | "members" | null;
-  setProjectDetailView: (view: "apps" | "data" | "members" | null) => void;
+  // Main view switching
+  mainView: MainView;
+  setMainView: (view: MainView) => void;
+  projectDetailView: "apps" | "data" | "members";
+  setProjectDetailView: (view: "apps" | "data" | "members") => void;
+  resourceTab: "data" | "skill" | "template";
+  setResourceTab: (tab: "data" | "skill" | "template") => void;
 };
 
 const ProjectContext = createContext<ProjectContextType | null>(null);
@@ -109,7 +117,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [projects, setProjects] = useState<Project[]>(SAMPLE_PROJECTS);
   const [activeProject, setActiveProject] = useState<Project>(SAMPLE_PROJECTS[0]);
   const [projectPanelOpen, setProjectPanelOpen] = useState(false);
-  const [projectDetailView, setProjectDetailView] = useState<"apps" | "data" | "members" | null>(null);
+  const [mainView, setMainView] = useState<MainView>("workspace");
+  const [projectDetailView, setProjectDetailView] = useState<"apps" | "data" | "members">("apps");
+  const [resourceTab, setResourceTab] = useState<"data" | "skill" | "template">("data");
 
   const createProject = (name: string, description: string): Project => {
     const colors = ["#161FAD", "#0891b2", "#7c3aed", "#059669", "#dc2626", "#d97706"];
@@ -136,8 +146,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         createProject,
         projectPanelOpen,
         setProjectPanelOpen,
+        mainView,
+        setMainView,
         projectDetailView,
         setProjectDetailView,
+        resourceTab,
+        setResourceTab,
       }}
     >
       {children}
