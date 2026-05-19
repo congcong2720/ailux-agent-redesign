@@ -38,6 +38,7 @@ import { toast } from "sonner";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { ProjectPanel } from "@/components/ProjectPanel";
 import { ResourcePanel } from "@/components/ResourcePanel";
+import { CreateProjectView } from "@/components/CreateProjectView";
 import { useProject } from "@/contexts/ProjectContext";
 
 type Lang = "zh" | "en";
@@ -1603,6 +1604,8 @@ export default function Home() {
             <ProjectPanel lang={lang} />
           ) : mainView === "resource" ? (
             <ResourcePanel lang={lang} />
+          ) : mainView === "create-project" ? (
+            <CreateProjectView lang={lang} />
           ) : activeView === "new" ? (
             <NewTaskWorkspace
               lang={lang}

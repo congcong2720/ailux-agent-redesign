@@ -177,33 +177,52 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((asset) => (
+        <div className="overflow-hidden rounded-[18px] border border-slate-100 bg-white">
+          {filtered.map((asset, idx) => (
             <button
               key={asset.id}
               onClick={() => toast.message(lang === "zh" ? `查看 ${asset.name}` : `View ${asset.name}`)}
-              className="flex w-full items-center gap-3 rounded-[16px] border border-slate-100 bg-slate-50/80 px-4 py-3 text-left transition hover:border-[rgba(23,36,216,0.12)] hover:bg-white"
+              className={`flex w-full items-start gap-4 px-5 py-4 text-left transition hover:bg-slate-50/80 ${
+                idx !== 0 ? "border-t border-slate-100" : ""
+              }`}
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white">
+              {/* File type icon */}
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-slate-50">
                 {FILE_TYPE_ICONS[asset.type] ?? <File className="h-4 w-4 text-slate-400" />}
               </div>
+
+              {/* File info */}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[12px] font-medium text-slate-700">{asset.name}</p>
-                <div className="mt-0.5 flex items-center gap-2">
-                  <span className="text-[10px] text-slate-400">{asset.size}</span>
-                  <span className="text-[10px] text-slate-300">·</span>
-                  <span className={`text-[10px] ${asset.source === "uploaded" ? "text-blue-500" : "text-emerald-500"}`}>
+                {/* File name */}
+                <p className="truncate text-[13px] font-medium text-slate-800">{asset.name}</p>
+
+                {/* Meta row: size · source · date */}
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-[12px] text-slate-400">{asset.size}</span>
+                  <span className="text-[11px] text-slate-300">·</span>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                      asset.source === "uploaded"
+                        ? "bg-blue-50 text-blue-600"
+                        : "bg-emerald-50 text-emerald-600"
+                    }`}
+                  >
                     {asset.source === "uploaded"
                       ? lang === "zh" ? "已上传" : "Uploaded"
                       : lang === "zh" ? "Run 产物" : "Run output"}
                   </span>
-                  <span className="text-[10px] text-slate-300">·</span>
-                  <span className="text-[10px] text-slate-400">{asset.updatedAt}</span>
+                  <span className="text-[11px] text-slate-300">·</span>
+                  <span className="text-[12px] text-slate-400">{asset.updatedAt}</span>
                 </div>
+
+                {/* Tags */}
                 {asset.tags && asset.tags.length > 0 && (
-                  <div className="mt-1 flex flex-wrap gap-1">
+                  <div className="mt-1.5 flex flex-wrap gap-1">
                     {asset.tags.map((tag) => (
-                      <span key={tag} className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                      <span
+                        key={tag}
+                        className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500"
+                      >
                         {tag}
                       </span>
                     ))}

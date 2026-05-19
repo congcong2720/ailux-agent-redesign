@@ -92,7 +92,7 @@ export const SAMPLE_PROJECTS: Project[] = [
   },
 ];
 
-export type MainView = "workspace" | "project-detail" | "resource";
+export type MainView = "workspace" | "project-detail" | "resource" | "create-project";
 
 type ProjectContextType = {
   projects: Project[];

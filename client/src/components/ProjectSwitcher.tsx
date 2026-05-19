@@ -1,36 +1,24 @@
 /*
  * ProjectSwitcher — 左侧导航栏中的项目切换器
- * 点击展开项目列表，支持切换和创建新项目
+ * 点击展开项目列表，支持切换；"创建新项目"跳转到右侧全屏创建表单
  * 右侧设置图标点击后切换主区域为项目详情视图
  * 设计语言：与现有 Ailux 蓝色系保持一致
  */
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Plus, Check, Settings2 } from "lucide-react";
 import { useProject, Project } from "@/contexts/ProjectContext";
-import { toast } from "sonner";
 
 type Lang = "zh" | "en";
 
 export function ProjectSwitcher({ lang }: { lang: Lang }) {
-  const { projects, activeProject, setActiveProject, createProject, setMainView, setProjectDetailView } = useProject();
+  const { projects, activeProject, setActiveProject, setMainView, setProjectDetailView } = useProject();
   const [open, setOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newDesc, setNewDesc] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (creating && inputRef.current) inputRef.current.focus();
-  }, [creating]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setOpen(false);
-        setCreating(false);
-        setNewName("");
-        setNewDesc("");
       }
     }
     if (open) document.addEventListener("mousedown", handleClickOutside);
@@ -42,22 +30,16 @@ export function ProjectSwitcher({ lang }: { lang: Lang }) {
     setOpen(false);
   };
 
-  const handleCreate = () => {
-    if (!newName.trim()) return;
-    const project = createProject(newName.trim(), newDesc.trim());
-    setActiveProject(project);
-    setCreating(false);
-    setNewName("");
-    setNewDesc("");
-    setOpen(false);
-    toast.success(lang === "zh" ? `项目「${project.name}」已创建` : `Project "${project.name}" created`);
-  };
-
   const handleOpenDetail = (e: React.MouseEvent) => {
     e.stopPropagation();
     setProjectDetailView("apps");
     setMainView("project-detail");
     setOpen(false);
+  };
+
+  const handleCreateNew = () => {
+    setOpen(false);
+    setMainView("create-project");
   };
 
   return (
@@ -131,52 +113,14 @@ export function ProjectSwitcher({ lang }: { lang: Lang }) {
 
           <div className="h-px bg-slate-100 my-1.5" />
 
-          {/* Create new project */}
-          {creating ? (
-            <div className="rounded-[12px] border border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.04)] p-2.5">
-              <input
-                ref={inputRef}
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleCreate();
-                  if (e.key === "Escape") { setCreating(false); setNewName(""); setNewDesc(""); }
-                }}
-                placeholder={lang === "zh" ? "项目名称" : "Project name"}
-                className="mb-1.5 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] text-slate-800 outline-none placeholder:text-slate-400 focus:border-[rgba(23,36,216,0.3)]"
-              />
-              <input
-                value={newDesc}
-                onChange={(e) => setNewDesc(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
-                placeholder={lang === "zh" ? "项目描述（可选）" : "Description (optional)"}
-                className="mb-2 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] text-slate-800 outline-none placeholder:text-slate-400 focus:border-[rgba(23,36,216,0.3)]"
-              />
-              <div className="flex gap-1.5">
-                <button
-                  onClick={handleCreate}
-                  disabled={!newName.trim()}
-                  className="flex-1 rounded-lg bg-[#161FAD] py-1.5 text-[12px] font-medium text-white transition hover:bg-[#1724D8] disabled:cursor-not-allowed disabled:bg-slate-300"
-                >
-                  {lang === "zh" ? "创建" : "Create"}
-                </button>
-                <button
-                  onClick={() => { setCreating(false); setNewName(""); setNewDesc(""); }}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12px] text-slate-500 transition hover:bg-slate-50"
-                >
-                  {lang === "zh" ? "取消" : "Cancel"}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setCreating(true)}
-              className="flex w-full items-center gap-2 rounded-[12px] px-2.5 py-2 text-[12px] font-medium text-slate-500 transition hover:bg-slate-50 hover:text-[#161FAD]"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              {lang === "zh" ? "创建新项目" : "Create new project"}
-            </button>
-          )}
+          {/* Create new project — navigates to full-screen form */}
+          <button
+            onClick={handleCreateNew}
+            className="flex w-full items-center gap-2 rounded-[12px] px-2.5 py-2 text-[12px] font-medium text-slate-500 transition hover:bg-slate-50 hover:text-[#161FAD]"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {lang === "zh" ? "创建新项目" : "Create new project"}
+          </button>
         </div>
       )}
     </div>
