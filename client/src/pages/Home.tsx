@@ -53,7 +53,7 @@ type SideTab = "plan" | "results" | "reports";
 type StepStatus = "done" | "running" | "waiting" | "failed";
 type ResultType = "csv" | "docx" | "json" | "png" | "xlsx" | "pdb";
 type ScenarioId = "dll3" | "a2ui";
-type DemoCard = "plan-confirm" | "hitl-decision" | "recovery-action" | "results-summary";
+type DemoCard = "plan-confirm" | "plan-preview" | "hitl-decision" | "recovery-action" | "results-summary";
 type AgentDemoAction =
   | "confirm-run"
   | "adjust-params"
@@ -485,6 +485,57 @@ const runReports: RunReport[] = [
   },
 ];
 
+const a2uiPlanSections = [
+  {
+    title: l("理解任务与校验输入", "Understand Task & Validate Inputs"),
+    body: l(
+      "抽取目标、输入数据、约束和预期产物，并校验 CSV、PDB 与实验字段。",
+      "Extract objective, input data, constraints, and deliverables while validating CSV, PDB, and assay fields.",
+    ),
+    output: l("输入文件校验通过，识别 DLL3 双抗功能预测目标", "Input files validated, DLL3 bispecific prediction objective identified"),
+  },
+  {
+    title: l("生成可确认执行 Plan", "Generate Confirmable Execution Plan"),
+    body: l(
+      "把任务拆成结构特征、模型排序、人工检查点、结果解释和模板沉淀。",
+      "Split the task into structural features, model ranking, human checkpoints, result explanation, and template capture.",
+    ),
+    output: l("含步骤、参数、文件要求和风险提示的确认式 Plan", "Confirmable plan with steps, parameters, file requirements, and risk notes"),
+  },
+  {
+    title: l("计算结构与表位特征", "Compute Structural & Epitope Features"),
+    body: l(
+      "计算界面残基、空间距离、表位覆盖率和潜在冲突位点。",
+      "Compute interface residues, spatial distances, epitope coverage, and potential conflict sites.",
+    ),
+    output: l("结构、能量、界面、表位四维可复用特征", "Structure, energy, interface, and epitope reusable features"),
+  },
+  {
+    title: l("人工确认异常候选", "Human Review for Outlier Candidates"),
+    body: l(
+      "暂停流程并展示异常候选，等待用户决定继续、调参或排除。",
+      "Pause the flow and present outlier candidates for continue, tuning, or exclusion.",
+    ),
+    output: l("用户决策记录，含 warning 标注或阈值调整", "User decision record with warning labels or threshold adjustments"),
+  },
+  {
+    title: l("模型排序与失败恢复", "Model Ranking & Recovery"),
+    body: l(
+      "批量推理候选分子；字段缺失时只重跑当前步骤。",
+      "Run batch candidate inference and rerun only the current step when fields are missing.",
+    ),
+    output: l("ranked_candidates.csv + 字段缺失自动恢复", "ranked_candidates.csv + automatic field recovery"),
+  },
+  {
+    title: l("生成结果解释与模板", "Generate Result Explanation & Template"),
+    body: l(
+      "输出报告、文件预览、Data 保存入口和可复用流程模板。",
+      "Generate report, file preview, Data save entry, and reusable workflow template.",
+    ),
+    output: l("analysis_report.docx + workflow_template.json", "analysis_report.docx + workflow_template.json"),
+  },
+];
+
 const a2uiRunningMessages: RunningMessage[] = [
   {
     role: "user",
@@ -497,8 +548,17 @@ const a2uiRunningMessages: RunningMessage[] = [
   {
     role: "agent",
     content: l(
-      "我已经把任务拆成 6 个步骤。和 M1 的“直接开始执行”不同，M2 会先展示任务理解、参数、文件要求和风险提示，确认后再进入真实运行。",
-      "I have split the task into 6 steps. Unlike M1's direct execution, M2 first shows task understanding, parameters, file requirements, and risk notes before real execution starts.",
+      "好的，我已将任务拆解为 6 个步骤。以下是执行计划，请确认后开始运行。",
+      "Understood. I have broken the task into 6 steps. Please review the plan below and confirm to start execution.",
+    ),
+    time: "10:28",
+    card: "plan-preview",
+  },
+  {
+    role: "agent",
+    content: l(
+      "和 M1 的直接开始执行不同，M2 会先展示任务理解、参数、文件要求和风险提示，确认后再进入真实运行。",
+      "Unlike M1's direct execution, M2 first shows task understanding, parameters, file requirements, and risk notes before real execution starts.",
     ),
     time: "10:28",
     card: "plan-confirm",
@@ -1558,6 +1618,40 @@ function AgentDemoCard({
   recoveryFixed: boolean;
   existingResultsViewed: boolean;
 }) {
+  if (card === "plan-preview") {
+    return (
+      <div className="mt-3 rounded-[18px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(248,250,255,0.98),rgba(255,255,255,1))] px-4 py-4 shadow-[0_8px_24px_rgba(15,23,42,0.035)]">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-[12px] font-semibold tracking-[0.02em] text-[#161FAD]">
+            {lang === "zh" ? "分析计划" : "Analysis Plan"}
+          </span>
+          <span className="rounded-full bg-[rgba(22,31,173,0.07)] px-2 py-0.5 text-[10px] font-medium text-[#161FAD]">
+            {lang === "zh" ? "6 步骤" : "6 steps"}
+          </span>
+        </div>
+        <div className="space-y-3">
+          {a2uiPlanSections.map((section, idx) => (
+            <div key={idx} className="flex items-start gap-3">
+              <span className="mt-[1px] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgba(23,36,216,0.08)] text-[10px] font-bold text-[#161FAD]">
+                {idx + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-semibold text-[#0B1454]">{pick(lang, section.title)}</p>
+                <p className="mt-0.5 text-[11px] leading-[1.6] text-slate-500">{pick(lang, section.body)}</p>
+                <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-400">
+                  <svg className="h-3 w-3 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
+                  </svg>
+                  <span>{lang === "zh" ? "输出：" : "Output: "}{pick(lang, section.output)}</span>
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (card === "plan-confirm") {
     return (
       <div className="mt-3 rounded-xl border border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.08)] p-4">
