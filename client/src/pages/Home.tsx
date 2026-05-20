@@ -44,7 +44,6 @@ import {
   Upload,
   UserCircle2,
   WandSparkles,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -53,6 +52,19 @@ type ViewMode = "new" | "running" | "result";
 type SideTab = "plan" | "results" | "reports";
 type StepStatus = "done" | "running" | "waiting" | "failed";
 type ResultType = "csv" | "docx" | "json" | "png" | "xlsx" | "pdb";
+type ScenarioId = "dll3" | "a2ui";
+type DemoCard = "plan-confirm" | "hitl-decision" | "recovery-action" | "results-summary";
+type AgentDemoAction =
+  | "confirm-run"
+  | "adjust-params"
+  | "continue-label"
+  | "adjust-threshold"
+  | "fix-retry"
+  | "view-results"
+  | "view-report"
+  | "interpret-files"
+  | "rerun-ml"
+  | "explain-top-features";
 
 type LocalizedText = {
   zh: string;
@@ -144,6 +156,21 @@ type RunningMessage = {
   role: "user" | "agent";
   content: LocalizedText;
   time: string;
+  card?: DemoCard;
+};
+
+type RecommendedPrompt = {
+  id: ScenarioId;
+  text: LocalizedText;
+};
+
+type DemoScenario = {
+  id: ScenarioId;
+  title: LocalizedText;
+  messages: RunningMessage[];
+  steps: PlanStep[];
+  resultFiles: ResultFile[];
+  reports: RunReport[];
 };
 
 const l = (zh: string, en: string): LocalizedText => ({ zh, en });
@@ -208,13 +235,25 @@ const historyTasks: HistoryTask[] = [
   { id: "t4", title: l("CDR 区域内吞影响评估", "CDR region impact assessment"), meta: l("04-12 14:32", "04-12 14:32") },
 ];
 
-const recommendedPrompts = [
-  l(
-    "基于输入的实验数据，分析与双表位抗体内化（内吞作用）相关的特征。设计并构建一个预测模型，对这种内化活性进行评分。",
-    "Based on input experimental data, analyze the features correlated with biparatopic antibody internalization (endocytosis). Design and build a predictive model to score this internalization activity.",
-  ),
-  l("给我一条 DLL3 双抗功能预测的固定分析流程，并说明每步输出", "Give me a fixed DLL3 bispecific analysis workflow and explain the output of each step."),
-  l("输入 PDB 与 CSV 后，帮我生成结构、特征和结果解释报告", "After I provide PDB and CSV files, generate a structure, feature, and result interpretation report."),
+const recommendedPrompts: RecommendedPrompt[] = [
+  {
+    id: "dll3",
+    text: l(
+      "基于输入的实验数据，分析与双表位抗体内化（内吞作用）相关的特征。设计并构建一个预测模型，对这种内化活性进行评分。",
+      "Based on input experimental data, analyze the features correlated with biparatopic antibody internalization (endocytosis). Design and build a predictive model to score this internalization activity.",
+    ),
+  },
+  {
+    id: "a2ui",
+    text: l(
+      "给我一条 DLL3 双抗功能预测的固定分析流程，并说明每步输出",
+      "Give me a fixed DLL3 bispecific analysis workflow and explain the output of each step.",
+    ),
+  },
+  {
+    id: "dll3",
+    text: l("输入 PDB 与 CSV 后，帮我生成结构、特征和结果解释报告", "After I provide PDB and CSV files, generate a structure, feature, and result interpretation report."),
+  },
 ];
 
 const runningMessages: RunningMessage[] = [
@@ -384,7 +423,8 @@ const reportSections: ReportSection[] = [
     items: [
       { label: l("Mcb008", "Mcb008"), value: "140 features", detail: l("PDB：XF1_DLL3_Mcb008xi_000_SC_0.75.pdb，状态已完成。", "PDB XF1_DLL3_Mcb008xi_000_SC_0.75.pdb completed.") },
       { label: l("Msb028", "Msb028"), value: "140 features", detail: l("PDB：XF_res_DLL3_Msb028_001_SC_0.35.pdb，状态已完成。", "PDB XF_res_DLL3_Msb028_001_SC_0.35.pdb completed.") },
-      { label: l("ZG006-1 / ZG006-2", "ZG006-1 / ZG006-2"), value: "280 features", detail: l("两个 ZG006 结合域分别完成 140 维结构特征提取。", "Both ZG006 binders completed 140-dimensional structural feature extraction.") },
+      { label: l("ZG006-1", "ZG006-1"), value: "140 features", detail: l("PDB：XF1_DLL3_ZG006-1_000_SC_0.82.pdb，状态已完成。", "PDB XF1_DLL3_ZG006-1_000_SC_0.82.pdb completed.") },
+      { label: l("ZG006-2", "ZG006-2"), value: "140 features", detail: l("PDB：XF1_DLL3_ZG006-2_000_SC_0.84.pdb，状态已完成。", "PDB XF1_DLL3_ZG006-2_000_SC_0.84.pdb completed.") },
     ],
   },
   {
@@ -411,19 +451,6 @@ const reportSections: ReportSection[] = [
       { label: l("直接现象", "Observation"), value: "constant targets", detail: l("部分交叉验证 fold 的训练标签完全相同，CatBoost 会报错。", "Several cross-validation folds have identical training labels, causing CatBoost errors.") },
       { label: l("影响范围", "Impact"), value: "metrics", detail: l("GBDT 和 LightGBM 可容错完成训练，但结果更多用于验证流程。", "GBDT and LightGBM can finish, but results should mainly validate the workflow.") },
       { label: l("展示原则", "Display rule"), value: "with warning", detail: l("前端应明确提示“模型受限”，避免把 demo 指标误读成生产模型性能。", "The UI should clearly show model limitation warnings to prevent over-interpretation.") },
-    ],
-  },
-  {
-    id: "next-actions",
-    shortLabel: l("下一步", "Next"),
-    title: l("后续优化建议", "Recommended next actions"),
-    summary: l("下一轮重点不是继续调 UI，而是补足样本、标签和可解释特征筛选。", "The next round should focus on samples, labels, and explainable feature selection rather than UI tuning."),
-    badge: "recommended",
-    tone: "brand",
-    items: [
-      { label: l("扩大样本量", "More samples"), value: "priority 1", detail: l("增加更多双抗组合的实验数据，提高模型训练稳定性。", "Add more bispecific combinations to improve training stability.") },
-      { label: l("补充实验标签", "More labels"), value: "priority 2", detail: l("加入内吞速率、降解效率等连续定量标签。", "Add continuous labels such as internalization rate and degradation efficiency.") },
-      { label: l("特征筛选", "Feature selection"), value: "priority 3", detail: l("基于 140 维特征做降维、重要性排序和机制解释。", "Run dimensionality reduction, importance ranking, and mechanism interpretation on the 140 features.") },
     ],
   },
 ];
@@ -457,6 +484,269 @@ const runReports: RunReport[] = [
     sections: reportSections.slice(0, 2),
   },
 ];
+
+const a2uiRunningMessages: RunningMessage[] = [
+  {
+    role: "user",
+    content: l(
+      "给我一条 DLL3 双抗功能预测的固定分析流程，并说明每步输出。",
+      "Give me a fixed DLL3 bispecific analysis workflow and explain the output of each step.",
+    ),
+    time: "10:28",
+  },
+  {
+    role: "agent",
+    content: l(
+      "我已经把任务拆成 6 个步骤。和 M1 的“直接开始执行”不同，M2 会先展示任务理解、参数、文件要求和风险提示，确认后再进入真实运行。",
+      "I have split the task into 6 steps. Unlike M1's direct execution, M2 first shows task understanding, parameters, file requirements, and risk notes before real execution starts.",
+    ),
+    time: "10:28",
+    card: "plan-confirm",
+  },
+  {
+    role: "agent",
+    content: l(
+      "已确认 Plan，开始运行。你可以在右侧 Run 面板查看总进度、当前步骤参数、日志摘要，也可以中止或触发人工检查点。",
+      "Plan confirmed. Execution has started. You can inspect overall progress, current-step parameters, log summary, and pause or trigger human checkpoints in the right Run panel.",
+    ),
+    time: "10:29",
+  },
+  {
+    role: "agent",
+    content: l(
+      "我发现 3 个候选分子结构评分高但实验读数偏低。为了避免黑盒排序，当前流程暂停，等待你确认继续、调参或排除候选。",
+      "I found three candidates with high structural scores but low experimental readouts. To avoid black-box ranking, the flow is paused for your decision: continue, tune thresholds, or exclude candidates.",
+    ),
+    time: "10:31",
+    card: "hitl-decision",
+  },
+  {
+    role: "agent",
+    content: l(
+      "排序步骤出现字段缺失：ranked_candidates.csv 中 2 行缺少 mol_id。影响范围仅限 Step 5，可自动补齐并从当前步骤局部重跑。",
+      "The ranking step found missing fields: 2 rows in ranked_candidates.csv lack mol_id. The impact is limited to Step 5, and the flow can auto-fill the field and rerun this step only.",
+    ),
+    time: "10:33",
+    card: "recovery-action",
+  },
+  {
+    role: "agent",
+    content: l(
+      "任务已完成。我把结果按步骤分组展示在右侧 Files，并生成了可解释报告、热图、排序表和可保存的流程模板。",
+      "The task is complete. I grouped results by step in Files and generated an explainable report, heatmap, ranking table, and reusable workflow template.",
+    ),
+    time: "10:36",
+    card: "results-summary",
+  },
+];
+
+const a2uiRunningSteps: PlanStep[] = [
+  {
+    id: "a2ui-step-1",
+    title: l("理解任务与校验输入", "Understand Task And Validate Inputs"),
+    waiting: l("等待工作流启动。", "Waiting for the workflow to start."),
+    detail: l("正在抽取目标、输入数据、约束和预期产物，并校验 CSV、PDB 与实验字段。", "Extracting objective, input data, constraints, and deliverables while validating CSV, PDB, and assay fields."),
+    duration: "10s",
+    status: "waiting",
+    summary: l("输入文件和字段校验通过，已识别 DLL3 双抗功能预测目标。", "Input files and fields passed validation, and the DLL3 bispecific prediction objective was identified."),
+  },
+  {
+    id: "a2ui-step-2",
+    title: l("生成可确认执行 Plan", "Generate Confirmable Execution Plan"),
+    waiting: l("等待输入校验完成后启动。", "Waiting for input validation to finish."),
+    detail: l("正在把任务拆成结构特征、模型排序、人工检查点、结果解释和模板沉淀。", "Splitting the task into structural features, model ranking, human checkpoints, result explanation, and template capture."),
+    duration: "18s",
+    status: "waiting",
+    summary: l("确认式 Plan 已生成，包含步骤、参数、文件要求和风险提示。", "A confirmable plan is ready with steps, parameters, file requirements, and risk notes."),
+  },
+  {
+    id: "a2ui-step-3",
+    title: l("计算结构与表位特征", "Compute Structural And Epitope Features"),
+    waiting: l("等待用户确认 Plan 后启动。", "Waiting for the user to confirm the plan."),
+    detail: l("正在计算界面残基、空间距离、表位覆盖率和潜在冲突位点。", "Computing interface residues, spatial distances, epitope coverage, and potential conflict sites."),
+    duration: "16s",
+    status: "waiting",
+    summary: l("结构、能量、界面和表位维度已形成可复用特征。", "Structure, energy, interface, and epitope dimensions are now reusable features."),
+  },
+  {
+    id: "a2ui-step-4",
+    title: l("人工确认异常候选", "Human Review For Outlier Candidates"),
+    waiting: l("等待结构特征计算完成后启动。", "Waiting for structural feature calculation to finish."),
+    detail: l("正在暂停流程并展示异常候选，等待用户决定继续、调参或排除。", "Pausing the flow and presenting outlier candidates for continue, tuning, or exclusion."),
+    duration: "12s",
+    status: "waiting",
+    summary: l("人工检查点已完成，用户选择继续并保留 warning。", "Human checkpoint completed, and the user chose to continue with warning labels."),
+  },
+  {
+    id: "a2ui-step-5",
+    title: l("模型排序与失败恢复", "Model Ranking And Recovery"),
+    waiting: l("等待人工确认完成后启动。", "Waiting for human review to finish."),
+    detail: l("正在批量推理候选分子；字段缺失时只重跑当前步骤。", "Running batch candidate inference and rerunning only the current step when fields are missing."),
+    duration: "14s",
+    status: "waiting",
+    summary: l("排序步骤已完成，字段缺失通过局部重跑恢复。", "Ranking is complete, and missing fields were recovered through a local rerun."),
+  },
+  {
+    id: "a2ui-step-6",
+    title: l("生成结果解释与模板", "Generate Result Explanation And Template"),
+    waiting: l("等待排序完成后启动。", "Waiting for ranking to finish."),
+    detail: l("正在输出报告、文件预览、Data 保存入口和可复用流程模板。", "Generating report, file preview, Data save entry, and reusable workflow template."),
+    duration: "12s",
+    status: "waiting",
+    summary: l("结果摘要、图表、报告和模板均已生成。", "Result summary, charts, report, and template have been generated."),
+  },
+];
+
+const a2uiResultFiles: ResultFile[] = [
+  {
+    id: "a2ui-structure-features",
+    name: "structure_features.parquet",
+    meta: l("结构特征表", "Structural feature table"),
+    step: l("步骤 3 · 计算结构与表位特征", "Step 3 · Compute structural and epitope features"),
+    type: "csv",
+  },
+  {
+    id: "a2ui-interface-heatmap",
+    name: "interface_heatmap.png",
+    meta: l("界面热图", "Interface heatmap"),
+    step: l("步骤 3 · 计算结构与表位特征", "Step 3 · Compute structural and epitope features"),
+    type: "png",
+  },
+  {
+    id: "a2ui-ranked-candidates",
+    name: "ranked_candidates.csv",
+    meta: l("候选排序表", "Candidate ranking table"),
+    step: l("步骤 5 · 模型排序与失败恢复", "Step 5 · Model ranking and recovery"),
+    type: "csv",
+  },
+  {
+    id: "a2ui-analysis-report",
+    name: "analysis_report.docx",
+    meta: l("可解释报告", "Explainable report"),
+    step: l("步骤 6 · 生成结果解释与模板", "Step 6 · Generate result explanation and template"),
+    type: "docx",
+  },
+  {
+    id: "a2ui-template-json",
+    name: "workflow_template.json",
+    meta: l("可复用流程模板", "Reusable workflow template"),
+    step: l("步骤 6 · 生成结果解释与模板", "Step 6 · Generate result explanation and template"),
+    type: "json",
+  },
+];
+
+const a2uiReportSections: ReportSection[] = [
+  {
+    id: "overview",
+    shortLabel: l("概况", "Overview"),
+    title: l("项目概况", "Project overview"),
+    summary: l("XAD017 第四轮计算数据，靶点为 DLL3，分析对象为 XF1 双表位双特异性抗体。", "XAD017 round-4 computation dataset targeting DLL3, focused on XF1 biparatopic bispecific antibodies."),
+    badge: "XAD017 / DLL3",
+    tone: "brand",
+    items: [
+      { label: l("抗体格式", "Antibody format"), value: "XF1", detail: l("双表位双特异性抗体。", "Biparatopic bispecific antibody.") },
+      { label: l("结合域", "Binders"), value: "4", detail: l("Mcb008、Msb028、ZG006-1、ZG006-2。", "Mcb008, Msb028, ZG006-1, and ZG006-2.") },
+      { label: l("特征来源", "Feature sources"), value: "Prodigy + Rosetta", detail: l("融合蛋白相互作用、能量学、表位和结合域特征。", "Combines protein interaction, energy, epitope, and binder-domain features.") },
+    ],
+  },
+  {
+    id: "execution",
+    shortLabel: l("流程", "Flow"),
+    title: l("执行流程：9/9 步骤全部成功", "Execution flow: 9/9 steps succeeded"),
+    summary: l("工作空间检查、结构特征计算、双结合域组合和 ML 回归分析均成功完成。", "Workspace checks, structural feature computation, dual-binder feature combination, and ML regression all completed successfully."),
+    badge: "9/9 success",
+    tone: "success",
+    items: [
+      { label: l("特征计算", "Feature computation"), value: "completed", detail: l("Prodigy、Rosetta、表位/结合域特征计算完成。", "Prodigy, Rosetta, and epitope/binder features completed.") },
+      { label: l("双结合域组合", "Dual-binder combination"), value: "completed", detail: l("两臂特征已合并为双表位双抗联合特征。", "Two-arm features were merged into biparatopic antibody feature vectors.") },
+      { label: l("ML 回归分析", "ML regression"), value: "completed", detail: l("完成多模型 K-fold 交叉验证与特征重要性排序。", "Completed multi-model K-fold validation and feature-importance ranking.") },
+    ],
+  },
+  {
+    id: "binder-features",
+    shortLabel: l("Binder", "Binder"),
+    title: l("四个结合域的特征提取", "Feature extraction for four binders"),
+    summary: l("每个 binder 提取 140 维结构特征，四个结合域均已完成。", "Each binder has 140 structural features extracted, and all four binders completed successfully."),
+    badge: "4 × 140",
+    tone: "success",
+    items: [
+      { label: l("Mcb008", "Mcb008"), value: "140", detail: l("XF1_DLL3_Mcb008xi_000_SC_0.75.pdb，状态成功。", "XF1_DLL3_Mcb008xi_000_SC_0.75.pdb succeeded.") },
+      { label: l("Msb028", "Msb028"), value: "140", detail: l("XF_res_DLL3_Msb028_001_SC_0.35.pdb，状态成功。", "XF_res_DLL3_Msb028_001_SC_0.35.pdb succeeded.") },
+      { label: l("ZG006-1", "ZG006-1"), value: "140", detail: l("XF1_DLL3_ZG006-1_000_SC_0.82.pdb，状态成功。", "XF1_DLL3_ZG006-1_000_SC_0.82.pdb succeeded.") },
+      { label: l("ZG006-2", "ZG006-2"), value: "140", detail: l("XF1_DLL3_ZG006-2_000_SC_0.84.pdb，状态成功。", "XF1_DLL3_ZG006-2_000_SC_0.84.pdb succeeded.") },
+    ],
+  },
+  {
+    id: "feature-categories",
+    shortLabel: l("特征", "Features"),
+    title: l("特征类别：140 维 / binder", "Feature categories: 140 dimensions per binder"),
+    summary: l("特征体系覆盖相互作用、能量学、表位和结合域结构信息。", "The feature system covers interaction, energy, epitope, and binder-domain structural information."),
+    badge: "140 dims",
+    tone: "brand",
+    items: [
+      { label: l("Prodigy", "Prodigy"), value: "interaction", detail: l("界面接触数、极性/非极性接触比、结合自由能预测等。", "Interface contacts, polar/non-polar contact ratio, predicted binding free energy, and more.") },
+      { label: l("Rosetta", "Rosetta"), value: "energy", detail: l("总能量、界面能、范德华力、静电能、溶剂化能等。", "Total energy, interface energy, van der Waals, electrostatic, and solvation energies.") },
+      { label: l("表位/结合域", "Epitope / binder"), value: "structure", detail: l("表位残基组成、表位面积、极性分布、CDR 区和框架区特征。", "Epitope residue composition, area, polarity distribution, CDR, and framework features.") },
+    ],
+  },
+  {
+    id: "ml-analysis",
+    shortLabel: l("ML", "ML"),
+    title: l("ML 回归分析结果", "ML regression analysis"),
+    summary: l("系统完成 16 个实验配置组合，但当前数据存在 All train targets are equal 风险。", "The system completed 16 experiment configurations, with an All train targets are equal risk in the current dataset."),
+    badge: "16 configs",
+    tone: "warning",
+    items: [
+      { label: l("分析配置", "Config"), value: "4-fold K-fold", detail: l("OpenBox 贝叶斯优化 5 轮 / fold，模型包括 GBDT、LightGBM、CatBoost。", "OpenBox Bayesian optimization, 5 rounds per fold, with GBDT, LightGBM, and CatBoost.") },
+      { label: l("实验维度", "Dimensions"), value: "1nM / 10nM", detail: l("覆盖 cutoff、特征集和 Stage1 / Stage2 训练阶段组合。", "Covers cutoff, feature set, and Stage1 / Stage2 combinations.") },
+      { label: l("模型风险", "Risk"), value: "constant targets", detail: l("部分 fold 训练目标值全部相同，Spearman / Pearson 因常数输入无法稳定定义。", "Some folds have identical targets, so Spearman / Pearson cannot be stably defined.") },
+    ],
+  },
+  {
+    id: "findings",
+    shortLabel: l("发现", "Findings"),
+    title: l("关键发现与抗体设计启示", "Key findings and antibody-design implications"),
+    summary: l("多层次特征体系已建立，可用于解释表位选择、结合模式和潜在内吞机制。", "A multi-level feature system has been established to explain epitope choice, binding mode, and potential internalization mechanisms."),
+    badge: "insights",
+    tone: "success",
+    items: [
+      { label: l("特征工程", "Feature engineering"), value: "multi-level", detail: l("从单臂结合特征到双表位组合特征均已构建成功。", "Built both single-arm binding features and biparatopic combination features.") },
+      { label: l("表位选择", "Epitope choice"), value: "pairwise", detail: l("Mcb008+ZG006 与 Msb028+ZG006 等组合的结构差异可指导表位优化。", "Structural differences among Mcb008+ZG006 and Msb028+ZG006 can guide epitope optimization.") },
+      { label: l("内吞机制", "Internalization"), value: "interface + distance", detail: l("内吞效率可能与界面互补性、表位距离等特征相关。", "Internalization efficiency may relate to interface complementarity and epitope distance.") },
+    ],
+  },
+];
+
+const a2uiRunReports: RunReport[] = [
+  {
+    id: "a2ui-report-run-01",
+    runId: "a2ui-run-01",
+    title: l("Run #1 · 双表位双抗内吞特征挖掘完整报告", "Run #1 · Complete biparatopic antibody internalization feature report"),
+    fileName: "analysis_report.docx",
+    generatedAt: l("今天 10:32", "Today 10:32"),
+    summary: l("基于 XAD017 第四轮 DLL3 数据的完整分析报告，覆盖特征计算、ML 回归风险、关键发现和下一步建议。", "Complete report for XAD017 round-4 DLL3 data, covering feature computation, ML regression risks, findings, and next actions."),
+    sections: a2uiReportSections,
+  },
+];
+
+const demoScenarios: Record<ScenarioId, DemoScenario> = {
+  dll3: {
+    id: "dll3",
+    title: l("内化预测建模工作流程", "Internalization Predictive Modeling Workflow"),
+    messages: runningMessages,
+    steps: runningSteps,
+    resultFiles,
+    reports: runReports,
+  },
+  a2ui: {
+    id: "a2ui",
+    title: l("DLL3 双抗功能预测固定流程", "DLL3 Bispecific Fixed Prediction Workflow"),
+    messages: a2uiRunningMessages,
+    steps: a2uiRunningSteps,
+    resultFiles: a2uiResultFiles,
+    reports: a2uiRunReports,
+  },
+};
 
 const historyRunItems: HistoryRunItem[] = [
   {
@@ -686,8 +976,8 @@ const statusStyles: Record<StepStatus, { icon: string }> = {
 
 const runningStepDurationsMs = [1400, 1500, 1600, 1700, 1800];
 
-const createRuntimeSteps = (): PlanStep[] =>
-  runningSteps.map((step, index): PlanStep => ({
+const createRuntimeSteps = (steps: PlanStep[]): PlanStep[] =>
+  steps.map((step, index): PlanStep => ({
     ...step,
     status: index === 0 ? "running" : "waiting",
   }));
@@ -1176,7 +1466,7 @@ function NewTaskWorkspace({
   lang: Lang;
   prompt: string;
   onPromptChange: (value: string) => void;
-  onPromptPick: (value: string) => void;
+  onPromptPick: (prompt: RecommendedPrompt) => void;
   onStart: () => void;
 }) {
   const text = copy[lang];
@@ -1202,12 +1492,12 @@ function NewTaskWorkspace({
             <div className="space-y-3">
               {recommendedPrompts.map((item) => (
                 <button
-                  key={pick(lang, item)}
-                  onClick={() => onPromptPick(pick(lang, item))}
+                  key={`${item.id}-${pick(lang, item.text)}`}
+                  onClick={() => onPromptPick(item)}
                   className="flex w-full items-start justify-between gap-3 rounded-[18px] border border-slate-100 bg-slate-50/80 px-4 py-4 text-left transition hover:border-[rgba(23,36,216,0.14)] hover:bg-white"
                 >
                   <div>
-                    <p className="text-[13px] font-medium text-slate-700">{pick(lang, item)}</p>
+                    <p className="text-[13px] font-medium text-slate-700">{pick(lang, item.text)}</p>
                   </div>
                   <ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
                 </button>
@@ -1245,37 +1535,375 @@ function NewTaskWorkspace({
   );
 }
 
+function AgentDemoCard({
+  card,
+  lang,
+  onAction,
+  parametersOpen,
+  planConfirmed,
+  thresholdApplied,
+  recoveryFixed,
+  existingResultsViewed,
+}: {
+  card: DemoCard;
+  lang: Lang;
+  onAction: (action: AgentDemoAction) => void;
+  parametersOpen: boolean;
+  planConfirmed: boolean;
+  thresholdApplied: boolean;
+  recoveryFixed: boolean;
+  existingResultsViewed: boolean;
+}) {
+  if (card === "plan-confirm") {
+    return (
+      <div className="mt-3 rounded-xl border border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.08)] p-4">
+        <p className="text-sm font-semibold text-[#161FAD]">{lang === "zh" ? "M2 Plan 确认卡" : "M2 Plan confirmation"}</p>
+        <p className="mt-1 text-xs leading-5 text-slate-600">
+          {lang === "zh"
+            ? "运行前展示任务理解、步骤、文件、参数和风险。用户确认后才开始执行。"
+            : "Before running, show task understanding, steps, files, parameters, and risks. Execution starts after user confirmation."}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button onClick={() => onAction("confirm-run")} className="rounded-md bg-[#161FAD] px-3 py-2 text-xs font-medium text-white">
+            {planConfirmed ? (lang === "zh" ? "已确认，运行中" : "Confirmed, running") : lang === "zh" ? "确认运行" : "Confirm run"}
+          </button>
+          <button onClick={() => onAction("adjust-params")} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600">
+            {lang === "zh" ? "调整参数" : "Adjust parameters"}
+          </button>
+        </div>
+        {parametersOpen ? (
+          <div className="mt-3 rounded-xl border border-white/80 bg-white/88 p-3">
+            <p className="text-xs font-semibold text-slate-800">{lang === "zh" ? "参数调整面板" : "Parameter panel"}</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              {[
+                [lang === "zh" ? "候选 Top K" : "Candidate Top K", "12"],
+                [lang === "zh" ? "异常阈值" : "Outlier threshold", "10 nM"],
+                [lang === "zh" ? "风险提示" : "Risk note", lang === "zh" ? "开启" : "On"],
+              ].map(([label, value]) => (
+                <label key={label} className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2">
+                  <span className="block text-[10px] text-slate-400">{label}</span>
+                  <input value={value} readOnly className="mt-1 w-full border-0 bg-transparent text-xs font-semibold text-slate-800 outline-none" />
+                </label>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] leading-5 text-slate-500">
+              {lang === "zh" ? "这里模拟真实参数编辑入口：开发可在此接入表单校验、推荐值解释和变更 diff。" : "This simulates a real parameter editor for validation, recommendation rationale, and change diff."}
+            </p>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (card === "hitl-decision") {
+    return (
+      <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4">
+        <p className="text-sm font-semibold text-amber-900">{lang === "zh" ? "人工检查点" : "Human checkpoint"}</p>
+        <p className="mt-1 text-xs leading-5 text-amber-800">
+          {lang === "zh"
+            ? "异常候选：DLL3-BiAb-087、091、102。建议继续运行并加 warning，或调整阈值后重跑。"
+            : "Outliers: DLL3-BiAb-087, 091, 102. Continue with warning labels, or adjust thresholds and rerun."}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button onClick={() => onAction("continue-label")} className="rounded-md bg-amber-500 px-3 py-2 text-xs font-medium text-white">{lang === "zh" ? "继续并打标" : "Continue with label"}</button>
+          <button onClick={() => onAction("adjust-threshold")} className="rounded-md border border-amber-200 bg-white px-3 py-2 text-xs font-medium text-amber-800">{lang === "zh" ? "调整阈值" : "Adjust threshold"}</button>
+        </div>
+        {thresholdApplied ? (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-white/80 px-3 py-2 text-[11px] leading-5 text-amber-800">
+            {lang === "zh" ? "已将异常阈值从 10 nM 调整为 15 nM，并继续后续排序步骤。" : "Threshold adjusted from 10 nM to 15 nM, then ranking continues."}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (card === "recovery-action") {
+    return (
+      <div className="mt-3 rounded-xl border border-red-200 bg-red-50/70 p-4">
+        <p className="text-sm font-semibold text-red-700">{lang === "zh" ? "失败恢复建议" : "Recovery suggestion"}</p>
+        <p className="mt-1 text-xs leading-5 text-red-700">
+          {lang === "zh"
+            ? "影响范围仅为排序步骤。可自动补齐 mol_id，并从 step-05 局部重跑。"
+            : "The impact is limited to ranking. Auto-fill mol_id and rerun from step-05 only."}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button onClick={() => onAction("fix-retry")} className="rounded-md bg-red-600 px-3 py-2 text-xs font-medium text-white">
+            {recoveryFixed ? (lang === "zh" ? "已修复并重跑" : "Fixed and retried") : lang === "zh" ? "修复并重试" : "Fix and retry"}
+          </button>
+          <button onClick={() => onAction("view-results")} className="rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-700">{lang === "zh" ? "查看已有结果" : "View current results"}</button>
+        </div>
+        {existingResultsViewed || recoveryFixed ? (
+          <div className="mt-3 rounded-lg border border-red-100 bg-white/80 px-3 py-2 text-[11px] leading-5 text-red-700">
+            {recoveryFixed
+              ? lang === "zh"
+                ? "已补齐 mol_id，并从 Step 5 局部重跑；右侧结果区会保留已有文件。"
+                : "mol_id has been filled and Step 5 was rerun locally; existing files remain in Results."
+              : lang === "zh"
+                ? "已切换到右侧结果区，先查看当前已生成文件。"
+                : "Switched to Results so current generated files can be reviewed first."}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
+      <p className="text-sm font-semibold text-emerald-800">{lang === "zh" ? "Results 已生成" : "Results generated"}</p>
+      <p className="mt-1 text-xs leading-5 text-emerald-800">
+        {lang === "zh"
+          ? "包含结构特征、热图、排序表和完整报告。结果可预览、下载，并继续进入报告详情。"
+          : "Includes structural features, heatmap, ranking table, and complete report. Results can be previewed, downloaded, and opened in report detail."}
+      </p>
+
+      <div className="mt-4 rounded-2xl border border-white/80 bg-white/85 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">{lang === "zh" ? "双表位内吞特征报告指标卡" : "Biparatopic internalization report metrics"}</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              {lang === "zh" ? "把完整报告里的关键判断抽成可扫读的 A2UI 摘要，先看结论再进详情。" : "Extract key judgments into scannable A2UI summaries before opening the full detail."}
+            </p>
+          </div>
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
+            {lang === "zh" ? "模型受限" : "Limited"}
+          </span>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {[
+            { label: lang === "zh" ? "执行成功" : "Succeeded steps", value: "9/9", hint: lang === "zh" ? "全部步骤完成" : "All steps completed" },
+            { label: lang === "zh" ? "实验配置" : "Experiment configs", value: "16", hint: "cutoff × features × stages" },
+            { label: lang === "zh" ? "特征总量" : "Base features", value: "560", hint: "4 binders × 140" },
+          ].map((metric) => (
+            <div key={metric.label} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+              <p className="text-[11px] text-slate-500">{metric.label}</p>
+              <p className="mt-1 text-lg font-semibold text-slate-900">{metric.value}</p>
+              <p className="mt-1 text-[10px] leading-4 text-slate-400">{metric.hint}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-3 space-y-2">
+          {[
+            {
+              label: lang === "zh" ? "模型状态" : "Model state",
+              value: "constant_targets",
+              tone: "warning",
+              description: lang === "zh" ? "部分 fold 训练标签全相同，CatBoost 报错，指标需要降权解读。" : "Some folds have constant targets, CatBoost errors, and metrics should be down-weighted.",
+            },
+            {
+              label: lang === "zh" ? "指标可信度" : "Metric validity",
+              value: "partial",
+              tone: "warning",
+              description: lang === "zh" ? "GBDT/LightGBM 可容错完成，但 Spearman/Pearson 在常数输入下无法稳定定义。" : "GBDT/LightGBM can finish, but Spearman/Pearson are not stable under constant inputs.",
+            },
+            {
+              label: lang === "zh" ? "特征工程" : "Feature engineering",
+              value: "completed",
+              tone: "success",
+              description: lang === "zh" ? "单臂结合特征和双表位组合特征已形成可复用特征框架。" : "Single-arm and biparatopic combination features form a reusable feature framework.",
+            },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className={`flex items-start gap-2 rounded-xl border px-3 py-2 ${
+                item.tone === "warning" ? "border-amber-200 bg-amber-50/70" : "border-emerald-200 bg-emerald-50/70"
+              }`}
+            >
+              <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${item.tone === "warning" ? "bg-amber-500" : "bg-emerald-500"}`} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-slate-800">{item.label}</span>
+                  <code className="rounded bg-white/80 px-1.5 py-0.5 text-[10px] text-slate-600">{item.value}</code>
+                </div>
+                <p className="mt-1 text-[11px] leading-4 text-slate-600">{item.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={() => onAction("view-report")}
+          className="mt-3 rounded-md bg-emerald-600 px-3 py-2 text-xs font-medium text-white"
+        >
+          {lang === "zh" ? "查看报告详情" : "View report"}
+        </button>
+      </div>
+
+      <div className="mt-4 border-t border-emerald-200/70 pt-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-[#161FAD]">{lang === "zh" ? "推荐下一步" : "Recommended next steps"}</p>
+            <p className="mt-1 text-xs leading-5 text-emerald-800/80">
+              {lang === "zh"
+                ? "这些是报告之外的可继续操作，点击后可直接进入下一轮 Agent 任务。"
+                : "These are follow-up actions outside the report. Click one to continue into the next agent task."}
+            </p>
+          </div>
+          <span className="rounded-full border border-[rgba(23,36,216,0.12)] bg-white/70 px-2.5 py-1 text-[11px] font-medium text-[#161FAD]">
+            {lang === "zh" ? "可操作" : "Actionable"}
+          </span>
+        </div>
+
+        <div className="mt-3 grid gap-2">
+          {[
+            {
+              action: "interpret-files" as const,
+              label: lang === "zh" ? "读取并解读结果文件" : "Read and interpret result files",
+              detail:
+                lang === "zh"
+                  ? "解析 feature_filtering_result.csv 和 importance_analysis_result.csv。"
+                  : "Parse feature_filtering_result.csv and importance_analysis_result.csv.",
+            },
+            {
+              action: "rerun-ml" as const,
+              label: lang === "zh" ? "重新运行 ML 回归分析" : "Rerun ML regression",
+              detail: lang === "zh" ? "基于筛选后的精简特征集重新训练。" : "Retrain on the filtered compact feature set.",
+            },
+            {
+              action: "explain-top-features" as const,
+              label: lang === "zh" ? "解读 Top 重要特征" : "Explain top features",
+              detail: lang === "zh" ? "分析 Top 特征与内吞机制的关联。" : "Analyze how top features relate to internalization.",
+            },
+          ].map((item) => (
+            <button
+              key={item.action}
+              onClick={() => onAction(item.action)}
+              className="rounded-xl border border-[rgba(23,36,216,0.12)] bg-white/70 px-3 py-2.5 text-left transition hover:border-[rgba(23,36,216,0.28)] hover:bg-white"
+            >
+              <p className="text-[11px] font-semibold text-[#161FAD]">{item.label}</p>
+              <p className="mt-0.5 text-[10px] leading-4 text-slate-500">{item.detail}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RunningWorkspace({
   lang,
+  title,
+  messages,
+  reports,
   prompt,
   onPromptChange,
+  onContinueRun,
+  onViewResults,
   steps,
   workflowCompleted,
   compact = false,
 }: {
   lang: Lang;
+  title: LocalizedText;
+  messages: RunningMessage[];
+  reports: RunReport[];
   prompt: string;
   onPromptChange: (value: string) => void;
+  onContinueRun: () => void;
+  onViewResults: () => void;
   steps: PlanStep[];
   workflowCompleted: boolean;
   compact?: boolean;
 }) {
   const text = copy[lang];
   const currentRunningStep = steps.find((step) => step.status === "running");
-  const runtimeMessages: RunningMessage[] = runningMessages;
+  const [parametersOpen, setParametersOpen] = useState(false);
+  const [planConfirmed, setPlanConfirmed] = useState(false);
+  const [thresholdApplied, setThresholdApplied] = useState(false);
+  const [recoveryFixed, setRecoveryFixed] = useState(false);
+  const [existingResultsViewed, setExistingResultsViewed] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<RunReport | null>(null);
+
+  useEffect(() => {
+    setParametersOpen(false);
+    setPlanConfirmed(false);
+    setThresholdApplied(false);
+    setRecoveryFixed(false);
+    setExistingResultsViewed(false);
+    setSelectedReport(null);
+  }, [messages]);
+
+  const handleAgentDemoAction = (action: AgentDemoAction) => {
+    if (action === "confirm-run") {
+      setPlanConfirmed(true);
+      onContinueRun();
+      return;
+    }
+
+    if (action === "adjust-params") {
+      setParametersOpen((current) => !current);
+      return;
+    }
+
+    if (action === "continue-label") {
+      setThresholdApplied(false);
+      onContinueRun();
+      return;
+    }
+
+    if (action === "adjust-threshold") {
+      setThresholdApplied(true);
+      onContinueRun();
+      return;
+    }
+
+    if (action === "fix-retry") {
+      setRecoveryFixed(true);
+      onContinueRun();
+      return;
+    }
+
+    if (action === "view-results") {
+      setExistingResultsViewed(true);
+      onViewResults();
+      return;
+    }
+
+    if (action === "interpret-files") {
+      onPromptChange(
+        lang === "zh"
+          ? "请读取并解读 feature_filtering_result.csv 和 importance_analysis_result.csv，告诉我哪些特征最重要、哪些应该剔除。"
+          : "Please read and interpret feature_filtering_result.csv and importance_analysis_result.csv, and tell me which features matter most and which should be removed.",
+      );
+      onViewResults();
+      return;
+    }
+
+    if (action === "rerun-ml") {
+      onPromptChange(
+        lang === "zh"
+          ? "请基于筛选后的精简特征集，重新运行 ML 回归分析。"
+          : "Please rerun ML regression analysis on the filtered compact feature set.",
+      );
+      onContinueRun();
+      return;
+    }
+
+    if (action === "explain-top-features") {
+      onPromptChange(
+        lang === "zh"
+          ? "请对 Top 重要特征进行生物学意义解读，并分析它们与内吞机制的关联。"
+          : "Please explain the biological meaning of the top features and how they relate to internalization.",
+      );
+      return;
+    }
+
+    setSelectedReport(reports[0] ?? null);
+  };
 
   return (
     <section className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className={`border-b border-slate-200/80 ${compact ? "px-4 py-4" : "px-6 py-5"}`}>
         <div>
           <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.conversation}</p>
-          <h2 className="mt-1 text-[17px] font-semibold text-[#070261]">{text.runningTitle}</h2>
+          <h2 className="mt-1 text-[17px] font-semibold text-[#070261]">{pick(lang, title)}</h2>
         </div>
       </div>
 
       <div className={`min-h-0 flex-1 overflow-y-auto ${compact ? "px-4 py-4" : "px-6 py-6"}`}>
         <div className="space-y-4 pb-1">
-          {runtimeMessages.map((message, index) => {
+          {messages.map((message, index) => {
             const isUser = message.role === "user";
             return (
               <div key={`${message.role}-${index}`} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -1291,7 +1919,7 @@ function RunningWorkspace({
                       <Bot className="h-4 w-4" />Ailux Agent
                     </div>
                   ) : null}
-                  {!isUser && index === 1 ? (
+                  {!isUser && index === 1 && !message.card ? (
                     <div className="rounded-[18px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(248,250,255,0.96),rgba(255,255,255,0.98))] px-4 py-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.035)]">
                       <p className="text-[13px] font-semibold leading-6 text-[#0B1454]">{pick(lang, firstReplyIntro)}</p>
                       <div className="mt-3 space-y-2.5 text-[12px] leading-5 text-slate-700">
@@ -1312,8 +1940,20 @@ function RunningWorkspace({
                   ) : (
                     <p className="whitespace-pre-line">{pick(lang, message.content)}</p>
                   )}
+                  {!isUser && message.card ? (
+                    <AgentDemoCard
+                      card={message.card}
+                      lang={lang}
+                      onAction={handleAgentDemoAction}
+                      parametersOpen={parametersOpen}
+                      planConfirmed={planConfirmed}
+                      thresholdApplied={thresholdApplied}
+                      recoveryFixed={recoveryFixed}
+                      existingResultsViewed={existingResultsViewed}
+                    />
+                  ) : null}
                   <p className={`mt-3 text-[10px] ${isUser ? "text-white/75" : "text-slate-400"}`}>{message.time}</p>
-                  {!isUser && index === 1 && !workflowCompleted ? (
+                  {!isUser && index === 1 && !message.card && !workflowCompleted ? (
                     <div className="mt-3 rounded-[16px] border border-[rgba(255,201,151,0.38)] bg-[rgba(255,201,151,0.16)] px-3 py-2.5 text-[#8a5216]">
                       <div className="flex items-start gap-2">
                         <CircleDashed className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
@@ -1347,6 +1987,12 @@ function RunningWorkspace({
                   className="mt-4 block h-auto w-full rounded-[16px]"
                 />
                 <p className="mt-4 text-[13px] leading-6 text-slate-600">{text.finalSummaryOutcome}</p>
+                <button
+                  onClick={() => setSelectedReport(reports[0] ?? null)}
+                  className="mt-4 rounded-xl bg-[#161FAD] px-3.5 py-2 text-[12px] font-medium text-white transition hover:bg-[#1724D8]"
+                >
+                  {lang === "zh" ? "查看最终报告详情" : "View final report"}
+                </button>
                 <p className="mt-2 text-[10px] text-slate-400">18:31</p>
               </article>
             </div>
@@ -1378,83 +2024,51 @@ function RunningWorkspace({
           </div>
         </div>
       </div>
+      <ReportDrawer lang={lang} report={selectedReport} onOpenChange={(open) => !open && setSelectedReport(null)} />
     </section>
   );
 }
 
-function ResultWorkspace({
+function FilePreviewDrawer({
   lang,
-  openedFiles,
-  selectedFile,
-  onSelectFile,
-  onCloseFile,
+  file,
+  onOpenChange,
   onDownloadFile,
 }: {
   lang: Lang;
-  openedFiles: ResultFile[];
-  selectedFile: ResultFile | null;
-  onSelectFile: (id: string) => void;
-  onCloseFile: (id: string) => void;
+  file: ResultFile | null;
+  onOpenChange: (open: boolean) => void;
   onDownloadFile: (file: ResultFile) => void;
 }) {
   const text = copy[lang];
+  const selectedFile = file;
 
   return (
-    <section className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-        <div className="rounded-[22px] border border-slate-100 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-          <div className="border-b border-slate-200/80 px-4 py-3">
-            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
-              {openedFiles.length > 0 ? (
-                openedFiles.map((file) => {
-                  const active = selectedFile?.id === file.id;
-                  return (
-                    <div
-                      key={file.id}
-                      className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-[12px] font-medium transition ${
-                        active
-                          ? "border-[rgba(255,201,151,0.5)] bg-[rgba(255,201,151,0.28)] text-[#6c4b1d]"
-                          : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-white hover:text-slate-700"
-                      }`}
-                    >
-                      <button onClick={() => onSelectFile(file.id)} className="truncate text-left">
-                        {file.name}
-                      </button>
-                      <button
-                        onClick={() => onCloseFile(file.id)}
-                        className="rounded-full p-0.5 text-slate-400 transition hover:bg-white hover:text-slate-700"
-                        aria-label={`${text.closeFile} ${file.name}`}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-[12px] text-slate-400">{text.fileTabHint}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="px-4 py-4">
-            {!selectedFile ? (
-              <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-[12px] leading-6 text-slate-500">
-                {text.noOpenedFile}
-              </div>
-            ) : (
-              <>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <p className="truncate pr-3 text-[14px] font-semibold text-[#070261]">{selectedFile.name}</p>
-                  <Button
-                    variant="outline"
-                    onClick={() => onDownloadFile(selectedFile)}
-                    className="h-8 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-600 hover:bg-slate-50"
-                  >
-                    <ArrowDownToLine className="mr-1.5 h-4 w-4" />
-                    {text.downloadFile}
-                  </Button>
+    <Sheet open={Boolean(selectedFile)} onOpenChange={onOpenChange}>
+      <SheetContent side="right" showOverlay={false} className="w-[min(760px,92vw)] gap-0 overflow-hidden border-l border-slate-200 bg-[#f8faff] p-0 sm:max-w-none">
+        {selectedFile ? (
+          <>
+            <SheetHeader className="border-b border-slate-200 bg-white/92 px-5 py-5">
+              <div className="flex items-start justify-between gap-4 pr-8">
+                <div className="min-w-0">
+                  <SheetTitle className="truncate text-[17px] font-semibold text-[#070261]">{selectedFile.name}</SheetTitle>
+                  <SheetDescription className="mt-1 text-[12px] leading-5 text-slate-500">
+                    {pick(lang, selectedFile.step)} · {pick(lang, selectedFile.meta)}
+                  </SheetDescription>
                 </div>
+                <Button
+                  variant="outline"
+                  onClick={() => onDownloadFile(selectedFile)}
+                  className="h-8 shrink-0 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-600 hover:bg-slate-50"
+                >
+                  <ArrowDownToLine className="mr-1.5 h-4 w-4" />
+                  {text.downloadFile}
+                </Button>
+              </div>
+            </SheetHeader>
 
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+              <>
                 {selectedFile.type === "pdb" ? (
                   <PdbViewer lang={lang} pdbText={demoPdbContent} />
                 ) : selectedFile.id === "feature-importance-plot" ? (
@@ -1564,11 +2178,11 @@ function ResultWorkspace({
                   </div>
                 )}
               </>
-            )}
-          </div>
-        </div>
-      </div>
-    </section>
+            </div>
+          </>
+        ) : null}
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -1613,7 +2227,7 @@ function ReportDrawer({
 
   return (
     <Sheet open={Boolean(report)} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[min(760px,92vw)] gap-0 overflow-hidden border-l border-slate-200 bg-[#f8faff] p-0 sm:max-w-none">
+      <SheetContent side="right" showOverlay={false} className="w-[min(960px,96vw)] gap-0 overflow-hidden border-l border-slate-200 bg-[#f8faff] p-0 sm:max-w-none">
         {report ? (
           <>
             <SheetHeader className="border-b border-slate-200 bg-white/92 px-5 py-5">
@@ -1691,23 +2305,15 @@ function ReportDrawer({
   );
 }
 
-function ReportsPanelContent({ lang }: { lang: Lang }) {
+function ReportsPanelContent({ lang, reports }: { lang: Lang; reports: RunReport[] }) {
   const text = copy[lang];
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
-  const selectedReport = runReports.find((report) => report.id === selectedReportId) ?? null;
+  const selectedReport = reports.find((report) => report.id === selectedReportId) ?? null;
 
   return (
     <>
       <div className="space-y-3">
-        <div className="rounded-[18px] border border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.06)] p-3.5">
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-[#161FAD]" />
-            <p className="text-[13px] font-semibold text-[#161FAD]">{text.finalReports}</p>
-          </div>
-          <p className="mt-2 text-[12px] leading-5 text-slate-600">{text.finalReportsHint}</p>
-        </div>
-
-        {runReports.map((report) => (
+        {reports.map((report) => (
           <button
             key={report.id}
             onClick={() => setSelectedReportId(report.id)}
@@ -1919,7 +2525,7 @@ function HistoryPanelContent({ lang }: { lang: Lang }) {
       </div>
 
       <Sheet open={Boolean(selectedRun)} onOpenChange={(open) => !open && setSelectedRunId(null)}>
-        <SheetContent side="right" className="w-[min(760px,92vw)] gap-0 overflow-hidden border-l border-slate-200 bg-[#f8faff] p-0 sm:max-w-none">
+        <SheetContent side="right" showOverlay={false} className="w-[min(760px,92vw)] gap-0 overflow-hidden border-l border-slate-200 bg-[#f8faff] p-0 sm:max-w-none">
           {selectedRun ? (
             <>
               <SheetHeader className="border-b border-slate-200 bg-white/90 px-5 py-5">
@@ -1944,6 +2550,8 @@ function SidePanel({
   view,
   sideTab,
   steps,
+  resultFiles,
+  reports,
   selectedFileId,
   selectedFileIds,
   searchQuery,
@@ -1958,6 +2566,8 @@ function SidePanel({
   view: ViewMode;
   sideTab: SideTab;
   steps: PlanStep[];
+  resultFiles: ResultFile[];
+  reports: RunReport[];
   selectedFileId: string;
   selectedFileIds: string[];
   searchQuery: string;
@@ -1982,7 +2592,7 @@ function SidePanel({
     const keyword = searchQuery.trim().toLowerCase();
     if (!keyword) return resultFiles;
     return resultFiles.filter((file) => `${file.name} ${pick(lang, file.step)}`.toLowerCase().includes(keyword));
-  }, [lang, searchQuery]);
+  }, [lang, resultFiles, searchQuery]);
 
   const groupedFiles = useMemo(() => {
     return filteredFiles.reduce<Record<string, ResultFile[]>>((acc, file) => {
@@ -2100,10 +2710,9 @@ function SidePanel({
             <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 p-5">
               <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.reports}</p>
               <h3 className="mt-1 text-[15px] font-semibold text-[#070261]">{text.finalReports}</h3>
-              <p className="mt-3 text-[12px] leading-6 text-slate-500">{text.finalReportsHint}</p>
             </div>
           ) : (
-            <ReportsPanelContent lang={lang} />
+            <ReportsPanelContent lang={lang} reports={reports} />
           )
         ) : showEmpty ? (
           <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 p-5">
@@ -2113,20 +2722,6 @@ function SidePanel({
           </div>
         ) : (
           <div>
-            <div className="mb-4 rounded-[18px] border border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.06)] p-3.5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-[#161FAD]">{text.currentRunLabel}</p>
-                  <p className="mt-1 text-[11px] leading-5 text-slate-500">{text.currentRunHint}</p>
-                </div>
-                {selectedFileIds.length > 0 ? (
-                  <Button onClick={onExportSelected} className="h-8 shrink-0 rounded-xl bg-[#161FAD] px-3 text-[12px] text-white hover:bg-[#1724D8]">
-                    {text.exportSelected} ({selectedFileIds.length})
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-
             <div className="mb-4 rounded-[18px] border border-slate-200 bg-slate-50/90 px-3 py-2.5">
               <div className="flex items-center gap-2 text-slate-400">
                 <Search className="h-4 w-4" />
@@ -2136,6 +2731,11 @@ function SidePanel({
                   className="w-full border-0 bg-transparent text-[13px] outline-none placeholder:text-slate-400"
                   placeholder={text.searchFiles}
                 />
+                {selectedFileIds.length > 0 ? (
+                  <Button onClick={onExportSelected} className="h-8 shrink-0 rounded-xl bg-[#161FAD] px-3 text-[12px] text-white hover:bg-[#1724D8]">
+                    {text.exportSelected} ({selectedFileIds.length})
+                  </Button>
+                ) : null}
               </div>
             </div>
 
@@ -2289,15 +2889,16 @@ export default function Home() {
   const { mainView, setMainView } = useProject();
   const [lang, setLang] = useState<Lang>("zh");
   const [activeView, setActiveView] = useState<ViewMode>("new");
+  const [activeScenarioId, setActiveScenarioId] = useState<ScenarioId>("dll3");
   const [sideTab, setSideTab] = useState<SideTab>("plan");
   const [composerValue, setComposerValue] = useState("");
   const [selectedFileId, setSelectedFileId] = useState<string>("");
-  const [openedFileIds, setOpenedFileIds] = useState<string[]>([]);
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const activeScenario = demoScenarios[activeScenarioId];
   const [runtimeSteps, setRuntimeSteps] = useState<PlanStep[]>(() =>
-    runningSteps.map((step): PlanStep => ({ ...step, status: "waiting" })),
+    demoScenarios.dll3.steps.map((step): PlanStep => ({ ...step, status: "waiting" })),
   );
   const [workflowCompleted, setWorkflowCompleted] = useState(false);
   const menuBoundaryRef = useRef<HTMLDivElement | null>(null);
@@ -2362,17 +2963,26 @@ export default function Home() {
     };
   }, [activeView, runtimeSteps, workflowCompleted]);
 
-  const openedFiles = openedFileIds
-    .map((id) => resultFiles.find((file) => file.id === id))
-    .filter((file): file is ResultFile => Boolean(file));
-  const selectedFile = resultFiles.find((file) => file.id === selectedFileId) ?? null;
+  const selectedFile = activeScenario.resultFiles.find((file) => file.id === selectedFileId) ?? null;
 
-  const handlePromptPick = (value: string) => {
-    setComposerValue(value);
+  const handlePromptPick = (prompt: RecommendedPrompt) => {
+    const scenario = demoScenarios[prompt.id];
+    setActiveScenarioId(prompt.id);
+    setRuntimeSteps(scenario.steps.map((step): PlanStep => ({ ...step, status: "waiting" })));
+    setWorkflowCompleted(false);
+    setSelectedFileId("");
+    setSelectedFileIds([]);
+    setSearchQuery("");
+    setSideTab("plan");
+    setComposerValue(pick(lang, prompt.text));
   };
 
   const handleStart = () => {
-    setRuntimeSteps(createRuntimeSteps());
+    setRuntimeSteps(
+      activeScenarioId === "a2ui"
+        ? activeScenario.steps.map((step): PlanStep => ({ ...step, status: "waiting" }))
+        : createRuntimeSteps(activeScenario.steps),
+    );
     setWorkflowCompleted(false);
     setMainView("workspace");
     setActiveView("running");
@@ -2380,39 +2990,48 @@ export default function Home() {
     setComposerValue("");
   };
 
+  const handleContinueRun = () => {
+    setWorkflowCompleted(false);
+    setRuntimeSteps((current) => {
+      if (current.some((step) => step.status === "running") || current.every((step) => step.status === "done")) {
+        return current;
+      }
+
+      const nextIndex = current.findIndex((step) => step.status === "waiting" || step.status === "failed");
+      if (nextIndex === -1) return current;
+
+      return current.map((step, index) => (index === nextIndex ? { ...step, status: "running" } : step));
+    });
+  };
+
+  const handleViewCurrentResults = () => {
+    setMainView("workspace");
+    setActiveView("result");
+    setSideTab("results");
+  };
+
   const handleNewConversation = () => {
     if (workflowTimerRef.current) {
       window.clearTimeout(workflowTimerRef.current);
       workflowTimerRef.current = null;
     }
-    setRuntimeSteps(runningSteps.map((step): PlanStep => ({ ...step, status: "waiting" })));
+    setActiveScenarioId("dll3");
+    setRuntimeSteps(demoScenarios.dll3.steps.map((step): PlanStep => ({ ...step, status: "waiting" })));
     setWorkflowCompleted(false);
     setMainView("workspace");
     setActiveView("new");
     setSideTab("plan");
     setComposerValue("");
     setSelectedFileId("");
-    setOpenedFileIds([]);
     setSelectedFileIds([]);
     setSearchQuery("");
     setUserMenuOpen(false);
   };
 
   const handleSelectFile = (id: string) => {
-    setOpenedFileIds((current) => (current.includes(id) ? current : [...current, id]));
     setSelectedFileId(id);
     setSideTab("results");
     setActiveView("result");
-  };
-
-  const handleCloseFile = (id: string) => {
-    setOpenedFileIds((current) => {
-      const remaining = current.filter((item) => item !== id);
-      if (selectedFileId === id) {
-        setSelectedFileId(remaining[remaining.length - 1] ?? "");
-      }
-      return remaining;
-    });
   };
 
   const handleToggleFile = (id: string) => {
@@ -2430,7 +3049,7 @@ export default function Home() {
       return;
     }
 
-    const selectedFiles = resultFiles.filter((file) => selectedFileIds.includes(file.id));
+    const selectedFiles = activeScenario.resultFiles.filter((file) => selectedFileIds.includes(file.id));
     const payload = JSON.stringify(
       {
         exportedAt: new Date().toISOString(),
@@ -2474,7 +3093,7 @@ export default function Home() {
             mainView !== "workspace" || activeView === "new"
               ? "xl:grid-cols-[260px_minmax(0,1fr)]"
               : activeView === "result"
-                ? "xl:grid-cols-[88px_minmax(420px,0.96fr)_minmax(480px,1.04fr)_360px]"
+                ? "xl:grid-cols-[88px_minmax(0,1fr)_360px]"
                 : "xl:grid-cols-[260px_minmax(0,1fr)_360px]"
           }`}
         >
@@ -2505,24 +3124,18 @@ export default function Home() {
           ) : (
             <RunningWorkspace
               lang={lang}
+              title={activeScenario.title}
+              messages={activeScenario.messages}
+              reports={activeScenario.reports}
               prompt={composerValue}
               onPromptChange={setComposerValue}
+              onContinueRun={handleContinueRun}
+              onViewResults={handleViewCurrentResults}
               steps={runtimeSteps}
               workflowCompleted={workflowCompleted}
               compact={activeView === "result"}
             />
           )}
-
-          {mainView === "workspace" && activeView === "result" ? (
-            <ResultWorkspace
-              lang={lang}
-              openedFiles={openedFiles}
-              selectedFile={selectedFile}
-              onSelectFile={handleSelectFile}
-              onCloseFile={handleCloseFile}
-              onDownloadFile={handleDownloadFile}
-            />
-          ) : null}
 
           {mainView === "workspace" && activeView !== "new" ? (
             <SidePanel
@@ -2530,6 +3143,8 @@ export default function Home() {
               view={activeView}
               sideTab={sideTab}
               steps={runtimeSteps}
+              resultFiles={activeScenario.resultFiles}
+              reports={activeScenario.reports}
               selectedFileId={selectedFileId}
               selectedFileIds={selectedFileIds}
               searchQuery={searchQuery}
@@ -2542,6 +3157,14 @@ export default function Home() {
             />
           ) : null}
         </div>
+        <FilePreviewDrawer
+          lang={lang}
+          file={selectedFile}
+          onOpenChange={(open) => {
+            if (!open) setSelectedFileId("");
+          }}
+          onDownloadFile={handleDownloadFile}
+        />
       </div>
     </div>
   );
