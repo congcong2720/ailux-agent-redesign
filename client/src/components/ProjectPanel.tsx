@@ -191,17 +191,16 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
                 {FILE_TYPE_ICONS[asset.type] ?? <File className="h-4 w-4 text-slate-400" />}
               </div>
 
-              {/* File info */}
+              {/* File info — single row layout */}
               <div className="min-w-0 flex-1">
-                {/* File name */}
-                <p className="truncate text-[13px] font-medium text-slate-800">{asset.name}</p>
-
-                {/* Meta row: size · source · date */}
-                <div className="mt-1 flex items-center gap-2">
-                  <span className="text-[12px] text-slate-400">{asset.size}</span>
+                {/* Single row: name · size · source · date · tags */}
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className="shrink-0 text-[13px] font-medium text-slate-800">{asset.name}</p>
+                  <span className="text-[11px] text-slate-300">·</span>
+                  <span className="shrink-0 text-[12px] text-slate-400">{asset.size}</span>
                   <span className="text-[11px] text-slate-300">·</span>
                   <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                    className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
                       asset.source === "uploaded"
                         ? "bg-blue-50 text-blue-600"
                         : "bg-emerald-50 text-emerald-600"
@@ -212,22 +211,21 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
                       : lang === "zh" ? "Run 产物" : "Run output"}
                   </span>
                   <span className="text-[11px] text-slate-300">·</span>
-                  <span className="text-[12px] text-slate-400">{asset.updatedAt}</span>
+                  <span className="shrink-0 text-[12px] text-slate-400">{asset.updatedAt}</span>
+                  {asset.tags && asset.tags.length > 0 && (
+                    <>
+                      <span className="text-[11px] text-slate-300">·</span>
+                      {asset.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </>
+                  )}
                 </div>
-
-                {/* Tags */}
-                {asset.tags && asset.tags.length > 0 && (
-                  <div className="mt-1.5 flex flex-wrap gap-1">
-                    {asset.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
             </button>
           ))}

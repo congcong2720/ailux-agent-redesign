@@ -78,19 +78,24 @@ function PublicDataTab({ lang }: { lang: Lang }) {
               {FILE_ICONS[item.type] ?? <File className="h-4 w-4 text-slate-400" />}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <p className="truncate text-[12px] font-medium text-slate-800">{item.name}</p>
+              {/* Single row: name · starred · size · tags */}
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <p className="shrink-0 text-[12px] font-medium text-slate-800">{item.name}</p>
                 {item.starred && <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />}
+                <span className="text-[10px] text-slate-300">·</span>
+                <span className="shrink-0 text-[11px] text-slate-400">{item.size}</span>
+                {item.tags.length > 0 && (
+                  <>
+                    <span className="text-[10px] text-slate-300">·</span>
+                    {item.tags.map((tag) => (
+                      <span key={tag} className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">{tag}</span>
+                    ))}
+                  </>
+                )}
               </div>
               <p className="mt-0.5 truncate text-[11px] text-slate-400">{item.desc}</p>
-              <div className="mt-1 flex flex-wrap gap-1">
-                <span className="text-[10px] text-slate-400">{item.size}</span>
-                {item.tags.map((tag) => (
-                  <span key={tag} className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">{tag}</span>
-                ))}
-              </div>
             </div>
-            <ArrowUpRight className="mt-1 h-3.5 w-3.5 shrink-0 text-slate-300" />
+            <ArrowUpRight className="mt-1 h-3.5 w-3.5 shrink-0 text-slate-300 transition group-hover:text-[#161FAD]" />
           </button>
         ))}
       </div>

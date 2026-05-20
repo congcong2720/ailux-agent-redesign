@@ -1250,13 +1250,7 @@ function UserMenu({ lang, onAction }: { lang: Lang; onAction: (action: "profile"
         <UserCircle2 className="h-4 w-4" />
         {text.userCenter}
       </button>
-      <button
-        onClick={() => onAction("network")}
-        className="flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[13px] font-medium text-slate-700 transition hover:bg-slate-50 hover:text-[#161FAD]"
-      >
-        <Search className="h-4 w-4" />
-        {text.networkDiagnostic}
-      </button>
+
       <button
         onClick={() => onAction("language")}
         className="flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[13px] font-medium text-slate-700 transition hover:bg-[rgba(23,36,216,0.06)] hover:text-[#161FAD]"
