@@ -548,17 +548,8 @@ const a2uiRunningMessages: RunningMessage[] = [
   {
     role: "agent",
     content: l(
-      "好的，我已将任务拆解为 6 个步骤。以下是执行计划，请确认后开始运行。",
-      "Understood. I have broken the task into 6 steps. Please review the plan below and confirm to start execution.",
-    ),
-    time: "10:28",
-    card: "plan-preview",
-  },
-  {
-    role: "agent",
-    content: l(
-      "和 M1 的直接开始执行不同，M2 会先展示任务理解、参数、文件要求和风险提示，确认后再进入真实运行。",
-      "Unlike M1's direct execution, M2 first shows task understanding, parameters, file requirements, and risk notes before real execution starts.",
+      "好的，我已将任务拆解为 6 个步骤。请确认计划后开始运行。",
+      "Understood. I have broken the task into 6 steps. Please confirm the plan to start.",
     ),
     time: "10:28",
     card: "plan-confirm",
@@ -1654,39 +1645,64 @@ function AgentDemoCard({
 
   if (card === "plan-confirm") {
     return (
-      <div className="mt-3 rounded-xl border border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.08)] p-4">
-        <p className="text-sm font-semibold text-[#161FAD]">{lang === "zh" ? "M2 Plan 确认卡" : "M2 Plan confirmation"}</p>
-        <p className="mt-1 text-xs leading-5 text-slate-600">
-          {lang === "zh"
-            ? "运行前展示任务理解、步骤、文件、参数和风险。用户确认后才开始执行。"
-            : "Before running, show task understanding, steps, files, parameters, and risks. Execution starts after user confirmation."}
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button onClick={() => onAction("confirm-run")} className="rounded-md bg-[#161FAD] px-3 py-2 text-xs font-medium text-white">
+      <div className="mt-3 overflow-hidden rounded-[16px] border border-[rgba(23,36,216,0.12)] bg-white shadow-[0_4px_16px_rgba(22,31,173,0.06)]">
+        {/* Plan steps — compact list */}
+        <div className="px-4 pt-4 pb-3">
+          <div className="mb-2.5 flex items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#161FAD]">
+              {lang === "zh" ? "分析计划" : "Analysis Plan"}
+            </span>
+            <span className="rounded-full bg-[rgba(22,31,173,0.07)] px-2 py-0.5 text-[10px] font-medium text-[#161FAD]">
+              {lang === "zh" ? "6 步" : "6 steps"}
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            {a2uiPlanSections.map((section, idx) => (
+              <div key={idx} className="flex items-center gap-2.5">
+                <span className="inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-[rgba(23,36,216,0.08)] text-[9px] font-bold text-[#161FAD]">
+                  {idx + 1}
+                </span>
+                <span className="text-[12px] font-medium text-slate-700">{pick(lang, section.title)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Divider */}
+        <div className="mx-4 border-t border-[rgba(23,36,216,0.08)]" />
+        {/* Action row */}
+        <div className="flex items-center gap-2 px-4 py-3">
+          <button
+            onClick={() => onAction("confirm-run")}
+            className={`rounded-lg px-4 py-2 text-[12px] font-semibold text-white transition active:scale-[0.97] ${
+              planConfirmed
+                ? "bg-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.25)]"
+                : "bg-[#161FAD] shadow-[0_4px_14px_rgba(22,31,173,0.22)] hover:bg-[#1724D8]"
+            }`}
+          >
             {planConfirmed ? (lang === "zh" ? "已确认，运行中" : "Confirmed, running") : lang === "zh" ? "确认运行" : "Confirm run"}
           </button>
-          <button onClick={() => onAction("adjust-params")} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600">
+          <button
+            onClick={() => onAction("adjust-params")}
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.2)] hover:bg-white hover:text-[#161FAD]"
+          >
             {lang === "zh" ? "调整参数" : "Adjust parameters"}
           </button>
         </div>
         {parametersOpen ? (
-          <div className="mt-3 rounded-xl border border-white/80 bg-white/88 p-3">
-            <p className="text-xs font-semibold text-slate-800">{lang === "zh" ? "参数调整面板" : "Parameter panel"}</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-3">
+            <p className="mb-2 text-[11px] font-semibold text-slate-600">{lang === "zh" ? "参数调整" : "Parameters"}</p>
+            <div className="grid gap-2 sm:grid-cols-3">
               {[
                 [lang === "zh" ? "候选 Top K" : "Candidate Top K", "12"],
                 [lang === "zh" ? "异常阈值" : "Outlier threshold", "10 nM"],
                 [lang === "zh" ? "风险提示" : "Risk note", lang === "zh" ? "开启" : "On"],
               ].map(([label, value]) => (
-                <label key={label} className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2">
+                <label key={label} className="rounded-lg border border-slate-100 bg-white px-3 py-2">
                   <span className="block text-[10px] text-slate-400">{label}</span>
-                  <input value={value} readOnly className="mt-1 w-full border-0 bg-transparent text-xs font-semibold text-slate-800 outline-none" />
+                  <input value={value} readOnly className="mt-1 w-full border-0 bg-transparent text-[12px] font-semibold text-slate-800 outline-none" />
                 </label>
               ))}
             </div>
-            <p className="mt-2 text-[11px] leading-5 text-slate-500">
-              {lang === "zh" ? "这里模拟真实参数编辑入口：开发可在此接入表单校验、推荐值解释和变更 diff。" : "This simulates a real parameter editor for validation, recommendation rationale, and change diff."}
-            </p>
           </div>
         ) : null}
       </div>
@@ -2078,7 +2094,7 @@ function RunningWorkspace({
                       <span className="text-[11px] font-semibold text-[#161FAD]">Ailux Agent</span>
                     </div>
                   ) : null}
-                  {!isUser && index === 1 && !message.card ? (
+                  {!isUser && index === 1 && !message.card && messages[1]?.card !== "plan-confirm" ? (
                     <div className="rounded-[18px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(248,250,255,0.96),rgba(255,255,255,0.98))] px-4 py-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.035)]">
                       <p className="text-[13px] font-semibold leading-6 text-[#0B1454]">{pick(lang, firstReplyIntro)}</p>
                       <div className="mt-3 space-y-2.5 text-[12px] leading-5 text-slate-700">
@@ -2112,7 +2128,7 @@ function RunningWorkspace({
                     />
                   ) : null}
                   <p className={`mt-3 text-[10px] ${isUser ? "text-white/75" : "text-slate-400"}`}>{message.time}</p>
-                  {!isUser && index === 1 && !message.card && !workflowCompleted ? (
+                  {!isUser && index === 1 && !message.card && !workflowCompleted && messages[1]?.card !== "plan-confirm" ? (
                     <div className="mt-3 rounded-[16px] border border-[rgba(255,201,151,0.38)] bg-[rgba(255,201,151,0.16)] px-3 py-2.5 text-[#8a5216]">
                       <div className="flex items-start gap-2">
                         <CircleDashed className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
