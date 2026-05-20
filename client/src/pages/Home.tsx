@@ -1357,13 +1357,13 @@ function Sidebar({
   return (
     <aside className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       {/* Global header: Ailux Agent branding */}
-      <div className="mb-3 flex items-center gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3">
+      <div className="mb-4 flex items-center gap-3 px-1 py-2">
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#161FAD_0%,#848CFE_100%)] text-white shadow-[0_10px_22px_rgba(22,31,173,0.2)]">
           <FlaskConical className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Ailux Agent</p>
-          <p className="text-[14px] font-semibold text-[#070261]">{text.platformSubtitle}</p>
+          <p className="text-[15px] font-semibold tracking-tight text-[#070261]">{text.platformSubtitle}</p>
+          <p className="text-[11px] text-slate-400">Ailux Agent</p>
         </div>
       </div>
 
@@ -1373,10 +1373,10 @@ function Sidebar({
           setResourceTab("data");
           setMainView("resource");
         }}
-        className={`mb-3 flex w-full items-center gap-3 rounded-[18px] border px-3.5 py-3 text-left transition ${
+        className={`mb-3 flex w-full items-center gap-3 rounded-[18px] border px-3.5 py-3 text-left transition active:scale-[0.98] ${
           mainView === "resource"
-            ? "border-emerald-200 bg-emerald-50/90 text-emerald-700 shadow-[0_12px_28px_rgba(5,150,105,0.08)]"
-            : "border-slate-100 bg-slate-50/80 text-slate-700 hover:border-emerald-200 hover:bg-emerald-50/70 hover:text-emerald-700"
+            ? "border-[rgba(23,36,216,0.14)] bg-[linear-gradient(180deg,rgba(23,36,216,0.07),rgba(132,140,254,0.07))] text-[#161FAD] shadow-[0_12px_28px_rgba(22,31,173,0.08)]"
+            : "border-slate-100 bg-slate-50/80 text-slate-700 hover:border-[rgba(23,36,216,0.12)] hover:bg-[rgba(23,36,216,0.04)] hover:text-[#161FAD]"
         }`}
       >
         <Database className="h-4 w-4" />
@@ -1405,49 +1405,59 @@ function Sidebar({
 
       {/* Tasks section */}
       <div className="mb-2 flex items-center justify-between">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Tasks</p>
-          <h2 className="mt-0.5 text-[15px] font-semibold text-[#070261]">{text.tasksLabel}</h2>
-        </div>
-        <button className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-50 hover:text-[#161FAD]">
+        <h2 className="text-[13px] font-semibold text-slate-500">{text.tasksLabel}</h2>
+        <button className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-50 hover:text-[#161FAD] active:scale-[0.92]">
           <PanelRightOpen className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-        {historyTasks
-          .filter((task) => !task.isDraft)
-          .map((task) => {
-            const active = activeView !== "new" && task.id === "t1";
-
-            return (
-              <button
-                key={task.id}
-                className={`w-full rounded-[18px] border px-3.5 py-3 text-left transition ${
-                  active
-                    ? "border-[rgba(23,36,216,0.12)] bg-[linear-gradient(180deg,rgba(23,36,216,0.08),rgba(132,140,254,0.08))] shadow-[0_12px_28px_rgba(23,36,216,0.08)]"
-                    : "border-transparent bg-slate-50/80 hover:border-slate-200 hover:bg-white"
-                }`}
-              >
-                <p className={`truncate text-[13px] ${active ? "font-semibold text-[#070261]" : "font-medium text-slate-700"}`}>
-                  {pick(lang, task.title)}
-                </p>
-                <p className="mt-1 text-[11px] text-slate-400">{pick(lang, task.meta)}</p>
-              </button>
-            );
-          })}
+      <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
+        {historyTasks.filter((task) => !task.isDraft).length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center">
+            <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100">
+              <PanelRightOpen className="h-4 w-4 text-slate-400" />
+            </div>
+            <p className="text-[12px] font-medium text-slate-500">{lang === "zh" ? "暂无任务" : "No tasks yet"}</p>
+            <p className="mt-1 text-[11px] text-slate-400">{lang === "zh" ? "新建对话后任务将显示在这里" : "Tasks will appear here"}</p>
+          </div>
+        ) : (
+          historyTasks
+            .filter((task) => !task.isDraft)
+            .map((task) => {
+              const active = activeView !== "new" && task.id === "t1";
+              return (
+                <button
+                  key={task.id}
+                  className={`group w-full rounded-[18px] border px-3.5 py-3 text-left transition duration-150 active:scale-[0.98] ${
+                    active
+                      ? "border-[rgba(23,36,216,0.12)] bg-[linear-gradient(180deg,rgba(23,36,216,0.08),rgba(132,140,254,0.08))] shadow-[0_12px_28px_rgba(23,36,216,0.08)]"
+                      : "border-transparent bg-slate-50/80 hover:border-slate-200 hover:bg-white hover:shadow-[0_4px_12px_rgba(15,23,42,0.05)]"
+                  }`}
+                >
+                  <p className={`truncate text-[13px] transition-colors ${
+                    active ? "font-semibold text-[#070261]" : "font-medium text-slate-700 group-hover:text-[#070261]"
+                  }`}>
+                    {pick(lang, task.title)}
+                  </p>
+                  <p className="mt-1 text-[11px] text-slate-400">{pick(lang, task.meta)}</p>
+                </button>
+              );
+            })
+        )}
       </div>
 
       {/* User menu */}
       <div className="relative mt-4">
         <button
           onClick={onToggleUserMenu}
-          className="flex w-full items-center gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3 text-left transition hover:border-slate-200 hover:bg-white"
+          className="flex w-full items-center gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3 text-left transition hover:border-slate-200 hover:bg-white active:scale-[0.98]"
         >
-          <UserCircle2 className="h-8 w-8 text-slate-400" />
-          <div>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#161FAD_0%,#848CFE_100%)] text-[13px] font-bold text-white shadow-[0_4px_10px_rgba(22,31,173,0.22)]">
+            C
+          </div>
+          <div className="min-w-0 flex-1">
             <p className="text-[13px] font-medium text-slate-700">Chen Lab</p>
-            <p className="text-[11px] text-slate-400">{text.signedInRole}</p>
+            <p className="truncate text-[11px] text-slate-400">{text.signedInRole}</p>
           </div>
         </button>
         {userMenuOpen ? <UserMenu lang={lang} onAction={onUserMenuAction} /> : null}
@@ -1494,12 +1504,12 @@ function NewTaskWorkspace({
                 <button
                   key={`${item.id}-${pick(lang, item.text)}`}
                   onClick={() => onPromptPick(item)}
-                  className="flex w-full items-start justify-between gap-3 rounded-[18px] border border-slate-100 bg-slate-50/80 px-4 py-4 text-left transition hover:border-[rgba(23,36,216,0.14)] hover:bg-white"
+                  className="group flex w-full items-start justify-between gap-3 rounded-[18px] border border-slate-100 bg-slate-50/80 px-4 py-4 text-left transition duration-150 hover:border-[rgba(23,36,216,0.14)] hover:bg-white hover:shadow-[0_4px_14px_rgba(22,31,173,0.07)] active:scale-[0.99]"
                 >
                   <div>
                     <p className="text-[13px] font-medium text-slate-700">{pick(lang, item.text)}</p>
                   </div>
-                  <ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
+                  <ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0 text-slate-300 transition-colors group-hover:text-[#161FAD]" />
                 </button>
               ))}
             </div>
@@ -1895,10 +1905,7 @@ function RunningWorkspace({
   return (
     <section className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className={`border-b border-slate-200/80 ${compact ? "px-4 py-4" : "px-6 py-5"}`}>
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.conversation}</p>
-          <h2 className="mt-1 text-[17px] font-semibold text-[#070261]">{pick(lang, title)}</h2>
-        </div>
+        <h2 className="text-[17px] font-semibold text-[#070261]">{pick(lang, title)}</h2>
       </div>
 
       <div className={`min-h-0 flex-1 overflow-y-auto ${compact ? "px-4 py-4" : "px-6 py-6"}`}>
@@ -1908,15 +1915,18 @@ function RunningWorkspace({
             return (
               <div key={`${message.role}-${index}`} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[86%] rounded-[22px] border px-4 py-4 text-[13px] leading-6 shadow-[0_10px_28px_rgba(15,23,42,0.04)] ${
+                  className={`max-w-[72%] rounded-[22px] border px-4 py-4 text-[13px] leading-6 shadow-[0_10px_28px_rgba(15,23,42,0.04)] ${
                     isUser
                       ? "border-[rgba(23,36,216,0.12)] bg-[linear-gradient(135deg,#161FAD_0%,#2C36F4_100%)] text-white"
                       : "border-slate-200 bg-white text-slate-700"
                   }`}
                 >
                   {!isUser ? (
-                    <div className="mb-1.5 flex items-center gap-2 text-[11px] font-medium text-[#161FAD]">
-                      <Bot className="h-4 w-4" />Ailux Agent
+                    <div className="mb-2 flex items-center gap-2">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#161FAD_0%,#848CFE_100%)] text-white shadow-[0_3px_8px_rgba(22,31,173,0.2)]">
+                        <Bot className="h-3.5 w-3.5" />
+                      </div>
+                      <span className="text-[11px] font-semibold text-[#161FAD]">Ailux Agent</span>
                     </div>
                   ) : null}
                   {!isUser && index === 1 && !message.card ? (
@@ -1976,8 +1986,11 @@ function RunningWorkspace({
           {workflowCompleted ? (
             <div className="flex justify-start">
               <article className="w-full max-w-[980px] rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.06)] sm:px-5">
-                <div className="mb-2 flex items-center gap-2 text-[11px] font-medium text-[#161FAD]">
-                  <Bot className="h-4 w-4" />Ailux Agent
+                <div                   className="mb-2 flex items-center gap-2">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#161FAD_0%,#848CFE_100%)] text-white shadow-[0_3px_8px_rgba(22,31,173,0.2)]">
+                    <Bot className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[11px] font-semibold text-[#161FAD]">Ailux Agent</span>
                 </div>
                 <p className="text-[14px] font-semibold text-[#070261]">{text.finalSummaryTitle}</p>
                 <p className="mt-3 text-[13px] leading-6 text-slate-700">{text.finalSummaryBody}</p>

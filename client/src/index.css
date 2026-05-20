@@ -141,15 +141,21 @@ Design reminder for this file:
   * {
     @apply border-border outline-ring/50;
   }
-
-  html {
-    scroll-behavior: smooth;
-  }
-
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-weight: 400;
     background-image: radial-gradient(circle at top left, rgba(132, 140, 254, 0.08), transparent 24%);
+    /* Snappy ease-out for all UI transitions */
+    --ease-ui: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out-ui: cubic-bezier(0.77, 0, 0.175, 1);
+  }
+
+  /* Respect reduced-motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 
   h1,
