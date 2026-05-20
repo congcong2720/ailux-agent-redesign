@@ -7,22 +7,34 @@ Design reminder for this file:
 - Language switching should feel native rather than layered on top; avoid mixed-language headings in a single mode
 */
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CreateProjectView } from "@/components/CreateProjectView";
 import { PdbViewer } from "@/components/PdbViewer";
+import { ProjectPanel } from "@/components/ProjectPanel";
+import { ProjectSwitcher } from "@/components/ProjectSwitcher";
+import { ResourcePanel } from "@/components/ResourcePanel";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useProject } from "@/contexts/ProjectContext";
 import { demoPdbContent } from "@/lib/demoPdb";
 import {
   ArrowDownToLine,
   ArrowUpRight,
   Bot,
+  ChevronDown,
   CheckCircle2,
   CircleDashed,
+  Clock3,
   Database,
   FileJson,
   FileSpreadsheet,
   FileText,
   FlaskConical,
+  Folder,
+  FolderOpen,
+  GitBranch,
   Globe2,
+  History,
   LogOut,
   PanelRightOpen,
   Plus,
@@ -35,17 +47,12 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { ProjectSwitcher } from "@/components/ProjectSwitcher";
-import { ProjectPanel } from "@/components/ProjectPanel";
-import { ResourcePanel } from "@/components/ResourcePanel";
-import { CreateProjectView } from "@/components/CreateProjectView";
-import { useProject } from "@/contexts/ProjectContext";
 
 type Lang = "zh" | "en";
 type ViewMode = "new" | "running" | "result";
-type SideTab = "plan" | "results";
+type SideTab = "plan" | "results" | "reports";
 type StepStatus = "done" | "running" | "waiting" | "failed";
-type ResultType = "csv" | "json" | "png" | "xlsx" | "pdb";
+type ResultType = "csv" | "docx" | "json" | "png" | "xlsx" | "pdb";
 
 type LocalizedText = {
   zh: string;
@@ -75,6 +82,62 @@ type HistoryTask = {
   title: LocalizedText;
   meta: LocalizedText;
   isDraft?: boolean;
+};
+
+type HistoryRunStatus = "Completed" | "Paused at HITL" | "Failed" | "Running";
+
+type HistoryAttempt = {
+  id: string;
+  label: string;
+  tone: "completed" | "failed" | "modified" | "resumed" | "running";
+  detail: LocalizedText;
+};
+
+type HistoryPlanStep = {
+  id: string;
+  title: LocalizedText;
+  description: LocalizedText;
+  status: StepStatus;
+  duration: string;
+  toolName: string;
+  inputs: string[];
+  outputs: string[];
+  attempts: HistoryAttempt[];
+};
+
+type HistoryRunItem = {
+  id: string;
+  title: LocalizedText;
+  status: HistoryRunStatus;
+  time: LocalizedText;
+  summaryLine: LocalizedText;
+  reason: LocalizedText;
+  baseRun: LocalizedText;
+  compareSummary: LocalizedText;
+  compareItems: Array<{ label: LocalizedText; delta: string; detail: LocalizedText }>;
+  planSteps: HistoryPlanStep[];
+  files: Array<{ name: string; meta: LocalizedText }>;
+  logs: Array<{ time: string; event: string; message: LocalizedText }>;
+};
+
+type ReportSection = {
+  id: string;
+  shortLabel: LocalizedText;
+  title: LocalizedText;
+  summary: LocalizedText;
+  badge: string;
+  tone: "brand" | "success" | "warning";
+  items: Array<{ label: LocalizedText; value: string; detail: LocalizedText }>;
+};
+
+type RunReport = {
+  id: string;
+  runId: string;
+  title: LocalizedText;
+  fileName: string;
+  generatedAt: LocalizedText;
+  summary: LocalizedText;
+  sections: ReportSection[];
 };
 
 type RunningMessage = {
@@ -301,6 +364,300 @@ const resultFiles: ResultFile[] = [
     step: l("步骤 5 · 预测模型评估", "Step 5 · Predictive model evaluation"),
     type: "png",
   },
+  {
+    id: "analysis-report-current",
+    name: "analysis_report.docx",
+    meta: l("最终报告文件", "Final report file"),
+    step: l("步骤 5 · 预测模型评估", "Step 5 · Predictive model evaluation"),
+    type: "docx",
+  },
+];
+
+const reportSections: ReportSection[] = [
+  {
+    id: "binder-overview",
+    shortLabel: l("Binder", "Binder"),
+    title: l("四个结合域特征提取", "Feature extraction for four binders"),
+    summary: l("本次分析覆盖 Mcb008、Msb028、ZG006-1、ZG006-2 四个 DLL3 binder。", "This analysis covers four DLL3 binders: Mcb008, Msb028, ZG006-1, and ZG006-2."),
+    badge: "4 binders",
+    tone: "brand",
+    items: [
+      { label: l("Mcb008", "Mcb008"), value: "140 features", detail: l("PDB：XF1_DLL3_Mcb008xi_000_SC_0.75.pdb，状态已完成。", "PDB XF1_DLL3_Mcb008xi_000_SC_0.75.pdb completed.") },
+      { label: l("Msb028", "Msb028"), value: "140 features", detail: l("PDB：XF_res_DLL3_Msb028_001_SC_0.35.pdb，状态已完成。", "PDB XF_res_DLL3_Msb028_001_SC_0.35.pdb completed.") },
+      { label: l("ZG006-1 / ZG006-2", "ZG006-1 / ZG006-2"), value: "280 features", detail: l("两个 ZG006 结合域分别完成 140 维结构特征提取。", "Both ZG006 binders completed 140-dimensional structural feature extraction.") },
+    ],
+  },
+  {
+    id: "feature-sources",
+    shortLabel: l("特征来源", "Sources"),
+    title: l("特征类别与来源", "Feature categories and sources"),
+    summary: l("每个 binder 的 140 维特征来自 Prodigy、Rosetta、表位和结合域维度。", "Each binder has 140 features from Prodigy, Rosetta, epitope, and binder dimensions."),
+    badge: "140 / binder",
+    tone: "success",
+    items: [
+      { label: l("Prodigy", "Prodigy"), value: "interface", detail: l("提取界面接触数、极性/非极性接触比例、结合自由能预测等特征。", "Extracts interface contacts, polarity ratio, and predicted binding free energy.") },
+      { label: l("Rosetta", "Rosetta"), value: "energy", detail: l("提取总能量、界面能、范德华力、静电能和溶剂化能等能量学指标。", "Extracts total energy, interface energy, van der Waals, electrostatic, and solvation metrics.") },
+      { label: l("表位 / 结合域", "Epitope / binder"), value: "epitope", detail: l("描述表位残基组成、面积、极性分布，以及 CDR/框架区相关特征。", "Describes epitope residue composition, area, polarity, and CDR/framework features.") },
+    ],
+  },
+  {
+    id: "model-quality",
+    shortLabel: l("模型风险", "Risk"),
+    title: l("模型表现与数据质量风险", "Model performance and data quality risk"),
+    summary: l("当前 demo 数据在部分 fold 中出现 All train targets are equal，说明模型训练受样本量和标签分布限制。", "Some folds have all train targets equal, so model training is limited by sample size and label distribution."),
+    badge: "limited",
+    tone: "warning",
+    items: [
+      { label: l("直接现象", "Observation"), value: "constant targets", detail: l("部分交叉验证 fold 的训练标签完全相同，CatBoost 会报错。", "Several cross-validation folds have identical training labels, causing CatBoost errors.") },
+      { label: l("影响范围", "Impact"), value: "metrics", detail: l("GBDT 和 LightGBM 可容错完成训练，但结果更多用于验证流程。", "GBDT and LightGBM can finish, but results should mainly validate the workflow.") },
+      { label: l("展示原则", "Display rule"), value: "with warning", detail: l("前端应明确提示“模型受限”，避免把 demo 指标误读成生产模型性能。", "The UI should clearly show model limitation warnings to prevent over-interpretation.") },
+    ],
+  },
+  {
+    id: "next-actions",
+    shortLabel: l("下一步", "Next"),
+    title: l("后续优化建议", "Recommended next actions"),
+    summary: l("下一轮重点不是继续调 UI，而是补足样本、标签和可解释特征筛选。", "The next round should focus on samples, labels, and explainable feature selection rather than UI tuning."),
+    badge: "recommended",
+    tone: "brand",
+    items: [
+      { label: l("扩大样本量", "More samples"), value: "priority 1", detail: l("增加更多双抗组合的实验数据，提高模型训练稳定性。", "Add more bispecific combinations to improve training stability.") },
+      { label: l("补充实验标签", "More labels"), value: "priority 2", detail: l("加入内吞速率、降解效率等连续定量标签。", "Add continuous labels such as internalization rate and degradation efficiency.") },
+      { label: l("特征筛选", "Feature selection"), value: "priority 3", detail: l("基于 140 维特征做降维、重要性排序和机制解释。", "Run dimensionality reduction, importance ranking, and mechanism interpretation on the 140 features.") },
+    ],
+  },
+];
+
+const runReports: RunReport[] = [
+  {
+    id: "report-run-03",
+    runId: "run-03",
+    title: l("Run #3 · 双表位双抗内吞特征挖掘报告", "Run #3 · Biparatopic antibody internalization report"),
+    fileName: "analysis_report.docx",
+    generatedAt: l("今天 15:42", "Today 15:42"),
+    summary: l("Top K 调整后的最终报告，包含模型限制提示、Top 12 候选排序和后续优化建议。", "Final report after Top K adjustment, including model limitation warning, Top 12 ranking, and next actions."),
+    sections: reportSections,
+  },
+  {
+    id: "report-run-02",
+    runId: "run-02",
+    title: l("Run #2 · cutoff 调整中间报告", "Run #2 · Cutoff adjustment interim report"),
+    fileName: "analysis_report_run2.docx",
+    generatedAt: l("今天 15:18", "Today 15:18"),
+    summary: l("记录 10nM cutoff 重跑过程、HITL 暂停原因和可继续的模型配置。", "Documents the 10nM cutoff rerun, HITL pause reason, and resumable model config."),
+    sections: reportSections.slice(0, 3),
+  },
+  {
+    id: "report-run-01",
+    runId: "run-01",
+    title: l("Run #1 · 初始 Plan A 报告", "Run #1 · Initial Plan A report"),
+    fileName: "analysis_report_v1.docx",
+    generatedAt: l("今天 14:56", "Today 14:56"),
+    summary: l("首次运行的基础结构特征与初版模型分析报告，用作后续轮次对比基线。", "Baseline structural feature and initial model analysis report for comparison with later runs."),
+    sections: reportSections.slice(0, 2),
+  },
+];
+
+const historyRunItems: HistoryRunItem[] = [
+  {
+    id: "run-03",
+    title: l("Run #3 · DLL3 功能预测标准流程", "Run #3 · DLL3 functional prediction workflow"),
+    status: "Completed",
+    time: l("今天 15:42", "Today 15:42"),
+    summaryLine: l("Completed · 6 steps · 3 inputs · 12 files", "Completed · 6 steps · 3 inputs · 12 files"),
+    reason: l("基于 Run #2 调整 Top K=12 后重跑，并保留 HITL 决策记录。", "Reran from Run #2 with Top K=12 and kept the HITL decision trace."),
+    baseRun: l("Run #2", "Run #2"),
+    compareSummary: l("Run #3 只调整候选输出数量与结果解释策略，上游结构特征快照保持不变。", "Run #3 only changes the candidate count and result interpretation strategy. Upstream structural feature snapshots remain unchanged."),
+    compareItems: [
+      { label: l("Top K", "Top K"), delta: "8 → 12", detail: l("扩大候选输出范围，便于后续人工筛选。", "Expanded the candidate output range for downstream review.") },
+      { label: l("模型提示", "Model warning"), delta: "off → on", detail: l("增加 constant target warning，避免误读模型性能。", "Added constant-target warnings to avoid over-reading model performance.") },
+      { label: l("文件产物", "Artifacts"), delta: "+4 files", detail: l("新增 top12 排序表、结构化报告 JSON 和对比摘要。", "Added the top12 ranking table, structured report JSON, and comparison summary.") },
+    ],
+    planSteps: [
+      {
+        id: "step-01",
+        title: l("数据校验", "Data validation"),
+        description: l("校验输入 CSV、PDB 和 assay 标签字段，冻结输入文件快照。", "Validate CSV, PDB, and assay label fields, then freeze the input snapshot."),
+        status: "done",
+        duration: "1.8s",
+        toolName: "agent_planner",
+        inputs: ["candidates.csv", "dll3_complex.pdb", "assay.xlsx"],
+        outputs: ["CSV schema valid", "4 binder PDB files found", "assay label column bound"],
+        attempts: [{ id: "step-01-attempt-1", label: "Attempt 1", tone: "completed", detail: l("Completed: 输入文件、schema 与实验标签校验通过。", "Completed: input files, schema, and assay labels passed validation.") }],
+      },
+      {
+        id: "step-02",
+        title: l("结构预测", "Structure prediction"),
+        description: l("根据确认后的 Plan 使用结构文件生成结合域分析上下文。", "Generate binder analysis context from the confirmed plan and structure files."),
+        status: "done",
+        duration: "2.4s",
+        toolName: "strategist",
+        inputs: ["dll3_complex.pdb", "binder_metadata_v2.csv"],
+        outputs: ["DLL3 extracellular domain recognized", "Binder chain mapping completed", "SC confidence scores recorded"],
+        attempts: [
+          { id: "step-02-attempt-1", label: "Attempt 1", tone: "failed", detail: l("Failed: binder metadata 缺少 `epitope_region` 字段。", "Failed: binder metadata missed the `epitope_region` column.") },
+          { id: "step-02-attempt-2", label: "Attempt 2", tone: "modified", detail: l("Replaced input file: 使用修正后的 binder_metadata_v2.csv 继续。", "Replaced input file: continued with corrected binder_metadata_v2.csv.") },
+          { id: "step-02-attempt-3", label: "Attempt 3", tone: "completed", detail: l("Completed: 表位特征计算上下文生成成功。", "Completed: epitope feature context generated successfully.") },
+        ],
+      },
+      {
+        id: "step-03",
+        title: l("特征计算", "Feature calculation"),
+        description: l("提取 Prodigy、Rosetta、表位和结合域特征。", "Extract Prodigy, Rosetta, epitope, and binder features."),
+        status: "done",
+        duration: "8m 31s",
+        toolName: "structure_feature_skill",
+        inputs: ["Mcb008.pdb", "Msb028.pdb", "ZG006-1.pdb", "ZG006-2.pdb"],
+        outputs: ["560 features generated", "Feature QC passed", "Rosetta cache resumed for ZG006-2"],
+        attempts: [
+          { id: "step-03-attempt-1", label: "Attempt 1", tone: "failed", detail: l("Failed: ZG006-2 的 Rosetta score cache 缺失。", "Failed: Rosetta score cache was missing for ZG006-2.") },
+          { id: "step-03-attempt-2", label: "Attempt 2", tone: "resumed", detail: l("Resumed: 复用 Prodigy 输出，只补跑 Rosetta energy features。", "Resumed: reused Prodigy outputs and reran only Rosetta energy features.") },
+          { id: "step-03-attempt-3", label: "Attempt 3", tone: "completed", detail: l("Completed: 4 个 binder 共 560 个单臂特征生成成功。", "Completed: generated 560 single-arm features for 4 binders.") },
+        ],
+      },
+      {
+        id: "step-04",
+        title: l("候选排序", "Candidate ranking"),
+        description: l("使用 1nM / 10nM cutoff 和多模型配置进行回归分析。", "Run regression analysis with 1nM / 10nM cutoffs and multiple model configs."),
+        status: "done",
+        duration: "2m 12s",
+        toolName: "ranking_model",
+        inputs: ["combined_features.csv", "assay.xlsx"],
+        outputs: ["Top 12 candidate table generated", "Model limitation warning attached", "Ranking snapshot saved"],
+        attempts: [
+          { id: "step-04-attempt-1", label: "Attempt 1", tone: "modified", detail: l("topK=10：初版候选排序完成，但用户希望扩大候选范围。", "topK=10: initial ranking completed, then the user asked for a wider candidate range.") },
+          { id: "step-04-attempt-2", label: "Attempt 2", tone: "completed", detail: l("topK=20 后收敛到 Top 12 输出，并保留模型受限 warning。", "After topK=20, converged to a Top 12 output and kept the model warning.") },
+        ],
+      },
+      {
+        id: "step-05",
+        title: l("结果解释", "Result interpretation"),
+        description: l("生成结构化指标卡、完整报告和可复用流程模板。", "Generate a structured metric card, full report, and reusable workflow template."),
+        status: "done",
+        duration: "42s",
+        toolName: "report_skill",
+        inputs: ["ranked_candidates_top12.csv", "feature_importance.csv"],
+        outputs: ["A2UI metric card generated", "analysis_report.docx uploaded", "Run snapshot saved"],
+        attempts: [{ id: "step-05-attempt-1", label: "Attempt 1", tone: "completed", detail: l("Completed: 生成结构化指标卡、报告文件和 Run 快照。", "Completed: generated the metric card, report file, and run snapshot.") }],
+      },
+    ],
+    files: [
+      { name: "structure_features.parquet", meta: l("Step 3 · 特征计算", "Step 3 · Feature calculation") },
+      { name: "prodigy_features.csv", meta: l("Step 3 · 特征计算", "Step 3 · Feature calculation") },
+      { name: "ranked_candidates_top12.csv", meta: l("Step 5 · 结果解释", "Step 5 · Result interpretation") },
+      { name: "analysis_report.docx", meta: l("Step 5 · 结果解释", "Step 5 · Result interpretation") },
+    ],
+    logs: [
+      { time: "15:31:08", event: "planner_complete", message: l("Plan C generated from Run #2 with topK=12 and model warning enabled.", "Plan C generated from Run #2 with topK=12 and model warning enabled.") },
+      { time: "15:36:42", event: "commander_step_complete", message: l("Feature calculation completed for 4 binders, 140 features per binder.", "Feature calculation completed for 4 binders, 140 features per binder.") },
+      { time: "15:42:03", event: "result_file_uploaded", message: l("12 result files linked to Run #3 snapshot.", "12 result files linked to Run #3 snapshot.") },
+    ],
+  },
+  {
+    id: "run-02",
+    title: l("Run #2 · 调整 cutoff 后重跑", "Run #2 · Rerun with adjusted cutoff"),
+    status: "Paused at HITL",
+    time: l("今天 15:18", "Today 15:18"),
+    summaryLine: l("Paused at HITL · 4/6 steps · 3 inputs · 6 files", "Paused at HITL · 4/6 steps · 3 inputs · 6 files"),
+    reason: l("用户追问 10nM cutoff 下是否更稳定，Agent 生成 Plan B 并在异常候选处暂停。", "The user asked whether 10nM cutoff is more stable. The agent generated Plan B and paused at anomalous candidates."),
+    baseRun: l("Run #1", "Run #1"),
+    compareSummary: l("Run #2 主要调整 affinity cutoff，尚未生成最终结果。", "Run #2 mainly adjusts the affinity cutoff and has not generated final results yet."),
+    compareItems: [
+      { label: l("Cutoff", "Cutoff"), delta: "1nM → 10nM", detail: l("放宽亲和力阈值，尝试缓解标签过少问题。", "Relaxed the affinity threshold to reduce sparse-label issues.") },
+      { label: l("状态", "Status"), delta: "completed → paused", detail: l("在 HITL 节点暂停，等待用户确认。", "Paused at the HITL checkpoint for user confirmation.") },
+    ],
+    planSteps: [
+      {
+        id: "step-01",
+        title: l("复用输入快照", "Reuse input snapshot"),
+        description: l("继承 Run #1 的输入文件并冻结为 Run #2 输入快照。", "Inherit Run #1 inputs and freeze them as the Run #2 input snapshot."),
+        status: "done",
+        duration: "1.1s",
+        toolName: "agent_planner",
+        inputs: ["candidates.csv", "dll3_complex.pdb", "assay.xlsx"],
+        outputs: ["Run #1 snapshot inherited", "cutoff changed to 10nM"],
+        attempts: [{ id: "step-01-attempt-1", label: "Attempt 1", tone: "completed", detail: l("Completed: 输入快照已复用。", "Completed: input snapshot reused.") }],
+      },
+      {
+        id: "step-02",
+        title: l("重新生成模型配置", "Regenerate model config"),
+        description: l("将 cutoff 调整为 10nM，并准备重跑模型排序。", "Adjust cutoff to 10nM and prepare the ranking rerun."),
+        status: "done",
+        duration: "2.0s",
+        toolName: "strategist",
+        inputs: ["Run #1 feature snapshot"],
+        outputs: ["model_config_10nM.json", "HITL checkpoint generated"],
+        attempts: [{ id: "step-02-attempt-1", label: "Attempt 1", tone: "completed", detail: l("Completed: Plan B 已生成。", "Completed: Plan B generated.") }],
+      },
+      {
+        id: "step-03",
+        title: l("等待人工确认", "Wait for human decision"),
+        description: l("发现 3 个结构评分高但实验读数偏低的候选，等待用户决策。", "Found 3 candidates with high structure score but low assay readout, waiting for user decision."),
+        status: "running",
+        duration: "paused",
+        toolName: "hitl_decision",
+        inputs: ["model_config_10nM.json", "warning_candidates.json"],
+        outputs: ["continue / exclude / adjust options"],
+        attempts: [{ id: "step-03-attempt-1", label: "Attempt 1", tone: "running", detail: l("Running: 等待继续、排除或调参选择。", "Running: waiting for continue, exclude, or tune decision.") }],
+      },
+    ],
+    files: [{ name: "model_config_10nM.json", meta: l("Step 2 · 模型配置", "Step 2 · Model config") }],
+    logs: [
+      { time: "15:12:40", event: "strategist_complete", message: l("Plan B generated with cutoff=10nM.", "Plan B generated with cutoff=10nM.") },
+      { time: "15:18:09", event: "hitl_required", message: l("Three candidates require human decision before ranking continues.", "Three candidates require human decision before ranking continues.") },
+    ],
+  },
+  {
+    id: "run-01",
+    title: l("Run #1 · 初始 Plan A", "Run #1 · Initial Plan A"),
+    status: "Completed",
+    time: l("今天 14:56", "Today 14:56"),
+    summaryLine: l("Completed · 6 steps · 3 inputs · 8 files", "Completed · 6 steps · 3 inputs · 8 files"),
+    reason: l("首次基于用户原始问题生成 Plan A，完成基础结构特征和初版模型分析。", "First generated Plan A from the original prompt and completed baseline structural features and model analysis."),
+    baseRun: l("无", "None"),
+    compareSummary: l("这是初始运行，没有上一版本可对比。", "This is the initial run, with no previous version to compare."),
+    compareItems: [{ label: l("Baseline", "Baseline"), delta: "created", detail: l("建立首个不可变 Run 快照。", "Created the first immutable run snapshot.") }],
+    planSteps: [
+      {
+        id: "step-01",
+        title: l("初始数据校验", "Initial data validation"),
+        description: l("读取用户上传数据并生成首版执行计划。", "Read uploaded data and generate the first execution plan."),
+        status: "done",
+        duration: "1.6s",
+        toolName: "agent_planner",
+        inputs: ["user prompt", "uploaded files"],
+        outputs: ["Plan A generated", "input files validated"],
+        attempts: [{ id: "step-01-attempt-1", label: "Attempt 1", tone: "completed", detail: l("Completed: Plan A 已生成。", "Completed: Plan A generated.") }],
+      },
+      {
+        id: "step-02",
+        title: l("基础特征计算", "Baseline feature calculation"),
+        description: l("完成四个 binder 的单臂结构特征提取。", "Complete single-arm structural feature extraction for four binders."),
+        status: "done",
+        duration: "7m 48s",
+        toolName: "structure_feature_skill",
+        inputs: ["4 binder PDB files"],
+        outputs: ["Prodigy features", "Rosetta features", "Epitope features"],
+        attempts: [{ id: "step-02-attempt-1", label: "Attempt 1", tone: "completed", detail: l("Completed: 基础特征集已生成。", "Completed: baseline feature set generated.") }],
+      },
+      {
+        id: "step-03",
+        title: l("初版报告", "Initial report"),
+        description: l("生成初版结果摘要，提示样本量限制。", "Generate the initial result summary and flag sample-size limitations."),
+        status: "done",
+        duration: "38s",
+        toolName: "report_skill",
+        inputs: ["feature matrix", "model outputs"],
+        outputs: ["analysis_report_v1.docx", "markdown summary"],
+        attempts: [{ id: "step-03-attempt-1", label: "Attempt 1", tone: "completed", detail: l("Completed: 初版报告已生成。", "Completed: initial report generated.") }],
+      },
+    ],
+    files: [{ name: "analysis_report_v1.docx", meta: l("Step 3 · 初版报告", "Step 3 · Initial report") }],
+    logs: [
+      { time: "14:48:12", event: "planner_complete", message: l("Plan A generated from initial prompt.", "Plan A generated from initial prompt.") },
+      { time: "14:56:21", event: "react_cycle_complete", message: l("Run #1 completed with baseline report.", "Run #1 completed with baseline report.") },
+    ],
+  },
 ];
 
 const datasetPreviewRows = [
@@ -386,11 +743,27 @@ const copy = {
     ],
     plan: "计划",
     results: "结果",
+    reports: "报告",
+    history: "历史记录",
     waitingPlan: "等待生成计划",
     waitingPlanBody: "首条消息发送成功后，右侧会生成当前任务对应的步骤计划、进度条和每一步的执行摘要。当前新任务态不会展示旧任务数据。",
     overallProgress: "整体进度",
     emptyResults: "暂无结果文件",
     emptyResultsBody: "当任务启动后，系统会按步骤将数据集、图像、日志、JSON 汇总等文件增量写入当前任务的结果区，并支持按文件名搜索。",
+    currentRun: "当前 Run",
+    currentRunLabel: "当前 Run · Run #3",
+    currentRunHint: "默认展示最新一轮结果，旧轮次收起到下方文件夹。",
+    previousRuns: "历史轮次",
+    previousRunsHint: "同一会话内较早的结果轮次，展开后可快速找回半小时前的文件。",
+    filesCount: "个文件",
+    completedStatus: "已完成",
+    openRunFiles: "展开文件",
+    collapseRunFiles: "收起文件",
+    finalReports: "最终报告",
+    finalReportsHint: "每轮计划完成后生成的最终报告，可打开查看完整章节内容。",
+    viewReport: "查看报告",
+    reportReaderHint: "报告阅读提示",
+    reportReaderBody: "结构特征计算已经完成；当前模型表现受 demo 样本量和标签分布限制，不应过度解读模型指标。",
     exportSelected: "导出所选",
     searchFiles: "搜索文件",
     noMatchedResults: "没有匹配的结果文件，请尝试其他关键词。",
@@ -400,6 +773,15 @@ const copy = {
     selectBeforeExport: "请先选择需要导出的文件",
     exportedFiles: "已导出",
     exportedSuffix: "个文件",
+    runHistoryTitle: "Run / Plan 版本历史",
+    runHistoryBody: "当前任务内每次确认 Plan、重跑或 HITL 分支都会生成不可变 Run 快照。",
+    historySnapshot: "快照详情",
+    historyCompare: "对比变化",
+    historySteps: "计划步骤",
+    historyFiles: "关联文件",
+    historyLogs: "关键日志",
+    inputs: "输入",
+    outputs: "输出",
   },
   en: {
     platformSubtitle: "Agent Workspace",
@@ -451,6 +833,8 @@ const copy = {
     ],
     plan: "Plan",
     results: "Results",
+    reports: "Reports",
+    history: "History",
     waitingPlan: "Plan pending",
     waitingPlanBody:
       "After the first message is sent, the right panel will generate a step-by-step plan, progress indicator, and execution summaries. Historical task data stays hidden in the new-task state.",
@@ -458,6 +842,20 @@ const copy = {
     emptyResults: "No result files yet",
     emptyResultsBody:
       "Once the task starts, datasets, charts, logs, and JSON summaries will be written incrementally into the current result area and remain searchable by filename.",
+    currentRun: "Current run",
+    currentRunLabel: "Current run · Run #3",
+    currentRunHint: "The latest run is shown by default, while older runs stay folded below.",
+    previousRuns: "Previous runs",
+    previousRunsHint: "Earlier result rounds in this conversation. Expand to retrieve files from the last half hour.",
+    filesCount: "files",
+    completedStatus: "Completed",
+    openRunFiles: "Show files",
+    collapseRunFiles: "Hide files",
+    finalReports: "Final reports",
+    finalReportsHint: "Final reports generated after each completed plan round. Open one to inspect full sections.",
+    viewReport: "View report",
+    reportReaderHint: "Report reading note",
+    reportReaderBody: "Structural feature calculation is complete; model performance is limited by demo sample size and label distribution, so metrics should not be over-interpreted.",
     exportSelected: "Export selected",
     searchFiles: "Search files",
     noMatchedResults: "No result files match your query. Try another keyword.",
@@ -467,6 +865,15 @@ const copy = {
     selectBeforeExport: "Please select files to export first",
     exportedFiles: "Exported",
     exportedSuffix: "files",
+    runHistoryTitle: "Run / Plan version history",
+    runHistoryBody: "Every confirmed plan, rerun, or HITL branch in the current task creates an immutable run snapshot.",
+    historySnapshot: "Snapshot details",
+    historyCompare: "Diff",
+    historySteps: "Plan steps",
+    historyFiles: "Files",
+    historyLogs: "Key logs",
+    inputs: "Inputs",
+    outputs: "Outputs",
   },
 } as const;
 
@@ -600,7 +1007,7 @@ function Sidebar({
   collapsed?: boolean;
 }) {
   const text = copy[lang];
-  const { setMainView, mainView } = useProject();
+  const { mainView, setMainView, setResourceTab } = useProject();
 
   if (collapsed) {
     return (
@@ -670,40 +1077,30 @@ function Sidebar({
         </div>
       </div>
 
-      {/* Global Resource entry */}
+      {/* Global resources */}
       <button
-        onClick={() => setMainView(mainView === "resource" ? "workspace" : "resource")}
-        className={`mb-2 flex w-full items-center gap-2.5 rounded-[16px] border px-3 py-2.5 text-left transition ${
+        onClick={() => {
+          setResourceTab("data");
+          setMainView("resource");
+        }}
+        className={`mb-3 flex w-full items-center gap-3 rounded-[18px] border px-3.5 py-3 text-left transition ${
           mainView === "resource"
-            ? "border-emerald-200 bg-emerald-50/80 text-emerald-700"
-            : "border-slate-100 bg-slate-50/80 text-slate-600 hover:border-slate-200 hover:bg-white"
+            ? "border-emerald-200 bg-emerald-50/90 text-emerald-700 shadow-[0_12px_28px_rgba(5,150,105,0.08)]"
+            : "border-slate-100 bg-slate-50/80 text-slate-700 hover:border-emerald-200 hover:bg-emerald-50/70 hover:text-emerald-700"
         }`}
       >
-        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white text-[11px] ${
-          mainView === "resource"
-            ? "bg-[linear-gradient(135deg,#059669_0%,#34d399_100%)]"
-            : "bg-[linear-gradient(135deg,#64748b_0%,#94a3b8_100%)]"
-        }`}>
-          <Database className="h-3.5 w-3.5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[12px] font-semibold">{lang === "zh" ? "全局资源" : "Resources"}</p>
-          <p className="text-[10px] text-slate-400">{lang === "zh" ? "数据 · Skill · 模版" : "Data · Skills · Templates"}</p>
+        <Database className="h-4 w-4" />
+        <div>
+          <p className="text-[13px] font-semibold">{lang === "zh" ? "全局资源" : "Global resources"}</p>
+          <p className="mt-0.5 text-[11px] opacity-70">{lang === "zh" ? "数据 · Skill · 模版" : "Data · Skills · Templates"}</p>
         </div>
       </button>
 
-      {/* Project switcher */}
-      <div className="mb-3">
-        <p className="mb-1.5 px-1 text-[10px] uppercase tracking-[0.18em] text-slate-400">
-          {lang === "zh" ? "项目" : "Project"}
-        </p>
+      <div className="mb-4">
+        <p className="mb-2 px-1 text-[11px] uppercase tracking-[0.18em] text-slate-400">{lang === "zh" ? "项目" : "Projects"}</p>
         <ProjectSwitcher lang={lang} />
       </div>
 
-      {/* Divider */}
-      <div className="mb-3 h-px bg-slate-100" />
-
-      {/* New conversation */}
       <button
         onClick={onNewConversation}
         className={`mb-3 flex w-full items-center gap-2 rounded-[18px] border px-3.5 py-3 text-left text-[13px] font-medium transition ${
@@ -1175,6 +1572,373 @@ function ResultWorkspace({
   );
 }
 
+function historyRunStatusClass(status: HistoryRunStatus) {
+  if (status === "Completed") return "bg-emerald-50 text-emerald-700";
+  if (status === "Paused at HITL") return "bg-amber-50 text-amber-700";
+  if (status === "Failed") return "bg-red-50 text-red-600";
+  return "bg-[rgba(255,201,151,0.2)] text-[#8a5216]";
+}
+
+function historyStepIconClass(status: StepStatus) {
+  if (status === "done") return "border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.08)] text-[#161FAD]";
+  if (status === "running") return "border-[rgba(255,201,151,0.45)] bg-[rgba(255,201,151,0.2)] text-[#8a5216]";
+  if (status === "failed") return "border-red-200 bg-red-50 text-red-600";
+  return "border-slate-200 bg-slate-100 text-slate-500";
+}
+
+function attemptToneClass(tone: HistoryAttempt["tone"]) {
+  if (tone === "completed") return "bg-emerald-50 text-emerald-700";
+  if (tone === "failed") return "bg-red-50 text-red-600";
+  if (tone === "modified") return "bg-[rgba(23,36,216,0.08)] text-[#161FAD]";
+  if (tone === "resumed") return "bg-amber-50 text-amber-700";
+  return "bg-[rgba(255,201,151,0.2)] text-[#8a5216]";
+}
+
+function reportBadgeClass(tone: ReportSection["tone"]) {
+  if (tone === "success") return "bg-emerald-50 text-emerald-700";
+  if (tone === "warning") return "bg-amber-50 text-amber-700";
+  return "bg-[rgba(23,36,216,0.08)] text-[#161FAD]";
+}
+
+function ReportDrawer({
+  lang,
+  onOpenChange,
+  report,
+}: {
+  lang: Lang;
+  onOpenChange: (open: boolean) => void;
+  report: RunReport | null;
+}) {
+  const text = copy[lang];
+
+  return (
+    <Sheet open={Boolean(report)} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-[min(760px,92vw)] gap-0 overflow-hidden border-l border-slate-200 bg-[#f8faff] p-0 sm:max-w-none">
+        {report ? (
+          <>
+            <SheetHeader className="border-b border-slate-200 bg-white/92 px-5 py-5">
+              <SheetTitle className="pr-8 text-[17px] font-semibold text-[#070261]">{pick(lang, report.title)}</SheetTitle>
+              <SheetDescription className="text-[12px] leading-5 text-slate-500">
+                {report.fileName} · {pick(lang, report.generatedAt)}
+              </SheetDescription>
+            </SheetHeader>
+
+            <div className="flex min-h-0 flex-1 gap-4 overflow-hidden px-5 py-5">
+              <aside className="hidden w-[150px] shrink-0 border-r border-slate-100 pr-3 md:block">
+                <div className="sticky top-0 space-y-1">
+                  {report.sections.map((section) => (
+                    <a
+                      key={section.id}
+                      href={`#${report.id}-${section.id}`}
+                      className="block rounded-xl px-3 py-2 text-left text-[12px] font-medium text-slate-500 transition hover:bg-slate-50 hover:text-[#161FAD]"
+                    >
+                      {pick(lang, section.shortLabel)}
+                    </a>
+                  ))}
+                </div>
+              </aside>
+
+              <div className="min-w-0 flex-1 overflow-y-auto pr-1">
+                <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-amber-900">{text.reportReaderHint}</p>
+                      <p className="mt-1 text-xs leading-5 text-amber-800">{text.reportReaderBody}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-amber-700">
+                      {lang === "zh" ? "模型受限" : "Limited"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {report.sections.map((section) => (
+                    <section
+                      key={section.id}
+                      id={`${report.id}-${section.id}`}
+                      className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.035)]"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{pick(lang, section.title)}</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-500">{pick(lang, section.summary)}</p>
+                        </div>
+                        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${reportBadgeClass(section.tone)}`}>
+                          {section.badge}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid gap-3">
+                        {section.items.map((item) => (
+                          <div key={`${section.id}-${pick(lang, item.label)}`} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-medium text-slate-700">{pick(lang, item.label)}</span>
+                              <code className="rounded bg-white px-1.5 py-0.5 text-[10px] text-slate-500">{item.value}</code>
+                            </div>
+                            <p className="mt-1 text-xs leading-5 text-slate-600">{pick(lang, item.detail)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </>
+        ) : null}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function ReportsPanelContent({ lang }: { lang: Lang }) {
+  const text = copy[lang];
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const selectedReport = runReports.find((report) => report.id === selectedReportId) ?? null;
+
+  return (
+    <>
+      <div className="space-y-3">
+        <div className="rounded-[18px] border border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.06)] p-3.5">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-[#161FAD]" />
+            <p className="text-[13px] font-semibold text-[#161FAD]">{text.finalReports}</p>
+          </div>
+          <p className="mt-2 text-[12px] leading-5 text-slate-600">{text.finalReportsHint}</p>
+        </div>
+
+        {runReports.map((report) => (
+          <button
+            key={report.id}
+            onClick={() => setSelectedReportId(report.id)}
+            className="group flex w-full items-start gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3 text-left transition hover:border-[rgba(23,36,216,0.14)] hover:bg-white"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
+              <FileText className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-semibold text-slate-800">{pick(lang, report.title)}</p>
+              <p className="mt-0.5 truncate text-[11px] text-slate-400">{report.fileName}</p>
+              <p className="mt-2 text-[11px] leading-5 text-slate-500">{pick(lang, report.summary)}</p>
+            </div>
+            <span className="mt-1 shrink-0 rounded-xl px-2 py-1 text-[11px] font-medium text-[#161FAD] opacity-0 transition group-hover:bg-[rgba(23,36,216,0.06)] group-hover:opacity-100">
+              {text.viewReport}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <ReportDrawer lang={lang} report={selectedReport} onOpenChange={(open) => !open && setSelectedReportId(null)} />
+    </>
+  );
+}
+
+function HistoryRunDetail({
+  expandedStepId,
+  lang,
+  run,
+  setExpandedStepId,
+}: {
+  expandedStepId: string;
+  lang: Lang;
+  run: HistoryRunItem;
+  setExpandedStepId: (id: string) => void;
+}) {
+  const text = copy[lang];
+  const [activeDetailTab, setActiveDetailTab] = useState<"plan" | "files">("plan");
+
+  return (
+    <div className="space-y-3">
+      <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1">
+        {[
+          { id: "plan" as const, label: "Plan" },
+          { id: "files" as const, label: "Files" },
+        ].map((tab) => {
+          const active = activeDetailTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveDetailTab(tab.id)}
+              className={`rounded-xl px-3.5 py-2 text-[12px] font-medium transition ${
+                active ? "bg-white text-[#161FAD] shadow-[0_6px_16px_rgba(15,23,42,0.06)]" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeDetailTab === "plan" ? (
+        <div className="rounded-[20px] border border-slate-100 bg-white p-3.5 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
+          <div>
+          <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">{text.historySteps}</p>
+          <div className="space-y-2.5">
+            {run.planSteps.map((step) => {
+              const expanded = expandedStepId === step.id;
+              return (
+                <article key={step.id} className="rounded-[18px] border border-slate-100 bg-slate-50/90 p-3">
+                  <button onClick={() => setExpandedStepId(expanded ? "" : step.id)} className="flex w-full items-start gap-3 text-left">
+                    <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${historyStepIconClass(step.status)}`}>
+                      {step.status === "done" ? <CheckCircle2 className="h-4 w-4" /> : <CircleDashed className="h-4 w-4" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-[12px] font-semibold text-slate-800">{pick(lang, step.title)}</p>
+                        <span className="text-[10px] text-slate-400">{step.duration}</span>
+                      </div>
+                      <p className="mt-1 text-[11px] leading-5 text-slate-500">{pick(lang, step.description)}</p>
+                    </div>
+                    <ChevronDown className={`mt-1 h-4 w-4 shrink-0 text-slate-400 transition ${expanded ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {expanded ? (
+                    <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <code className="rounded bg-white px-2 py-1 text-[10px] text-slate-500">{step.toolName}</code>
+                        <span className="rounded-full bg-white px-2 py-1 text-[10px] text-slate-500">{step.attempts.length} attempts</span>
+                      </div>
+                      <div className="grid gap-2">
+                        <div className="rounded-[14px] bg-white px-3 py-2">
+                          <p className="text-[11px] font-semibold text-slate-700">{text.inputs}</p>
+                          <p className="mt-1 text-[11px] leading-5 text-slate-500">{step.inputs.join(" · ")}</p>
+                        </div>
+                        <div className="rounded-[14px] bg-white px-3 py-2">
+                          <p className="text-[11px] font-semibold text-slate-700">{text.outputs}</p>
+                          <p className="mt-1 text-[11px] leading-5 text-slate-500">{step.outputs.join(" · ")}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {step.attempts.map((attempt) => (
+                          <div key={attempt.id} className="rounded-[14px] border border-slate-100 bg-white px-3 py-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[11px] font-medium text-slate-700">{attempt.label}</span>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${attemptToneClass(attempt.tone)}`}>{attempt.tone}</span>
+                            </div>
+                            <p className="mt-1 text-[11px] leading-4 text-slate-500">{pick(lang, attempt.detail)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
+          </div>
+          </div>
+
+          <div className="mt-4">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">{text.historyLogs}</p>
+            <div className="space-y-2">
+              {run.logs.map((log) => (
+                <div key={`${log.time}-${log.event}`} className="rounded-[14px] bg-slate-50/90 px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-medium text-slate-600">{log.event}</span>
+                    <span className="text-[10px] text-slate-400">{log.time}</span>
+                  </div>
+                  <p className="mt-1 text-[11px] leading-4 text-slate-500">{pick(lang, log.message)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-[20px] border border-slate-100 bg-white p-3.5 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[13px] font-semibold text-[#070261]">{text.historyFiles}</p>
+              <p className="mt-1 text-[11px] text-slate-400">
+                {run.files.length} {text.filesCount}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {run.files.map((file) => (
+              <div key={file.name} className="flex items-center gap-3 rounded-[16px] border border-slate-100 bg-slate-50/90 px-3 py-2.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-[12px] font-medium text-slate-800">{file.name}</p>
+                  <p className="mt-0.5 text-[10px] text-slate-400">{pick(lang, file.meta)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HistoryPanelContent({ lang }: { lang: Lang }) {
+  const text = copy[lang];
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [expandedStepId, setExpandedStepId] = useState(historyRunItems[0]?.planSteps[0]?.id ?? "");
+  const selectedRun = historyRunItems.find((run) => run.id === selectedRunId) ?? null;
+
+  const handleOpenRun = (run: HistoryRunItem) => {
+    setSelectedRunId(run.id);
+    setExpandedStepId(run.planSteps[0]?.id ?? "");
+  };
+
+  return (
+    <>
+      <div className="space-y-3">
+        <div className="rounded-[18px] border border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.06)] p-3.5">
+          <div className="flex items-center gap-2">
+            <History className="h-4 w-4 text-[#161FAD]" />
+            <p className="text-[13px] font-semibold text-[#161FAD]">{text.runHistoryTitle}</p>
+          </div>
+          <p className="mt-2 text-[12px] leading-5 text-slate-600">{text.runHistoryBody}</p>
+        </div>
+
+        {historyRunItems.map((run) => (
+          <button
+            key={run.id}
+            onClick={() => handleOpenRun(run)}
+            className="w-full rounded-[18px] border border-slate-100 bg-slate-50/90 p-3.5 text-left transition hover:border-[rgba(23,36,216,0.14)] hover:bg-white hover:shadow-[0_10px_28px_rgba(23,36,216,0.06)]"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-[13px] font-semibold text-slate-800">{pick(lang, run.title)}</p>
+                <p className="mt-1 text-[11px] text-slate-400">{pick(lang, run.summaryLine)}</p>
+              </div>
+              <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${historyRunStatusClass(run.status)}`}>{run.status}</span>
+            </div>
+            <p className="mt-2 text-[11px] leading-5 text-slate-500">{pick(lang, run.reason)}</p>
+            <div className="mt-3 flex items-center justify-between gap-2 text-[11px]">
+              <span className="inline-flex items-center gap-1 text-slate-400">
+                <Clock3 className="h-3.5 w-3.5" />
+                {pick(lang, run.time)}
+              </span>
+              <span className="font-medium text-[#161FAD]">{lang === "zh" ? "查看快照 →" : "View snapshot →"}</span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <Sheet open={Boolean(selectedRun)} onOpenChange={(open) => !open && setSelectedRunId(null)}>
+        <SheetContent side="right" className="w-[min(760px,92vw)] gap-0 overflow-hidden border-l border-slate-200 bg-[#f8faff] p-0 sm:max-w-none">
+          {selectedRun ? (
+            <>
+              <SheetHeader className="border-b border-slate-200 bg-white/90 px-5 py-5">
+                <SheetTitle className="pr-8 text-[17px] font-semibold text-[#070261]">{pick(lang, selectedRun.title)}</SheetTitle>
+                <SheetDescription className="text-[12px] text-slate-500">
+                  {pick(lang, selectedRun.time)} · {selectedRun.status} · {pick(lang, selectedRun.summaryLine)}
+                </SheetDescription>
+              </SheetHeader>
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+                <HistoryRunDetail key={selectedRun.id} expandedStepId={expandedStepId} lang={lang} run={selectedRun} setExpandedStepId={setExpandedStepId} />
+              </div>
+            </>
+          ) : null}
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
 function SidePanel({
   lang,
   view,
@@ -1206,6 +1970,8 @@ function SidePanel({
 }) {
   const text = copy[lang];
   const showEmpty = view === "new";
+  const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [expandedPreviousRunIds, setExpandedPreviousRunIds] = useState<string[]>([]);
   const progressPercent = useMemo(() => {
     const doneCount = steps.filter((step) => step.status === "done").length;
     const hasRunning = steps.some((step) => step.status === "running");
@@ -1227,6 +1993,24 @@ function SidePanel({
     }, {});
   }, [filteredFiles, lang]);
 
+  const previousRunItems = historyRunItems.slice(1);
+  const filteredPreviousRunItems = useMemo(() => {
+    const keyword = searchQuery.trim().toLowerCase();
+    if (!keyword) return previousRunItems;
+    return previousRunItems.filter((run) => {
+      const runText = `${pick(lang, run.title)} ${pick(lang, run.summaryLine)} ${pick(lang, run.reason)} ${run.files
+        .map((file) => `${file.name} ${pick(lang, file.meta)}`)
+        .join(" ")}`.toLowerCase();
+      return runText.includes(keyword);
+    });
+  }, [lang, previousRunItems, searchQuery]);
+
+  const hasResultMatches = Object.entries(groupedFiles).length > 0 || filteredPreviousRunItems.length > 0;
+
+  const togglePreviousRun = (runId: string) => {
+    setExpandedPreviousRunIds((current) => (current.includes(runId) ? current.filter((id) => id !== runId) : [...current, runId]));
+  };
+
   return (
     <aside className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className="border-b border-slate-200/80 px-4 py-4">
@@ -1234,6 +2018,7 @@ function SidePanel({
           {[
             { id: "plan" as SideTab, label: text.plan },
             { id: "results" as SideTab, label: text.results },
+            { id: "reports" as SideTab, label: text.reports },
           ].map((tab) => {
             const active = sideTab === tab.id;
             return (
@@ -1310,6 +2095,16 @@ function SidePanel({
 
             </div>
           )
+        ) : sideTab === "reports" ? (
+          showEmpty ? (
+            <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 p-5">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.reports}</p>
+              <h3 className="mt-1 text-[15px] font-semibold text-[#070261]">{text.finalReports}</h3>
+              <p className="mt-3 text-[12px] leading-6 text-slate-500">{text.finalReportsHint}</p>
+            </div>
+          ) : (
+            <ReportsPanelContent lang={lang} />
+          )
         ) : showEmpty ? (
           <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 p-5">
             <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.results}</p>
@@ -1318,12 +2113,18 @@ function SidePanel({
           </div>
         ) : (
           <div>
-            <div className="mb-4 flex items-center justify-end gap-3 pt-1">
-              {selectedFileIds.length > 0 ? (
-                <Button onClick={onExportSelected} className="h-8 rounded-xl bg-[#161FAD] px-3 text-[12px] text-white hover:bg-[#1724D8]">
-                  {text.exportSelected} ({selectedFileIds.length})
-                </Button>
-              ) : null}
+            <div className="mb-4 rounded-[18px] border border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.06)] p-3.5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-[#161FAD]">{text.currentRunLabel}</p>
+                  <p className="mt-1 text-[11px] leading-5 text-slate-500">{text.currentRunHint}</p>
+                </div>
+                {selectedFileIds.length > 0 ? (
+                  <Button onClick={onExportSelected} className="h-8 shrink-0 rounded-xl bg-[#161FAD] px-3 text-[12px] text-white hover:bg-[#1724D8]">
+                    {text.exportSelected} ({selectedFileIds.length})
+                  </Button>
+                ) : null}
+              </div>
             </div>
 
             <div className="mb-4 rounded-[18px] border border-slate-200 bg-slate-50/90 px-3 py-2.5">
@@ -1339,67 +2140,155 @@ function SidePanel({
             </div>
 
             <div className="space-y-4">
-              {Object.entries(groupedFiles).length === 0 ? (
+              {!hasResultMatches ? (
                 <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-[12px] leading-6 text-slate-500">
                   {text.noMatchedResults}
                 </div>
               ) : (
-                Object.entries(groupedFiles).map(([group, files]) => (
-                  <div key={group}>
-                    <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">{group}</p>
-                    <div className="space-y-2.5">
-                      {files.map((file) => {
-                        const active = selectedFileId === file.id;
-                        const checked = selectedFileIds.includes(file.id);
-                        return (
-                          <div
-                            key={file.id}
-                            className={`group flex items-start gap-3 rounded-[18px] border px-3 py-3 transition ${
-                              active
-                                ? "border-[rgba(23,36,216,0.14)] bg-[rgba(23,36,216,0.05)]"
-                                : "border-slate-100 bg-slate-50/90 hover:border-[rgba(23,36,216,0.14)] hover:bg-white"
-                            }`}
-                          >
-                            <Checkbox
-                              checked={checked}
-                              onCheckedChange={() => onToggleFile(file.id)}
-                              className="mt-2"
-                              aria-label={`${text.selectFile} ${file.name}`}
-                            />
-                            <button onClick={() => onSelectFile(file.id)} className="flex min-w-0 flex-1 items-start gap-3 text-left">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
-                                <ResultTypeIcon type={file.type} />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-[13px] font-medium text-slate-800">{file.name}</p>
-                              </div>
-                            </button>
-                            <button
-                              onClick={() => onDownloadFile(file)}
-                              className="mt-1 rounded-xl p-2 text-slate-300 opacity-0 transition group-hover:bg-white group-hover:text-[#161FAD] group-hover:opacity-100"
-                              aria-label={`${text.download} ${file.name}`}
-                            >
-                              <ArrowDownToLine className="h-4 w-4" />
-                            </button>
+                <>
+                  {Object.entries(groupedFiles).length > 0 ? (
+                    <div className="rounded-[20px] border border-slate-100 bg-white p-3.5 shadow-[0_10px_28px_rgba(15,23,42,0.035)]">
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <FolderOpen className="h-4 w-4 shrink-0 text-[#161FAD]" />
+                          <div className="min-w-0">
+                            <p className="text-[12px] font-semibold text-[#070261]">{text.currentRun}</p>
+                            <p className="text-[10px] text-slate-400">{resultFiles.length} {text.filesCount}</p>
                           </div>
-                        );
-                      })}
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        {Object.entries(groupedFiles).map(([group, files]) => (
+                          <div key={group}>
+                            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">{group}</p>
+                            <div className="space-y-2.5">
+                              {files.map((file) => {
+                                const active = selectedFileId === file.id;
+                                const checked = selectedFileIds.includes(file.id);
+                                return (
+                                  <div
+                                    key={file.id}
+                                    className={`group flex items-start gap-3 rounded-[18px] border px-3 py-3 transition ${
+                                      active
+                                        ? "border-[rgba(23,36,216,0.14)] bg-[rgba(23,36,216,0.05)]"
+                                        : "border-slate-100 bg-slate-50/90 hover:border-[rgba(23,36,216,0.14)] hover:bg-white"
+                                    }`}
+                                  >
+                                    <Checkbox
+                                      checked={checked}
+                                      onCheckedChange={() => onToggleFile(file.id)}
+                                      className="mt-2"
+                                      aria-label={`${text.selectFile} ${file.name}`}
+                                    />
+                                    <button onClick={() => onSelectFile(file.id)} className="flex min-w-0 flex-1 items-start gap-3 text-left">
+                                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
+                                        <ResultTypeIcon type={file.type} />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="truncate text-[13px] font-medium text-slate-800">{file.name}</p>
+                                        <p className="mt-0.5 text-[10px] text-slate-400">{pick(lang, file.meta)}</p>
+                                      </div>
+                                    </button>
+                                    <button
+                                      onClick={() => onDownloadFile(file)}
+                                      className="mt-1 rounded-xl p-2 text-slate-300 opacity-0 transition group-hover:bg-white group-hover:text-[#161FAD] group-hover:opacity-100"
+                                      aria-label={`${text.download} ${file.name}`}
+                                    >
+                                      <ArrowDownToLine className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ) : null}
+
+                  {filteredPreviousRunItems.map((run) => {
+                    const runExpanded = expandedPreviousRunIds.includes(run.id);
+                    const runLabel = run.id.replace("run-", "Run #");
+                    return (
+                      <div key={run.id} className="rounded-[20px] border border-slate-100 bg-white p-3.5 shadow-[0_10px_28px_rgba(15,23,42,0.035)]">
+                        <button onClick={() => togglePreviousRun(run.id)} className="flex w-full items-center justify-between gap-3 text-left">
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-[#161FAD]">
+                              {runExpanded ? <FolderOpen className="h-4 w-4" /> : <Folder className="h-4 w-4" />}
+                            </div>
+                            <p className="truncate text-[13px] font-semibold text-[#070261]">{runLabel}</p>
+                          </div>
+                          <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${runExpanded ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {runExpanded ? (
+                          <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                            {run.files.map((file) => (
+                              <div key={`${run.id}-${file.name}`} className="group flex items-center gap-3 rounded-[16px] border border-slate-100 bg-slate-50/90 px-3 py-2.5">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
+                                  <FileText className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-[12px] font-medium text-slate-800">{file.name}</p>
+                                  <p className="mt-0.5 text-[10px] text-slate-400">{pick(lang, file.meta)}</p>
+                                </div>
+                                <button
+                                  onClick={() => toast.message(`${text.download} ${file.name}`)}
+                                  className="rounded-xl p-2 text-slate-300 opacity-0 transition group-hover:bg-white group-hover:text-[#161FAD] group-hover:opacity-100"
+                                  aria-label={`${text.download} ${file.name}`}
+                                >
+                                  <ArrowDownToLine className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </>
               )}
             </div>
           </div>
         )}
       </div>
+
+      {!showEmpty ? (
+        <div
+          className={`shrink-0 border-t border-slate-200/80 bg-white/86 transition-[height] duration-300 ${
+            historyExpanded ? "flex h-[52%] min-h-[320px] flex-col" : "h-[52px]"
+          }`}
+        >
+          <button
+            onClick={() => setHistoryExpanded((current) => !current)}
+            className="flex h-[52px] w-full items-center justify-between gap-3 px-4 text-left transition hover:bg-slate-50/80"
+          >
+            <div className="flex min-w-0 items-center gap-2.5">
+              <History className="h-4 w-4 shrink-0 text-[#161FAD]" />
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-[#070261]">{text.history}</p>
+                <p className="truncate text-[10px] text-slate-400">{pick(lang, historyRunItems[0].summaryLine)}</p>
+              </div>
+            </div>
+            <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${historyExpanded ? "rotate-180" : ""}`} />
+          </button>
+
+          {historyExpanded ? (
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1">
+              <HistoryPanelContent lang={lang} />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </aside>
   );
 }
 
 export default function Home() {
+  const { mainView, setMainView } = useProject();
   const [lang, setLang] = useState<Lang>("zh");
   const [activeView, setActiveView] = useState<ViewMode>("new");
-  const { mainView, setMainView } = useProject();
   const [sideTab, setSideTab] = useState<SideTab>("plan");
   const [composerValue, setComposerValue] = useState("");
   const [selectedFileId, setSelectedFileId] = useState<string>("");
@@ -1485,6 +2374,7 @@ export default function Home() {
   const handleStart = () => {
     setRuntimeSteps(createRuntimeSteps());
     setWorkflowCompleted(false);
+    setMainView("workspace");
     setActiveView("running");
     setSideTab("plan");
     setComposerValue("");
@@ -1497,6 +2387,7 @@ export default function Home() {
     }
     setRuntimeSteps(runningSteps.map((step): PlanStep => ({ ...step, status: "waiting" })));
     setWorkflowCompleted(false);
+    setMainView("workspace");
     setActiveView("new");
     setSideTab("plan");
     setComposerValue("");
@@ -1580,13 +2471,11 @@ export default function Home() {
         <div
           ref={menuBoundaryRef}
           className={`grid min-h-0 flex-1 gap-4 ${
-            mainView !== "workspace"
+            mainView !== "workspace" || activeView === "new"
               ? "xl:grid-cols-[260px_minmax(0,1fr)]"
-              : activeView === "new"
-                ? "xl:grid-cols-[260px_minmax(0,1fr)]"
-                : activeView === "result"
-                  ? "xl:grid-cols-[88px_minmax(420px,0.96fr)_minmax(480px,1.04fr)_360px]"
-                  : "xl:grid-cols-[260px_minmax(0,1fr)_360px]"
+              : activeView === "result"
+                ? "xl:grid-cols-[88px_minmax(420px,0.96fr)_minmax(480px,1.04fr)_360px]"
+                : "xl:grid-cols-[260px_minmax(0,1fr)_360px]"
           }`}
         >
           <Sidebar
@@ -1599,7 +2488,6 @@ export default function Home() {
             collapsed={mainView === "workspace" && activeView === "result"}
           />
 
-          {/* Main content area — switches based on mainView */}
           {mainView === "project-detail" ? (
             <ProjectPanel lang={lang} />
           ) : mainView === "resource" ? (
