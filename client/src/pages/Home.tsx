@@ -1657,132 +1657,193 @@ function AgentDemoCard({
     );
   }
 
-  return (
-    <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
-      <p className="text-sm font-semibold text-emerald-800">{lang === "zh" ? "Results 已生成" : "Results generated"}</p>
-      <p className="mt-1 text-xs leading-5 text-emerald-800">
-        {lang === "zh"
-          ? "包含结构特征、热图、排序表和完整报告。结果可预览、下载，并继续进入报告详情。"
-          : "Includes structural features, heatmap, ranking table, and complete report. Results can be previewed, downloaded, and opened in report detail."}
-      </p>
+  // ── Results-generated card ──────────────────────────────────────────────
+  const statusItems = [
+    {
+      label: lang === "zh" ? "模型状态" : "Model state",
+      value: lang === "zh" ? "常数目标" : "constant_targets",
+      code: "constant_targets",
+      tone: "warning" as const,
+      description:
+        lang === "zh"
+          ? "部分 fold 训练标签全相同，CatBoost 报错，指标需要降权解读。"
+          : "Some folds have constant targets; CatBoost errors — metrics should be down-weighted.",
+    },
+    {
+      label: lang === "zh" ? "指标可信度" : "Metric validity",
+      value: lang === "zh" ? "部分有效" : "partial",
+      code: "partial",
+      tone: "warning" as const,
+      description:
+        lang === "zh"
+          ? "GBDT/LightGBM 可容错完成，但 Spearman/Pearson 在常数输入下无法稳定定义。"
+          : "GBDT/LightGBM can finish, but Spearman/Pearson are unstable under constant inputs.",
+    },
+    {
+      label: lang === "zh" ? "特征工程" : "Feature engineering",
+      value: lang === "zh" ? "已完成" : "completed",
+      code: "completed",
+      tone: "success" as const,
+      description:
+        lang === "zh"
+          ? "单臂结合特征和双表位组合特征已形成可复用特征框架。"
+          : "Single-arm and biparatopic combination features form a reusable feature framework.",
+    },
+  ];
 
-      <div className="mt-4 rounded-2xl border border-white/80 bg-white/85 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
-        <div className="flex items-start justify-between gap-3">
+  const nextStepItems = [
+    {
+      action: "interpret-files" as const,
+      idx: 1,
+      label: lang === "zh" ? "读取并解读结果文件" : "Read and interpret result files",
+      detail:
+        lang === "zh"
+          ? "解析 feature_filtering_result.csv 和 importance_analysis_result.csv。"
+          : "Parse feature_filtering_result.csv and importance_analysis_result.csv.",
+    },
+    {
+      action: "rerun-ml" as const,
+      idx: 2,
+      label: lang === "zh" ? "重新运行 ML 回归分析" : "Rerun ML regression",
+      detail: lang === "zh" ? "基于筛选后的精简特征集重新训练。" : "Retrain on the filtered compact feature set.",
+    },
+    {
+      action: "explain-top-features" as const,
+      idx: 3,
+      label: lang === "zh" ? "解读 Top 重要特征" : "Explain top features",
+      detail: lang === "zh" ? "分析 Top 特征与内吞机制的关联。" : "Analyze how top features relate to internalization.",
+    },
+  ];
+
+  return (
+    <div className="mt-3 space-y-3">
+      {/* ── Header status banner ── */}
+      <div className="flex items-center gap-3 rounded-2xl border border-emerald-200/80 bg-gradient-to-r from-emerald-50 to-white px-4 py-3.5 shadow-[0_2px_8px_rgba(16,185,129,0.08)]">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.3)]">
+          <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-semibold text-slate-900">{lang === "zh" ? "Results 已生成" : "Results generated"}</p>
+          <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
+            {lang === "zh"
+              ? "包含结构特征、热图、排序表和完整报告。结果可预览、下载，并继续进入报告详情。"
+              : "Includes structural features, heatmap, ranking table, and complete report."}
+          </p>
+        </div>
+      </div>
+
+      {/* ── Metrics card ── */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white shadow-[0_4px_16px_rgba(15,23,42,0.06)]">
+        {/* Card header */}
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <div>
-            <p className="text-sm font-semibold text-slate-900">{lang === "zh" ? "双表位内吞特征报告指标卡" : "Biparatopic internalization report metrics"}</p>
-            <p className="mt-1 text-xs leading-5 text-slate-500">
-              {lang === "zh" ? "把完整报告里的关键判断抽成可扫读的 A2UI 摘要，先看结论再进详情。" : "Extract key judgments into scannable A2UI summaries before opening the full detail."}
+            <p className="text-[13px] font-semibold text-[#070261]">
+              {lang === "zh" ? "双表位内吞特征报告指标卡" : "Biparatopic Internalization Report"}
+            </p>
+            <p className="mt-0.5 text-[11px] leading-5 text-slate-400">
+              {lang === "zh"
+                ? "关键判断摘要 · 先看结论再进详情"
+                : "Key judgments summary · scan conclusions before full detail"}
             </p>
           </div>
-          <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
-            {lang === "zh" ? "模型受限" : "Limited"}
+          <span className="mt-0.5 shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-amber-700">
+            {lang === "zh" ? "模型受限" : "LIMITED"}
           </span>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2">
+        {/* Metrics row */}
+        <div className="grid grid-cols-3 divide-x divide-slate-100 px-1 py-1">
           {[
-            { label: lang === "zh" ? "执行成功" : "Succeeded steps", value: "9/9", hint: lang === "zh" ? "全部步骤完成" : "All steps completed" },
-            { label: lang === "zh" ? "实验配置" : "Experiment configs", value: "16", hint: "cutoff × features × stages" },
-            { label: lang === "zh" ? "特征总量" : "Base features", value: "560", hint: "4 binders × 140" },
-          ].map((metric) => (
-            <div key={metric.label} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-              <p className="text-[11px] text-slate-500">{metric.label}</p>
-              <p className="mt-1 text-lg font-semibold text-slate-900">{metric.value}</p>
-              <p className="mt-1 text-[10px] leading-4 text-slate-400">{metric.hint}</p>
+            { label: lang === "zh" ? "执行成功" : "Steps passed", value: "9/9", hint: lang === "zh" ? "全部步骤完成" : "All steps done", color: "text-emerald-600" },
+            { label: lang === "zh" ? "实验配置" : "Configs", value: "16", hint: "cutoff × features × stages", color: "text-[#161FAD]" },
+            { label: lang === "zh" ? "特征总量" : "Features", value: "560", hint: "4 binders × 140", color: "text-slate-800" },
+          ].map((m) => (
+            <div key={m.label} className="flex flex-col items-center py-4">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">{m.label}</p>
+              <p className={`mt-1.5 text-[26px] font-bold leading-none tabular-nums ${m.color}`}>{m.value}</p>
+              <p className="mt-1.5 text-center text-[10px] leading-4 text-slate-400">{m.hint}</p>
             </div>
           ))}
         </div>
 
-        <div className="mt-3 space-y-2">
-          {[
-            {
-              label: lang === "zh" ? "模型状态" : "Model state",
-              value: "constant_targets",
-              tone: "warning",
-              description: lang === "zh" ? "部分 fold 训练标签全相同，CatBoost 报错，指标需要降权解读。" : "Some folds have constant targets, CatBoost errors, and metrics should be down-weighted.",
-            },
-            {
-              label: lang === "zh" ? "指标可信度" : "Metric validity",
-              value: "partial",
-              tone: "warning",
-              description: lang === "zh" ? "GBDT/LightGBM 可容错完成，但 Spearman/Pearson 在常数输入下无法稳定定义。" : "GBDT/LightGBM can finish, but Spearman/Pearson are not stable under constant inputs.",
-            },
-            {
-              label: lang === "zh" ? "特征工程" : "Feature engineering",
-              value: "completed",
-              tone: "success",
-              description: lang === "zh" ? "单臂结合特征和双表位组合特征已形成可复用特征框架。" : "Single-arm and biparatopic combination features form a reusable feature framework.",
-            },
-          ].map((item) => (
+        {/* Status rows */}
+        <div className="space-y-0 border-t border-slate-100">
+          {statusItems.map((item, i) => (
             <div
               key={item.label}
-              className={`flex items-start gap-2 rounded-xl border px-3 py-2 ${
-                item.tone === "warning" ? "border-amber-200 bg-amber-50/70" : "border-emerald-200 bg-emerald-50/70"
+              className={`flex items-start gap-0 ${
+                i < statusItems.length - 1 ? "border-b border-slate-100" : ""
               }`}
             >
-              <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${item.tone === "warning" ? "bg-amber-500" : "bg-emerald-500"}`} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium text-slate-800">{item.label}</span>
-                  <code className="rounded bg-white/80 px-1.5 py-0.5 text-[10px] text-slate-600">{item.value}</code>
+              {/* Left color bar */}
+              <div className={`w-1 self-stretch rounded-l-none ${
+                item.tone === "warning" ? "bg-amber-400" : "bg-emerald-400"
+              }`} />
+              <div className="flex min-w-0 flex-1 items-start justify-between gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-semibold text-slate-800">{item.label}</p>
+                  <p className="mt-1 text-[11px] leading-[1.6] text-slate-500">{item.description}</p>
                 </div>
-                <p className="mt-1 text-[11px] leading-4 text-slate-600">{item.description}</p>
+                <span
+                  className={`mt-0.5 shrink-0 rounded-md px-2 py-0.5 font-mono text-[10px] font-medium ${
+                    item.tone === "warning"
+                      ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+                      : "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                  }`}
+                >
+                  {item.code}
+                </span>
               </div>
             </div>
           ))}
         </div>
 
-        <button
-          onClick={() => onAction("view-report")}
-          className="mt-3 rounded-md bg-emerald-600 px-3 py-2 text-xs font-medium text-white"
-        >
-          {lang === "zh" ? "查看报告详情" : "View report"}
-        </button>
+        {/* CTA */}
+        <div className="border-t border-slate-100 px-5 py-4">
+          <button
+            onClick={() => onAction("view-report")}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#161FAD] px-5 py-2.5 text-[12px] font-semibold text-white shadow-[0_4px_14px_rgba(22,31,173,0.25)] transition duration-150 hover:bg-[#1724D8] hover:shadow-[0_6px_18px_rgba(22,31,173,0.32)] active:scale-[0.97]"
+          >
+            {lang === "zh" ? "查看完整报告" : "View full report"}
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <div className="mt-4 border-t border-emerald-200/70 pt-4">
-        <div className="flex items-start justify-between gap-3">
+      {/* ── Recommended next steps ── */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white shadow-[0_4px_16px_rgba(15,23,42,0.06)]">
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
           <div>
-            <p className="text-sm font-semibold text-[#161FAD]">{lang === "zh" ? "推荐下一步" : "Recommended next steps"}</p>
-            <p className="mt-1 text-xs leading-5 text-emerald-800/80">
-              {lang === "zh"
-                ? "这些是报告之外的可继续操作，点击后可直接进入下一轮 Agent 任务。"
-                : "These are follow-up actions outside the report. Click one to continue into the next agent task."}
+            <p className="text-[12px] font-semibold text-[#070261]">{lang === "zh" ? "推荐下一步" : "Recommended next steps"}</p>
+            <p className="mt-0.5 text-[10px] text-slate-400">
+              {lang === "zh" ? "点击后直接进入下一轮 Agent 任务" : "Click to continue into the next agent task"}
             </p>
           </div>
-          <span className="rounded-full border border-[rgba(23,36,216,0.12)] bg-white/70 px-2.5 py-1 text-[11px] font-medium text-[#161FAD]">
-            {lang === "zh" ? "可操作" : "Actionable"}
+          <span className="rounded-full border border-[rgba(22,31,173,0.15)] bg-[rgba(22,31,173,0.05)] px-2.5 py-1 text-[10px] font-semibold text-[#161FAD]">
+            {lang === "zh" ? "可操作" : "ACTIONABLE"}
           </span>
         </div>
-
-        <div className="mt-3 grid gap-2">
-          {[
-            {
-              action: "interpret-files" as const,
-              label: lang === "zh" ? "读取并解读结果文件" : "Read and interpret result files",
-              detail:
-                lang === "zh"
-                  ? "解析 feature_filtering_result.csv 和 importance_analysis_result.csv。"
-                  : "Parse feature_filtering_result.csv and importance_analysis_result.csv.",
-            },
-            {
-              action: "rerun-ml" as const,
-              label: lang === "zh" ? "重新运行 ML 回归分析" : "Rerun ML regression",
-              detail: lang === "zh" ? "基于筛选后的精简特征集重新训练。" : "Retrain on the filtered compact feature set.",
-            },
-            {
-              action: "explain-top-features" as const,
-              label: lang === "zh" ? "解读 Top 重要特征" : "Explain top features",
-              detail: lang === "zh" ? "分析 Top 特征与内吞机制的关联。" : "Analyze how top features relate to internalization.",
-            },
-          ].map((item) => (
+        <div className="divide-y divide-slate-100">
+          {nextStepItems.map((item) => (
             <button
               key={item.action}
               onClick={() => onAction(item.action)}
-              className="rounded-xl border border-[rgba(23,36,216,0.12)] bg-white/70 px-3 py-2.5 text-left transition hover:border-[rgba(23,36,216,0.28)] hover:bg-white"
+              className="group flex w-full items-start gap-3.5 px-5 py-3.5 text-left transition duration-150 hover:bg-slate-50 active:bg-slate-100"
             >
-              <p className="text-[11px] font-semibold text-[#161FAD]">{item.label}</p>
-              <p className="mt-0.5 text-[10px] leading-4 text-slate-500">{item.detail}</p>
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgba(22,31,173,0.08)] text-[10px] font-bold text-[#161FAD] transition group-hover:bg-[#161FAD] group-hover:text-white">
+                {item.idx}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-semibold text-slate-800 transition group-hover:text-[#161FAD]">{item.label}</p>
+                <p className="mt-0.5 text-[11px] leading-4 text-slate-400">{item.detail}</p>
+              </div>
+              <svg className="mt-1 h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-[#161FAD]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
             </button>
           ))}
         </div>
