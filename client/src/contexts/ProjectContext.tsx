@@ -4,7 +4,7 @@ export type ProjectMember = {
   id: string;
   name: string;
   email: string;
-  role: "owner" | "admin" | "member" | "viewer";
+  role: "admin" | "member";
   avatar?: string;
 };
 
@@ -40,7 +40,7 @@ export type Project = {
 };
 
 const defaultMembers: ProjectMember[] = [
-  { id: "m1", name: "Chen Lab", email: "chen@ailux.ai", role: "owner" },
+  { id: "m1", name: "Chen Lab", email: "chen@ailux.ai", role: "admin" },
   { id: "m2", name: "Li Wei", email: "liwei@ailux.ai", role: "admin" },
   { id: "m3", name: "Zhang Min", email: "zhangmin@ailux.ai", role: "member" },
 ];
@@ -99,6 +99,13 @@ type ProjectContextType = {
   activeProject: Project;
   setActiveProject: (project: Project) => void;
   createProject: (name: string, description: string) => Project;
+  updateProject: (projectId: string, updates: Pick<Project, "name" | "description">) => void;
+  deleteProject: (projectId: string) => void;
+  updateProjectDataAsset: (projectId: string, assetId: string, name: string) => void;
+  deleteProjectDataAsset: (projectId: string, assetId: string) => void;
+  addProjectMember: (projectId: string, email: string, role: ProjectMember["role"]) => ProjectMember | null;
+  updateProjectMemberRole: (projectId: string, memberId: string, role: ProjectMember["role"]) => void;
+  removeProjectMember: (projectId: string, memberId: string) => void;
   // Legacy (kept for backward compat, now unused)
   projectPanelOpen: boolean;
   setProjectPanelOpen: (open: boolean) => void;
@@ -137,6 +144,95 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return newProject;
   };
 
+  const syncProject = (projectId: string, updater: (project: Project) => Project) => {
+    setProjects((prev) =>
+      prev.map((project) => (project.id === projectId ? updater(project) : project))
+    );
+    setActiveProject((current) => (current.id === projectId ? updater(current) : current));
+  };
+
+  const updateProject = (projectId: string, updates: Pick<Project, "name" | "description">) => {
+    syncProject(projectId, (project) => ({ ...project, ...updates }));
+  };
+
+  const deleteProject = (projectId: string) => {
+    if (projects.length <= 1) return;
+
+    const nextProjects = projects.filter((project) => project.id !== projectId);
+    setProjects(nextProjects);
+    setActiveProject((current) => (current.id === projectId ? nextProjects[0] : current));
+    setMainView("workspace");
+  };
+
+  const updateProjectDataAsset = (projectId: string, assetId: string, name: string) => {
+    syncProject(projectId, (project) => ({
+      ...project,
+      data: project.data.map((asset) => (asset.id === assetId ? { ...asset, name } : asset)),
+    }));
+  };
+
+  const deleteProjectDataAsset = (projectId: string, assetId: string) => {
+    syncProject(projectId, (project) => ({
+      ...project,
+      data: project.data.filter((asset) => asset.id !== assetId),
+    }));
+  };
+
+  const addProjectMember = (projectId: string, email: string, role: ProjectMember["role"]) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) return null;
+
+    let addedMember: ProjectMember | null = null;
+    const name = normalizedEmail
+      .split("@")[0]
+      .split(/[._-]/)
+      .filter(Boolean)
+      .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
+      .join(" ") || normalizedEmail;
+    const nextMember: ProjectMember = {
+      id: `m-${Date.now()}`,
+      name,
+      email: normalizedEmail,
+      role,
+    };
+
+    syncProject(projectId, (project) => {
+      const existing = project.members.find((member) => member.email.toLowerCase() === normalizedEmail);
+      if (existing) {
+        addedMember = existing;
+        return project;
+      }
+
+      addedMember = nextMember;
+
+      return {
+        ...project,
+        members: [...project.members, nextMember],
+      };
+    });
+
+    return addedMember;
+  };
+
+  const updateProjectMemberRole = (projectId: string, memberId: string, role: ProjectMember["role"]) => {
+    syncProject(projectId, (project) => {
+      return {
+        ...project,
+        members: project.members.map((member) => {
+          if (member.id === memberId) return { ...member, role };
+          return member;
+        }),
+      };
+    });
+  };
+
+  const removeProjectMember = (projectId: string, memberId: string) => {
+    syncProject(projectId, (project) => ({
+      ...project,
+      members: project.members.filter((member) => member.id !== memberId),
+    }));
+  };
+
   return (
     <ProjectContext.Provider
       value={{
@@ -144,6 +240,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         activeProject,
         setActiveProject,
         createProject,
+        updateProject,
+        deleteProject,
+        updateProjectDataAsset,
+        deleteProjectDataAsset,
+        addProjectMember,
+        updateProjectMemberRole,
+        removeProjectMember,
         projectPanelOpen,
         setProjectPanelOpen,
         mainView,

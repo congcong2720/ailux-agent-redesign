@@ -224,7 +224,7 @@ const firstReplySections = [
 ];
 
 const historyTasks: HistoryTask[] = [
-  { id: "draft", title: l("新对话", "New conversation"), meta: l("创建任务", "Create task"), isDraft: true },
+  { id: "draft", title: l("新任务", "New task"), meta: l("创建任务", "Create task"), isDraft: true },
   {
     id: "t1",
     title: l("内化预测建模工作流程", "Internalization Predictive Modeling Workflow"),
@@ -1035,8 +1035,8 @@ const createRuntimeSteps = (steps: PlanStep[]): PlanStep[] =>
 
 const copy = {
   zh: {
-    platformSubtitle: "智能体平台",
-    newConversation: "新对话",
+    platformSubtitle: "AILUX AGENT",
+    newConversation: "新任务",
     tasksLabel: "任务列表",
     signedInRole: "已登录 · 项目成员",
     userCenter: "用户中心",
@@ -1123,10 +1123,18 @@ const copy = {
     historyLogs: "关键日志",
     inputs: "输入",
     outputs: "输出",
+    flowGraph: "流程图",
+    flowGraphTitle: "执行流程图",
+    flowGraphHint: "节点状态与右侧 Plan 保持同步，用于查看步骤依赖、执行线路和当前运行位置。",
+    mermaidSource: "Mermaid 流程源",
+    currentStep: "当前节点",
+    statusDone: "已完成",
+    statusRunning: "运行中",
+    statusWaiting: "等待中",
   },
   en: {
-    platformSubtitle: "Agent Workspace",
-    newConversation: "New conversation",
+    platformSubtitle: "AILUX AGENT",
+    newConversation: "New task",
     tasksLabel: "Task list",
     signedInRole: "Signed in · Project member",
     userCenter: "User center",
@@ -1215,6 +1223,14 @@ const copy = {
     historyLogs: "Key logs",
     inputs: "Inputs",
     outputs: "Outputs",
+    flowGraph: "Flow",
+    flowGraphTitle: "Execution flow",
+    flowGraphHint: "Node status stays synced with the Plan, showing dependencies, route, and the current running step.",
+    mermaidSource: "Mermaid source",
+    currentStep: "Current node",
+    statusDone: "Done",
+    statusRunning: "Running",
+    statusWaiting: "Waiting",
   },
 } as const;
 
@@ -1407,8 +1423,7 @@ function Sidebar({
           <FlaskConical className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-[15px] font-semibold tracking-tight text-[#070261]">{text.platformSubtitle}</p>
-          <p className="text-[11px] text-slate-400">Ailux Agent</p>
+          <p className="text-[15px] font-semibold uppercase tracking-[0.08em] text-[#070261]">{text.platformSubtitle}</p>
         </div>
       </div>
 
@@ -2723,6 +2738,190 @@ function HistoryPanelContent({ lang }: { lang: Lang }) {
   );
 }
 
+function flowNodeClass(status: StepStatus) {
+  if (status === "done") return "border-emerald-300 bg-emerald-50/90 shadow-[0_8px_18px_rgba(16,185,129,0.08)]";
+  if (status === "running") return "border-[#161FAD]/35 bg-[rgba(23,36,216,0.08)] shadow-[0_14px_30px_rgba(23,36,216,0.16)]";
+  return "border-slate-200 bg-white/92 shadow-[0_8px_18px_rgba(15,23,42,0.035)]";
+}
+
+function flowEdgeColor(status: StepStatus) {
+  if (status === "done") return "#34d399";
+  if (status === "running") return "#161FAD";
+  return "#cbd5e1";
+}
+
+function flowStatusLabel(status: StepStatus, text: typeof copy.zh | typeof copy.en) {
+  if (status === "done") return text.statusDone;
+  if (status === "running") return text.statusRunning;
+  return text.statusWaiting;
+}
+
+function getFlowDisplayStatus(steps: PlanStep[], index: number): StepStatus {
+  const allWaiting = steps.length > 0 && steps.every((step) => step.status === "waiting");
+  if (!allWaiting) return steps[index]?.status === "failed" ? "waiting" : steps[index]?.status ?? "waiting";
+  if (index === 0) return "done";
+  if (index === 1) return "running";
+  return "waiting";
+}
+
+type FlowNodePosition = {
+  left: number;
+  top: number;
+};
+
+const FLOW_NODE_WIDTH = 258;
+const FLOW_NODE_HEIGHT = 86;
+const FLOW_CANVAS_WIDTH = 560;
+const FLOW_NODE_TITLES = [
+  "step-01: PRODIGY 特征计算 - 提取抗体-抗原界面相互作用特征",
+  "step-02: Rosetta 特征计算 - 提取结构打分与能量特征",
+  "step-03: 表位-结合物特征计算 - 提取表位上下文描述符",
+  "step-04: 双抗组合特征生成 - 将两个单抗臂的特征合并为双特异性抗体特征",
+  "step-05: 特征相关性分析 - 筛选冗余特征并指导模型选择",
+  "step-06: ML 回归建模 - 训练与评估双抗内吞功能预测模型",
+];
+
+function getFlowNodePositions(stepCount: number): FlowNodePosition[] {
+  const center = 151;
+  const leftBranch = 56;
+  const verticalGap = 124;
+
+  return Array.from({ length: stepCount }, (_, index) => {
+    if (stepCount >= 5 && index === 3) {
+      return { left: leftBranch, top: 34 + index * verticalGap };
+    }
+
+    return { left: center, top: 34 + index * verticalGap };
+  });
+}
+
+function getFlowEdges(stepCount: number) {
+  const sequentialEdges = Array.from({ length: Math.max(stepCount - 1, 0) }, (_, index) => ({
+    from: index,
+    to: index + 1,
+    dashed: false,
+  }));
+
+  if (stepCount < 5) return sequentialEdges;
+
+  return [
+    ...sequentialEdges,
+    { from: 2, to: 4, dashed: true },
+    ...(stepCount > 5 ? [{ from: 2, to: 5, dashed: true }] : []),
+  ];
+}
+
+function buildFlowPath(from: FlowNodePosition, to: FlowNodePosition) {
+  const startX = from.left + FLOW_NODE_WIDTH / 2;
+  const startY = from.top + FLOW_NODE_HEIGHT;
+  const endX = to.left + FLOW_NODE_WIDTH / 2;
+  const endY = to.top;
+  const midY = startY + Math.max((endY - startY) / 2, 28);
+
+  return `M ${startX} ${startY} C ${startX} ${midY}, ${endX} ${midY}, ${endX} ${endY}`;
+}
+
+function WorkflowFlowDrawer({
+  lang,
+  onOpenChange,
+  open,
+  steps,
+}: {
+  lang: Lang;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  steps: PlanStep[];
+}) {
+  const text = copy[lang];
+  const runningStepId = steps.find((step) => step.status === "running")?.id;
+  const nodePositions = getFlowNodePositions(steps.length);
+  const flowEdges = getFlowEdges(steps.length);
+  const canvasHeight = (nodePositions.at(-1)?.top ?? 34) + FLOW_NODE_HEIGHT + 48;
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" showOverlay={false} className="w-[min(720px,96vw)] gap-0 overflow-hidden border-l border-slate-200 bg-[#f8faff] p-0 sm:max-w-none">
+        <SheetHeader className="border-b border-slate-200 bg-white/92 px-5 py-5">
+          <SheetTitle className="flex items-center gap-2 text-[17px] font-semibold text-[#070261]">
+            <GitBranch className="h-4 w-4 text-[#161FAD]" />
+            {text.flowGraphTitle}
+          </SheetTitle>
+        </SheetHeader>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+          <div className="overflow-x-auto rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f2f6ff_100%)] px-4 py-5">
+            <div
+              className="relative mx-auto"
+              style={{ width: FLOW_CANVAS_WIDTH, height: canvasHeight }}
+            >
+              <div
+                className="absolute inset-0 opacity-[0.35]"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(rgba(148,163,184,0.22) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.22) 1px, transparent 1px)",
+                  backgroundSize: "20px 20px",
+                }}
+              />
+
+              <svg className="absolute inset-0 z-10" width={FLOW_CANVAS_WIDTH} height={canvasHeight} viewBox={`0 0 ${FLOW_CANVAS_WIDTH} ${canvasHeight}`}>
+                <defs>
+                  <marker id="flow-arrow" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="4">
+                    <path d="M 0 0 L 8 4 L 0 8 z" fill="#64748b" />
+                  </marker>
+                </defs>
+                {flowEdges.map((edge) => {
+                  const from = nodePositions[edge.from];
+                  const to = nodePositions[edge.to];
+                  if (!from || !to) return null;
+                  const status = getFlowDisplayStatus(steps, edge.from);
+                  return (
+                    <path
+                      key={`${edge.from}-${edge.to}-${edge.dashed ? "dashed" : "solid"}`}
+                      d={buildFlowPath(from, to)}
+                      fill="none"
+                      markerEnd="url(#flow-arrow)"
+                      stroke={flowEdgeColor(status)}
+                      strokeDasharray={edge.dashed ? "4 5" : undefined}
+                      strokeLinecap="round"
+                      strokeWidth={edge.dashed ? 1.3 : 1.6}
+                    />
+                  );
+                })}
+              </svg>
+
+              {steps.map((step, index) => {
+                const position = nodePositions[index];
+                const displayStatus = getFlowDisplayStatus(steps, index);
+                const isRunning = step.id === runningStepId || displayStatus === "running";
+                const statusLabel = flowStatusLabel(displayStatus, text);
+                return (
+                  <article
+                    key={step.id}
+                    className={`absolute z-20 rounded-[12px] border px-5 py-4 text-center transition ${flowNodeClass(displayStatus)} ${
+                      isRunning ? "ring-4 ring-[rgba(23,36,216,0.08)]" : ""
+                    }`}
+                    style={{ left: position.left, top: position.top, width: FLOW_NODE_WIDTH, minHeight: FLOW_NODE_HEIGHT }}
+                  >
+                    <p className="line-clamp-2 text-[12px] font-semibold leading-[1.65] text-slate-800">
+                      {FLOW_NODE_TITLES[index] ?? `${step.id}: ${pick(lang, step.title)}`}
+                    </p>
+                    <div className="mt-2.5 flex items-center justify-center gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: flowEdgeColor(displayStatus) }} />
+                        {statusLabel}
+                      </span>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 function SidePanel({
   lang,
   view,
@@ -2758,6 +2957,7 @@ function SidePanel({
 }) {
   const text = copy[lang];
   const showEmpty = view === "new";
+  const [flowOpen, setFlowOpen] = useState(false);
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [expandedPreviousRunIds, setExpandedPreviousRunIds] = useState<string[]>([]);
   const progressPercent = useMemo(() => {
@@ -2835,9 +3035,17 @@ function SidePanel({
           ) : (
             <div>
               <div className="mb-4 pt-1">
-                <div className="mb-1 flex items-center justify-between text-[11px] text-slate-400">
+                <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-slate-400">
                   <span>{text.overallProgress}</span>
-                  <span>{progressPercent}%</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setFlowOpen(true)}
+                      className="inline-flex items-center gap-1 rounded-full border border-[rgba(23,36,216,0.12)] bg-white px-2 py-1 text-[10px] font-semibold text-[#161FAD] transition hover:bg-[rgba(23,36,216,0.06)] active:scale-[0.97]"
+                    >
+                      <GitBranch className="h-3 w-3" />
+                      {text.flowGraph}
+                    </button>
+                  </div>
                 </div>
                 <div className="h-2 rounded-full bg-slate-100">
                   <div
@@ -2846,6 +3054,7 @@ function SidePanel({
                   />
                 </div>
               </div>
+              <WorkflowFlowDrawer lang={lang} open={flowOpen} steps={steps} onOpenChange={setFlowOpen} />
               <div className="space-y-3">
                 {steps.map((step) => {
                   const style = statusStyles[step.status];
