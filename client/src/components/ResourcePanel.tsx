@@ -14,8 +14,6 @@ import {
   File,
   FileText,
   Image,
-  ArrowUpRight,
-  Star,
   Clock,
 } from "lucide-react";
 import { useState } from "react";
@@ -86,14 +84,17 @@ function PublicDataTab({ lang }: { lang: Lang }) {
   return (
     <div className="flex flex-col gap-5">
       {/* Search */}
-      <div className="flex items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-        <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="flex-1 bg-transparent text-[13px] text-slate-700 outline-none placeholder:text-slate-400"
-          placeholder={lang === "zh" ? "搜索公共数据集…" : "Search public datasets…"}
-        />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex w-full max-w-[320px] items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
+          <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
+            placeholder={lang === "zh" ? "搜索公共数据集…" : "Search public datasets…"}
+          />
+        </div>
+        <div className="min-h-8 flex-1" />
       </div>
 
       {/* Hint bar */}
@@ -123,13 +124,12 @@ function PublicDataTab({ lang }: { lang: Lang }) {
                 onClick={() => toast.message(lang === "zh" ? `查看 ${item.name}` : `View ${item.name}`)}
                 className="group relative flex flex-col gap-2 rounded-[14px] border border-slate-200 bg-white p-4 text-left transition hover:border-[#161FAD]/30 hover:shadow-sm"
               >
-                {/* Top row: icon + name + external link */}
+                {/* Top row: icon + name */}
                 <div className="flex items-start gap-2">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-amber-100 bg-amber-50">
                     {FILE_ICONS[item.type] ?? <File className="h-4 w-4 text-slate-400" />}
                   </div>
                   <p className="flex-1 text-[13px] font-semibold leading-tight text-slate-800">{item.name}</p>
-                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-hover:text-[#161FAD]" />
                 </div>
                 {/* Desc */}
                 <p className="line-clamp-2 text-[11px] leading-relaxed text-slate-500">{item.desc}</p>
@@ -138,7 +138,6 @@ function PublicDataTab({ lang }: { lang: Lang }) {
                   {item.tags.map((tag) => (
                     <span key={tag} className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] text-slate-500">{tag}</span>
                   ))}
-                  {item.starred && <Star className="ml-auto h-3 w-3 fill-amber-400 text-amber-400" />}
                 </div>
               </button>
             ))}
@@ -168,14 +167,17 @@ function SkillTab({ lang }: { lang: Lang }) {
   return (
     <div className="flex flex-col gap-5">
       {/* Search */}
-      <div className="flex items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-        <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="flex-1 bg-transparent text-[13px] text-slate-700 outline-none placeholder:text-slate-400"
-          placeholder={lang === "zh" ? "搜索 Skill…" : "Search skills…"}
-        />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex w-full max-w-[320px] items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
+          <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
+            placeholder={lang === "zh" ? "搜索 Skill…" : "Search skills…"}
+          />
+        </div>
+        <div className="min-h-8 flex-1" />
       </div>
 
       {/* Hint bar */}
@@ -210,7 +212,6 @@ function SkillTab({ lang }: { lang: Lang }) {
                     <Zap className="h-3.5 w-3.5 text-[#161FAD]" />
                   </div>
                   <p className="flex-1 text-[13px] font-semibold leading-tight text-slate-800">{skill.name}</p>
-                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-hover:text-[#161FAD]" />
                 </div>
                 <p className="line-clamp-2 text-[11px] leading-relaxed text-slate-500">{skill.desc}</p>
                 <div className="mt-auto flex items-center gap-1.5">
@@ -219,7 +220,6 @@ function SkillTab({ lang }: { lang: Lang }) {
                     <Clock className="h-3 w-3" />
                     {skill.uses}
                   </span>
-                  {skill.starred && <Star className="h-3 w-3 fill-amber-400 text-amber-400" />}
                 </div>
               </button>
             ))}
@@ -254,14 +254,17 @@ function TemplateTab({ lang }: { lang: Lang }) {
   return (
     <div className="flex flex-col gap-5">
       {/* Search */}
-      <div className="flex items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-        <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="flex-1 bg-transparent text-[13px] text-slate-700 outline-none placeholder:text-slate-400"
-          placeholder={lang === "zh" ? "搜索模版…" : "Search templates…"}
-        />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex w-full max-w-[320px] items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
+          <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
+            placeholder={lang === "zh" ? "搜索模版…" : "Search templates…"}
+          />
+        </div>
+        <div className="min-h-8 flex-1" />
       </div>
 
       {/* Hint bar */}
@@ -296,7 +299,6 @@ function TemplateTab({ lang }: { lang: Lang }) {
                     <LayoutTemplate className="h-3.5 w-3.5 text-emerald-600" />
                   </div>
                   <p className="flex-1 text-[13px] font-semibold leading-tight text-slate-800">{tpl.name}</p>
-                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-hover:text-[#161FAD]" />
                 </div>
                 <p className="line-clamp-2 text-[11px] leading-relaxed text-slate-500">{tpl.desc}</p>
                 <div className="mt-auto flex flex-wrap items-center gap-1">
@@ -306,7 +308,6 @@ function TemplateTab({ lang }: { lang: Lang }) {
                   <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] text-slate-500">
                     {lang === "zh" ? `${tpl.steps} 步` : `${tpl.steps} steps`}
                   </span>
-                  {tpl.starred && <Star className="ml-auto h-3 w-3 fill-amber-400 text-amber-400" />}
                 </div>
               </button>
             ))}

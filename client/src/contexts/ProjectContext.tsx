@@ -11,21 +11,14 @@ export type ProjectMember = {
 export type ProjectDataAsset = {
   id: string;
   name: string;
-  type: "csv" | "json" | "pdb" | "png" | "xlsx" | "pdf";
+  type: "csv" | "json" | "pdb" | "png" | "xlsx" | "pdf" | "docx";
   size: string;
   updatedAt: string;
   source: "uploaded" | "run-saved";
   tags?: string[];
 };
 
-export type ProjectApp = {
-  id: string;
-  name: string;
-  type: "agent" | "report" | "pipeline";
-  description: string;
-  lastRun?: string;
-  status: "active" | "draft" | "archived";
-};
+export type ProjectDetailView = "data" | "members";
 
 export type Project = {
   id: string;
@@ -35,7 +28,6 @@ export type Project = {
   isDefault?: boolean;
   members: ProjectMember[];
   data: ProjectDataAsset[];
-  apps: ProjectApp[];
   createdAt: string;
 };
 
@@ -52,12 +44,6 @@ const defaultData: ProjectDataAsset[] = [
   { id: "d4", name: "internalization_experiment_raw.csv", type: "csv", size: "48 KB", updatedAt: "2026-04-20", source: "uploaded", tags: ["raw-data"] },
 ];
 
-const defaultApps: ProjectApp[] = [
-  { id: "a1", name: "内化预测建模工作流程", type: "pipeline", description: "双表位抗体内化活性预测完整流程", lastRun: "2026-04-29", status: "active" },
-  { id: "a2", name: "内吞特征关联分析", type: "agent", description: "特征相关性分析 Agent", lastRun: "2026-04-28", status: "active" },
-  { id: "a3", name: "模型评估报告", type: "report", description: "ML 模型对比评估报告模板", lastRun: "2026-04-27", status: "draft" },
-];
-
 export const SAMPLE_PROJECTS: Project[] = [
   {
     id: "proj-default",
@@ -67,7 +53,6 @@ export const SAMPLE_PROJECTS: Project[] = [
     isDefault: true,
     members: defaultMembers,
     data: defaultData,
-    apps: defaultApps,
     createdAt: "2026-03-01",
   },
   {
@@ -77,7 +62,6 @@ export const SAMPLE_PROJECTS: Project[] = [
     color: "#0891b2",
     members: [defaultMembers[0], defaultMembers[1]],
     data: [defaultData[3]],
-    apps: [],
     createdAt: "2026-04-01",
   },
   {
@@ -87,7 +71,6 @@ export const SAMPLE_PROJECTS: Project[] = [
     color: "#7c3aed",
     members: [defaultMembers[0]],
     data: [],
-    apps: [],
     createdAt: "2026-04-15",
   },
 ];
@@ -101,6 +84,7 @@ type ProjectContextType = {
   createProject: (name: string, description: string) => Project;
   updateProject: (projectId: string, updates: Pick<Project, "name" | "description">) => void;
   deleteProject: (projectId: string) => void;
+  addProjectDataAsset: (projectId: string, asset: Omit<ProjectDataAsset, "id" | "source" | "updatedAt">) => "created" | "existing";
   updateProjectDataAsset: (projectId: string, assetId: string, name: string) => void;
   deleteProjectDataAsset: (projectId: string, assetId: string) => void;
   addProjectMember: (projectId: string, email: string, role: ProjectMember["role"]) => ProjectMember | null;
@@ -112,8 +96,8 @@ type ProjectContextType = {
   // Main view switching
   mainView: MainView;
   setMainView: (view: MainView) => void;
-  projectDetailView: "apps" | "data" | "members";
-  setProjectDetailView: (view: "apps" | "data" | "members") => void;
+  projectDetailView: ProjectDetailView;
+  setProjectDetailView: (view: ProjectDetailView) => void;
   resourceTab: "data" | "skill" | "template";
   setResourceTab: (tab: "data" | "skill" | "template") => void;
 };
@@ -125,7 +109,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [activeProject, setActiveProject] = useState<Project>(SAMPLE_PROJECTS[0]);
   const [projectPanelOpen, setProjectPanelOpen] = useState(false);
   const [mainView, setMainView] = useState<MainView>("workspace");
-  const [projectDetailView, setProjectDetailView] = useState<"apps" | "data" | "members">("apps");
+  const [projectDetailView, setProjectDetailView] = useState<ProjectDetailView>("data");
   const [resourceTab, setResourceTab] = useState<"data" | "skill" | "template">("data");
 
   const createProject = (name: string, description: string): Project => {
@@ -137,7 +121,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       color: colors[projects.length % colors.length],
       members: [defaultMembers[0]],
       data: [],
-      apps: [],
       createdAt: new Date().toISOString().slice(0, 10),
     };
     setProjects((prev) => [...prev, newProject]);
@@ -162,6 +145,33 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setProjects(nextProjects);
     setActiveProject((current) => (current.id === projectId ? nextProjects[0] : current));
     setMainView("workspace");
+  };
+
+  const addProjectDataAsset = (projectId: string, asset: Omit<ProjectDataAsset, "id" | "source" | "updatedAt">) => {
+    let result: "created" | "existing" = "created";
+
+    syncProject(projectId, (project) => {
+      const exists = project.data.some((item) => item.name === asset.name);
+      if (exists) {
+        result = "existing";
+        return project;
+      }
+
+      return {
+        ...project,
+        data: [
+          {
+            ...asset,
+            id: `d-${Date.now()}-${project.data.length}`,
+            updatedAt: new Date().toISOString().slice(0, 10),
+            source: "run-saved",
+          },
+          ...project.data,
+        ],
+      };
+    });
+
+    return result;
   };
 
   const updateProjectDataAsset = (projectId: string, assetId: string, name: string) => {
@@ -242,6 +252,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         createProject,
         updateProject,
         deleteProject,
+        addProjectDataAsset,
         updateProjectDataAsset,
         deleteProjectDataAsset,
         addProjectMember,

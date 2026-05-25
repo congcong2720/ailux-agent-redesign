@@ -15,7 +15,7 @@ import { ResourcePanel } from "@/components/ResourcePanel";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useProject } from "@/contexts/ProjectContext";
+import { useProject, type ProjectDataAsset } from "@/contexts/ProjectContext";
 import { demoPdbContent } from "@/lib/demoPdb";
 import {
   ArrowDownToLine,
@@ -38,6 +38,7 @@ import {
   LogOut,
   PanelRightOpen,
   Plus,
+  Save,
   Search,
   SendHorizonal,
   Sparkles,
@@ -1063,6 +1064,10 @@ const copy = {
       "当前未打开任何结果文件。请从最右侧结果文件列表选择需要查看的文件，系统会在此区域展示对应预览，同时左侧对话区保持可追问。",
     closeFile: "关闭",
     downloadFile: "下载文件",
+    saveToProjectData: "保存到项目数据",
+    save: "保存",
+    savedToProjectData: "已保存到项目数据",
+    alreadyInProjectData: "项目数据中已存在",
     tableFooter: "仅展示前 100 行。下载文件可查看完整数据。",
     modelSummary: "模型比较摘要",
     conclusion: "结论建议",
@@ -1109,10 +1114,15 @@ const copy = {
     searchFiles: "搜索文件",
     noMatchedResults: "没有匹配的结果文件，请尝试其他关键词。",
     selectFile: "选择",
+    batchDownload: "批量下载",
+    batchSave: "批量保存",
+    selectedCount: "已选择",
     download: "下载",
     downloading: "已开始下载",
+    downloadedFiles: "已下载",
     selectBeforeExport: "请先选择需要导出的文件",
     exportedFiles: "已导出",
+    savedFilesToProject: "已保存到项目数据",
     exportedSuffix: "个文件",
     runHistoryTitle: "Run / Plan 版本历史",
     runHistoryBody: "当前任务内每次确认 Plan、重跑或 HITL 分支都会生成不可变 Run 快照。",
@@ -1161,6 +1171,10 @@ const copy = {
       "No result file is currently open. Choose a file from the right-side results list to preview it here while keeping the conversation available on the left.",
     closeFile: "Close",
     downloadFile: "Download file",
+    saveToProjectData: "Save to project data",
+    save: "Save",
+    savedToProjectData: "Saved to project data",
+    alreadyInProjectData: "Already exists in project data",
     tableFooter: "Showing the first 100 rows only. Download the file to inspect the full dataset.",
     modelSummary: "Model comparison summary",
     conclusion: "Recommendation",
@@ -1209,10 +1223,15 @@ const copy = {
     searchFiles: "Search files",
     noMatchedResults: "No result files match your query. Try another keyword.",
     selectFile: "Select",
+    batchDownload: "Download",
+    batchSave: "Save",
+    selectedCount: "Selected",
     download: "Download",
     downloading: "Started downloading",
+    downloadedFiles: "Downloaded",
     selectBeforeExport: "Please select files to export first",
     exportedFiles: "Exported",
+    savedFilesToProject: "Saved to project data",
     exportedSuffix: "files",
     runHistoryTitle: "Run / Plan version history",
     runHistoryBody: "Every confirmed plan, rerun, or HITL branch in the current task creates an immutable run snapshot.",
@@ -1303,6 +1322,80 @@ function downloadResultFile(file: ResultFile, lang: Lang) {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function getReportPayload(report: RunReport, lang: Lang) {
+  return {
+    mime: "text/plain;charset=utf-8",
+    content: [
+      pick(lang, report.title),
+      "",
+      pick(lang, report.summary),
+      "",
+      ...report.sections.flatMap((section) => [
+        `## ${pick(lang, section.title)}`,
+        pick(lang, section.summary),
+        ...section.items.map((item) => `${pick(lang, item.label)}: ${item.value} - ${pick(lang, item.detail)}`),
+        "",
+      ]),
+    ].join("\n"),
+  };
+}
+
+function downloadReportFile(report: RunReport, lang: Lang) {
+  const payload = getReportPayload(report, lang);
+  const blob = new Blob([payload.content], { type: payload.mime });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = report.fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function resultTypeFromFileName(fileName: string): ResultType {
+  const normalized = fileName.toLowerCase();
+  if (normalized.endsWith(".pdb")) return "pdb";
+  if (normalized.endsWith(".json")) return "json";
+  if (normalized.endsWith(".png")) return "png";
+  if (normalized.endsWith(".xlsx")) return "xlsx";
+  if (normalized.endsWith(".docx")) return "docx";
+  return "csv";
+}
+
+function resultFileFromHistoryFile(run: HistoryRunItem, file: HistoryRunItem["files"][number]): ResultFile {
+  return {
+    id: `${run.id}-${file.name}`,
+    name: file.name,
+    meta: file.meta,
+    step: run.title,
+    type: resultTypeFromFileName(file.name),
+  };
+}
+
+function dataAssetTypeFromResult(type: ResultType): ProjectDataAsset["type"] {
+  if (type === "docx") return "docx";
+  return type;
+}
+
+function dataAssetFromResultFile(file: ResultFile): Omit<ProjectDataAsset, "id" | "source" | "updatedAt"> {
+  return {
+    name: file.name,
+    type: dataAssetTypeFromResult(file.type),
+    size: file.type === "pdb" ? "2.4 MB" : file.type === "png" ? "320 KB" : file.type === "docx" ? "1.2 MB" : "128 KB",
+    tags: ["run-output"],
+  };
+}
+
+function dataAssetFromReport(report: RunReport): Omit<ProjectDataAsset, "id" | "source" | "updatedAt"> {
+  return {
+    name: report.fileName,
+    type: "docx",
+    size: "1.2 MB",
+    tags: ["report", report.runId],
+  };
 }
 
 function UserMenu({ lang, onAction }: { lang: Lang; onAction: (action: "profile" | "network" | "language" | "logout") => void }) {
@@ -1977,7 +2070,9 @@ function RunningWorkspace({
   messages,
   reports,
   prompt,
+  onDownloadReport,
   onPromptChange,
+  onSaveReportToProject,
   onContinueRun,
   onViewResults,
   steps,
@@ -1989,7 +2084,9 @@ function RunningWorkspace({
   messages: RunningMessage[];
   reports: RunReport[];
   prompt: string;
+  onDownloadReport: (report: RunReport) => void;
   onPromptChange: (value: string) => void;
+  onSaveReportToProject: (report: RunReport) => void;
   onContinueRun: () => void;
   onViewResults: () => void;
   steps: PlanStep[];
@@ -2217,7 +2314,13 @@ function RunningWorkspace({
           </div>
         </div>
       </div>
-      <ReportDrawer lang={lang} report={selectedReport} onOpenChange={(open) => !open && setSelectedReport(null)} />
+      <ReportDrawer
+        lang={lang}
+        report={selectedReport}
+        onDownloadReport={onDownloadReport}
+        onOpenChange={(open) => !open && setSelectedReport(null)}
+        onSaveReportToProject={onSaveReportToProject}
+      />
     </section>
   );
 }
@@ -2227,11 +2330,13 @@ function FilePreviewDrawer({
   file,
   onOpenChange,
   onDownloadFile,
+  onSaveFileToProject,
 }: {
   lang: Lang;
   file: ResultFile | null;
   onOpenChange: (open: boolean) => void;
   onDownloadFile: (file: ResultFile) => void;
+  onSaveFileToProject: (file: ResultFile) => void;
 }) {
   const text = copy[lang];
   const selectedFile = file;
@@ -2249,14 +2354,24 @@ function FilePreviewDrawer({
                     {pick(lang, selectedFile.step)} · {pick(lang, selectedFile.meta)}
                   </SheetDescription>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => onDownloadFile(selectedFile)}
-                  className="h-8 shrink-0 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-600 hover:bg-slate-50"
-                >
-                  <ArrowDownToLine className="mr-1.5 h-4 w-4" />
-                  {text.downloadFile}
-                </Button>
+                <div className="flex shrink-0 gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => onSaveFileToProject(selectedFile)}
+                    className="h-8 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-600 hover:bg-slate-50"
+                  >
+                    <Save className="mr-1.5 h-4 w-4" />
+                    {text.save}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => onDownloadFile(selectedFile)}
+                    className="h-8 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-600 hover:bg-slate-50"
+                  >
+                    <ArrowDownToLine className="mr-1.5 h-4 w-4" />
+                    {text.downloadFile}
+                  </Button>
+                </div>
               </div>
             </SheetHeader>
 
@@ -2409,11 +2524,15 @@ function reportBadgeClass(tone: ReportSection["tone"]) {
 
 function ReportDrawer({
   lang,
+  onDownloadReport,
   onOpenChange,
+  onSaveReportToProject,
   report,
 }: {
   lang: Lang;
+  onDownloadReport: (report: RunReport) => void;
   onOpenChange: (open: boolean) => void;
+  onSaveReportToProject: (report: RunReport) => void;
   report: RunReport | null;
 }) {
   const text = copy[lang];
@@ -2424,10 +2543,32 @@ function ReportDrawer({
         {report ? (
           <>
             <SheetHeader className="border-b border-slate-200 bg-white/92 px-5 py-5">
-              <SheetTitle className="pr-8 text-[17px] font-semibold text-[#070261]">{pick(lang, report.title)}</SheetTitle>
-              <SheetDescription className="text-[12px] leading-5 text-slate-500">
-                {report.fileName} · {pick(lang, report.generatedAt)}
-              </SheetDescription>
+              <div className="flex items-start justify-between gap-4 pr-8">
+                <div className="min-w-0">
+                  <SheetTitle className="text-[17px] font-semibold text-[#070261]">{pick(lang, report.title)}</SheetTitle>
+                  <SheetDescription className="text-[12px] leading-5 text-slate-500">
+                    {report.fileName} · {pick(lang, report.generatedAt)}
+                  </SheetDescription>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => onSaveReportToProject(report)}
+                    className="h-8 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-600 hover:bg-slate-50"
+                  >
+                    <Save className="mr-1.5 h-4 w-4" />
+                    {text.save}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => onDownloadReport(report)}
+                    className="h-8 rounded-xl border-slate-200 bg-white px-3 text-[12px] text-slate-600 hover:bg-slate-50"
+                  >
+                    <ArrowDownToLine className="mr-1.5 h-4 w-4" />
+                    {text.download}
+                  </Button>
+                </div>
+              </div>
             </SheetHeader>
 
             <div className="flex min-h-0 flex-1 gap-4 overflow-hidden px-5 py-5">
@@ -2498,7 +2639,17 @@ function ReportDrawer({
   );
 }
 
-function ReportsPanelContent({ lang, reports }: { lang: Lang; reports: RunReport[] }) {
+function ReportsPanelContent({
+  lang,
+  onDownloadReport,
+  onSaveReportToProject,
+  reports,
+}: {
+  lang: Lang;
+  onDownloadReport: (report: RunReport) => void;
+  onSaveReportToProject: (report: RunReport) => void;
+  reports: RunReport[];
+}) {
   const text = copy[lang];
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const selectedReport = reports.find((report) => report.id === selectedReportId) ?? null;
@@ -2507,27 +2658,48 @@ function ReportsPanelContent({ lang, reports }: { lang: Lang; reports: RunReport
     <>
       <div className="space-y-3">
         {reports.map((report) => (
-          <button
+          <div
             key={report.id}
-            onClick={() => setSelectedReportId(report.id)}
-            className="group flex w-full items-start gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3 text-left transition hover:border-[rgba(23,36,216,0.14)] hover:bg-white"
+            className="group flex items-start gap-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3 text-left transition hover:border-[rgba(23,36,216,0.14)] hover:bg-white"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
               <FileText className="h-4 w-4" />
             </div>
-            <div className="min-w-0 flex-1">
+            <button onClick={() => setSelectedReportId(report.id)} className="min-w-0 flex-1 text-left">
               <p className="truncate text-[13px] font-semibold text-slate-800">{pick(lang, report.title)}</p>
               <p className="mt-0.5 truncate text-[11px] text-slate-400">{report.fileName}</p>
               <p className="mt-2 text-[11px] leading-5 text-slate-500">{pick(lang, report.summary)}</p>
+              <span className="mt-2 inline-flex rounded-xl px-2 py-1 text-[11px] font-medium text-[#161FAD] transition group-hover:bg-[rgba(23,36,216,0.06)]">
+                {text.viewReport}
+              </span>
+            </button>
+            <div className="flex shrink-0 gap-1 opacity-0 transition group-hover:opacity-100">
+              <button
+                onClick={() => onDownloadReport(report)}
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
+                aria-label={`${text.download} ${report.fileName}`}
+              >
+                <ArrowDownToLine className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onSaveReportToProject(report)}
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
+                aria-label={`${text.saveToProjectData} ${report.fileName}`}
+              >
+                <Save className="h-4 w-4" />
+              </button>
             </div>
-            <span className="mt-1 shrink-0 rounded-xl px-2 py-1 text-[11px] font-medium text-[#161FAD] opacity-0 transition group-hover:bg-[rgba(23,36,216,0.06)] group-hover:opacity-100">
-              {text.viewReport}
-            </span>
-          </button>
+          </div>
         ))}
       </div>
 
-      <ReportDrawer lang={lang} report={selectedReport} onOpenChange={(open) => !open && setSelectedReportId(null)} />
+      <ReportDrawer
+        lang={lang}
+        report={selectedReport}
+        onDownloadReport={onDownloadReport}
+        onOpenChange={(open) => !open && setSelectedReportId(null)}
+        onSaveReportToProject={onSaveReportToProject}
+      />
     </>
   );
 }
@@ -2684,14 +2856,6 @@ function HistoryPanelContent({ lang }: { lang: Lang }) {
   return (
     <>
       <div className="space-y-3">
-        <div className="rounded-[18px] border border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.06)] p-3.5">
-          <div className="flex items-center gap-2">
-            <History className="h-4 w-4 text-[#161FAD]" />
-            <p className="text-[13px] font-semibold text-[#161FAD]">{text.runHistoryTitle}</p>
-          </div>
-          <p className="mt-2 text-[12px] leading-5 text-slate-600">{text.runHistoryBody}</p>
-        </div>
-
         {historyRunItems.map((run) => (
           <button
             key={run.id}
@@ -2936,8 +3100,13 @@ function SidePanel({
   onSideTabChange,
   onSelectFile,
   onToggleFile,
+  onToggleFiles,
   onDownloadFile,
-  onExportSelected,
+  onDownloadReport,
+  onDownloadFiles,
+  onSaveFileToProject,
+  onSaveFilesToProject,
+  onSaveReportToProject,
 }: {
   lang: Lang;
   view: ViewMode;
@@ -2952,8 +3121,13 @@ function SidePanel({
   onSideTabChange: (tab: SideTab) => void;
   onSelectFile: (id: string) => void;
   onToggleFile: (id: string) => void;
+  onToggleFiles: (ids: string[], checked: boolean) => void;
   onDownloadFile: (file: ResultFile) => void;
-  onExportSelected: () => void;
+  onDownloadReport: (report: RunReport) => void;
+  onDownloadFiles: (files: ResultFile[]) => void;
+  onSaveFileToProject: (file: ResultFile) => void;
+  onSaveFilesToProject: (files: ResultFile[]) => void;
+  onSaveReportToProject: (report: RunReport) => void;
 }) {
   const text = copy[lang];
   const showEmpty = view === "new";
@@ -2993,10 +3167,28 @@ function SidePanel({
     });
   }, [lang, previousRunItems, searchQuery]);
 
+  const selectableFiles = useMemo(
+    () => [
+      ...resultFiles,
+      ...previousRunItems.flatMap((run) => run.files.map((file) => resultFileFromHistoryFile(run, file))),
+    ],
+    [previousRunItems, resultFiles],
+  );
+  const selectedFiles = useMemo(
+    () => selectableFiles.filter((file) => selectedFileIds.includes(file.id)),
+    [selectableFiles, selectedFileIds],
+  );
+
   const hasResultMatches = Object.entries(groupedFiles).length > 0 || filteredPreviousRunItems.length > 0;
 
   const togglePreviousRun = (runId: string) => {
     setExpandedPreviousRunIds((current) => (current.includes(runId) ? current.filter((id) => id !== runId) : [...current, runId]));
+  };
+
+  const handleToggleFileGroup = (files: ResultFile[]) => {
+    const ids = files.map((file) => file.id);
+    const allSelected = ids.every((id) => selectedFileIds.includes(id));
+    onToggleFiles(ids, !allSelected);
   };
 
   return (
@@ -3099,7 +3291,12 @@ function SidePanel({
               <h3 className="mt-1 text-[15px] font-semibold text-[#070261]">{text.finalReports}</h3>
             </div>
           ) : (
-            <ReportsPanelContent lang={lang} reports={reports} />
+            <ReportsPanelContent
+              lang={lang}
+              reports={reports}
+              onDownloadReport={onDownloadReport}
+              onSaveReportToProject={onSaveReportToProject}
+            />
           )
         ) : showEmpty ? (
           <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 p-5">
@@ -3119,9 +3316,25 @@ function SidePanel({
                   placeholder={text.searchFiles}
                 />
                 {selectedFileIds.length > 0 ? (
-                  <Button onClick={onExportSelected} className="h-8 shrink-0 rounded-xl bg-[#161FAD] px-3 text-[12px] text-white hover:bg-[#1724D8]">
-                    {text.exportSelected} ({selectedFileIds.length})
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <span className="rounded-full bg-white px-2 py-1 text-[10px] font-medium text-slate-500">
+                      {text.selectedCount} {selectedFileIds.length}
+                    </span>
+                    <button
+                      onClick={() => onDownloadFiles(selectedFiles)}
+                      className="inline-flex h-8 items-center gap-1 rounded-xl bg-[#161FAD] px-2.5 text-[11px] font-medium text-white transition hover:bg-[#1724D8]"
+                    >
+                      <ArrowDownToLine className="h-3.5 w-3.5" />
+                      {text.batchDownload}
+                    </button>
+                    <button
+                      onClick={() => onSaveFilesToProject(selectedFiles)}
+                      className="inline-flex h-8 items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 text-[11px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+                    >
+                      <Save className="h-3.5 w-3.5" />
+                      {text.batchSave}
+                    </button>
+                  </div>
                 ) : null}
               </div>
             </div>
@@ -3146,9 +3359,18 @@ function SidePanel({
                       </div>
 
                       <div className="space-y-4">
-                        {Object.entries(groupedFiles).map(([group, files]) => (
+                        {Object.entries(groupedFiles).map(([group, files]) => {
+                          const groupSelected = files.length > 0 && files.every((file) => selectedFileIds.includes(file.id));
+                          return (
                           <div key={group}>
-                            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">{group}</p>
+                            <div className="mb-2 flex items-center gap-2">
+                              <Checkbox
+                                checked={groupSelected}
+                                onCheckedChange={() => handleToggleFileGroup(files)}
+                                aria-label={`${text.selectFile} ${group}`}
+                              />
+                              <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">{group}</p>
+                            </div>
                             <div className="space-y-2.5">
                               {files.map((file) => {
                                 const active = selectedFileId === file.id;
@@ -3177,19 +3399,29 @@ function SidePanel({
                                         <p className="mt-0.5 text-[10px] text-slate-400">{pick(lang, file.meta)}</p>
                                       </div>
                                     </button>
-                                    <button
-                                      onClick={() => onDownloadFile(file)}
-                                      className="mt-1 rounded-xl p-2 text-slate-300 opacity-0 transition group-hover:bg-white group-hover:text-[#161FAD] group-hover:opacity-100"
-                                      aria-label={`${text.download} ${file.name}`}
-                                    >
-                                      <ArrowDownToLine className="h-4 w-4" />
-                                    </button>
+                                    <div className="flex shrink-0 gap-1 opacity-0 transition group-hover:opacity-100">
+                                      <button
+                                        onClick={() => onDownloadFile(file)}
+                                        className="rounded-xl p-2 text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
+                                        aria-label={`${text.download} ${file.name}`}
+                                      >
+                                        <ArrowDownToLine className="h-4 w-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => onSaveFileToProject(file)}
+                                        className="rounded-xl p-2 text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
+                                        aria-label={`${text.saveToProjectData} ${file.name}`}
+                                      >
+                                        <Save className="h-4 w-4" />
+                                      </button>
+                                    </div>
                                   </div>
                                 );
                               })}
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ) : null}
@@ -3197,38 +3429,65 @@ function SidePanel({
                   {filteredPreviousRunItems.map((run) => {
                     const runExpanded = expandedPreviousRunIds.includes(run.id);
                     const runLabel = run.id.replace("run-", "Run #");
+                    const runFiles = run.files.map((file) => resultFileFromHistoryFile(run, file));
+                    const runSelected = runFiles.length > 0 && runFiles.every((file) => selectedFileIds.includes(file.id));
                     return (
                       <div key={run.id} className="rounded-[20px] border border-slate-100 bg-white p-3.5 shadow-[0_10px_28px_rgba(15,23,42,0.035)]">
-                        <button onClick={() => togglePreviousRun(run.id)} className="flex w-full items-center justify-between gap-3 text-left">
+                        <div className="flex w-full items-center justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-2.5">
+                            <Checkbox
+                              checked={runSelected}
+                              onCheckedChange={() => handleToggleFileGroup(runFiles)}
+                              aria-label={`${text.selectFile} ${runLabel}`}
+                            />
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-[#161FAD]">
                               {runExpanded ? <FolderOpen className="h-4 w-4" /> : <Folder className="h-4 w-4" />}
                             </div>
-                            <p className="truncate text-[13px] font-semibold text-[#070261]">{runLabel}</p>
+                            <button onClick={() => togglePreviousRun(run.id)} className="truncate text-left text-[13px] font-semibold text-[#070261]">
+                              {runLabel}
+                            </button>
                           </div>
-                          <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${runExpanded ? "rotate-180" : ""}`} />
-                        </button>
+                          <button onClick={() => togglePreviousRun(run.id)}>
+                            <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${runExpanded ? "rotate-180" : ""}`} />
+                          </button>
+                        </div>
 
                         {runExpanded ? (
                           <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
-                            {run.files.map((file) => (
-                              <div key={`${run.id}-${file.name}`} className="group flex items-center gap-3 rounded-[16px] border border-slate-100 bg-slate-50/90 px-3 py-2.5">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
-                                  <FileText className="h-4 w-4" />
+                            {runFiles.map((historyFile) => {
+                              return (
+                                <div key={historyFile.id} className="group flex items-center gap-3 rounded-[16px] border border-slate-100 bg-slate-50/90 px-3 py-2.5">
+                                  <Checkbox
+                                    checked={selectedFileIds.includes(historyFile.id)}
+                                    onCheckedChange={() => onToggleFile(historyFile.id)}
+                                    aria-label={`${text.selectFile} ${historyFile.name}`}
+                                  />
+                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
+                                    <ResultTypeIcon type={historyFile.type} />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-[12px] font-medium text-slate-800">{historyFile.name}</p>
+                                    <p className="mt-0.5 text-[10px] text-slate-400">{pick(lang, historyFile.meta)}</p>
+                                  </div>
+                                  <div className="flex shrink-0 gap-1 opacity-0 transition group-hover:opacity-100">
+                                    <button
+                                      onClick={() => onDownloadFile(historyFile)}
+                                      className="rounded-xl p-2 text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
+                                      aria-label={`${text.download} ${historyFile.name}`}
+                                    >
+                                      <ArrowDownToLine className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => onSaveFileToProject(historyFile)}
+                                      className="rounded-xl p-2 text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
+                                      aria-label={`${text.saveToProjectData} ${historyFile.name}`}
+                                    >
+                                      <Save className="h-4 w-4" />
+                                    </button>
+                                  </div>
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-[12px] font-medium text-slate-800">{file.name}</p>
-                                  <p className="mt-0.5 text-[10px] text-slate-400">{pick(lang, file.meta)}</p>
-                                </div>
-                                <button
-                                  onClick={() => toast.message(`${text.download} ${file.name}`)}
-                                  className="rounded-xl p-2 text-slate-300 opacity-0 transition group-hover:bg-white group-hover:text-[#161FAD] group-hover:opacity-100"
-                                  aria-label={`${text.download} ${file.name}`}
-                                >
-                                  <ArrowDownToLine className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         ) : null}
                       </div>
@@ -3273,7 +3532,7 @@ function SidePanel({
 }
 
 export default function Home() {
-  const { mainView, setMainView } = useProject();
+  const { activeProject, addProjectDataAsset, mainView, setMainView } = useProject();
   const [lang, setLang] = useState<Lang>("zh");
   const [activeView, setActiveView] = useState<ViewMode>("new");
   const [activeScenarioId, setActiveScenarioId] = useState<ScenarioId>("dll3");
@@ -3425,37 +3684,74 @@ export default function Home() {
     setSelectedFileIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   };
 
+  const handleToggleFiles = (ids: string[], checked: boolean) => {
+    setSelectedFileIds((current) => {
+      if (checked) {
+        return Array.from(new Set([...current, ...ids]));
+      }
+
+      return current.filter((id) => !ids.includes(id));
+    });
+  };
+
   const handleDownloadFile = (file: ResultFile) => {
     downloadResultFile(file, lang);
     toast.success(`${text.downloading} ${file.name}`);
   };
 
-  const handleExportSelected = () => {
-    if (selectedFileIds.length === 0) {
+  const handleDownloadReport = (report: RunReport) => {
+    downloadReportFile(report, lang);
+    toast.success(`${text.downloading} ${report.fileName}`);
+  };
+
+  const handleDownloadFiles = (files: ResultFile[]) => {
+    if (files.length === 0) {
       toast.message(text.selectBeforeExport);
       return;
     }
 
-    const selectedFiles = activeScenario.resultFiles.filter((file) => selectedFileIds.includes(file.id));
-    const payload = JSON.stringify(
-      {
-        exportedAt: new Date().toISOString(),
-        files: selectedFiles.map((file) => ({ name: file.name, step: pick(lang, file.step), meta: pick(lang, file.meta) })),
-      },
-      null,
-      2,
-    );
+    files.forEach((file, index) => {
+      window.setTimeout(() => downloadResultFile(file, lang), index * 120);
+    });
+    toast.success(`${text.downloadedFiles} ${files.length} ${text.exportedSuffix}`);
+  };
 
-    const blob = new Blob([payload], { type: "application/json;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "ailux-selected-results.json";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    toast.success(`${text.exportedFiles} ${selectedFiles.length} ${text.exportedSuffix}`);
+  const showSaveResultToast = (result: "created" | "existing", fileName: string) => {
+    if (result === "existing") {
+      toast.message(`${text.alreadyInProjectData}: ${fileName}`);
+      return;
+    }
+
+    toast.success(`${text.savedToProjectData}: ${fileName}`);
+  };
+
+  const handleSaveFileToProject = (file: ResultFile) => {
+    const result = addProjectDataAsset(activeProject.id, dataAssetFromResultFile(file));
+    showSaveResultToast(result, file.name);
+  };
+
+  const handleSaveReportToProject = (report: RunReport) => {
+    const result = addProjectDataAsset(activeProject.id, dataAssetFromReport(report));
+    showSaveResultToast(result, report.fileName);
+  };
+
+  const handleSaveFilesToProject = (files: ResultFile[]) => {
+    if (files.length === 0) {
+      toast.message(text.selectBeforeExport);
+      return;
+    }
+
+    const createdCount = files.reduce((count, file) => {
+      const result = addProjectDataAsset(activeProject.id, dataAssetFromResultFile(file));
+      return result === "created" ? count + 1 : count;
+    }, 0);
+
+    if (createdCount === 0) {
+      toast.message(text.alreadyInProjectData);
+      return;
+    }
+
+    toast.success(`${text.savedFilesToProject} ${createdCount} ${text.exportedSuffix}`);
   };
 
   const handleUserMenuAction = (action: "profile" | "network" | "language" | "logout") => {
@@ -3515,7 +3811,9 @@ export default function Home() {
               messages={activeScenario.messages}
               reports={activeScenario.reports}
               prompt={composerValue}
+              onDownloadReport={handleDownloadReport}
               onPromptChange={setComposerValue}
+              onSaveReportToProject={handleSaveReportToProject}
               onContinueRun={handleContinueRun}
               onViewResults={handleViewCurrentResults}
               steps={runtimeSteps}
@@ -3539,8 +3837,13 @@ export default function Home() {
               onSideTabChange={setSideTab}
               onSelectFile={handleSelectFile}
               onToggleFile={handleToggleFile}
+              onToggleFiles={handleToggleFiles}
               onDownloadFile={handleDownloadFile}
-              onExportSelected={handleExportSelected}
+              onDownloadReport={handleDownloadReport}
+              onDownloadFiles={handleDownloadFiles}
+              onSaveFileToProject={handleSaveFileToProject}
+              onSaveFilesToProject={handleSaveFilesToProject}
+              onSaveReportToProject={handleSaveReportToProject}
             />
           ) : null}
         </div>
@@ -3551,6 +3854,7 @@ export default function Home() {
             if (!open) setSelectedFileId("");
           }}
           onDownloadFile={handleDownloadFile}
+          onSaveFileToProject={handleSaveFileToProject}
         />
       </div>
     </div>

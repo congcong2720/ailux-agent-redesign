@@ -30,7 +30,7 @@ export function CreateProjectView({ lang }: { lang: Lang }) {
     setTimeout(() => {
       const project = createProject(name.trim(), desc.trim());
       setActiveProject(project);
-      setProjectDetailView("apps");
+      setProjectDetailView("data");
       setMainView("project-detail");
       toast.success(lang === "zh" ? `项目「${project.name}」已创建` : `Project "${project.name}" created`);
       setSubmitting(false);
@@ -56,7 +56,7 @@ export function CreateProjectView({ lang }: { lang: Lang }) {
             {lang === "zh" ? "创建新项目" : "Create New Project"}
           </p>
           <p className="text-[11px] text-slate-400">
-            {lang === "zh" ? "项目是数据、应用和成员的组织单元" : "Projects organize your data, apps, and team"}
+            {lang === "zh" ? "项目是数据和成员的组织单元" : "Projects organize your data and team"}
           </p>
         </div>
       </div>

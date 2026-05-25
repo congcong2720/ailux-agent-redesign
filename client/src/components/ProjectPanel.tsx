@@ -1,17 +1,13 @@
 /*
  * ProjectPanel — 项目详情内嵌视图（替换原弹窗，直接渲染在主区域）
- * Tabs: 应用 / 数据 / 成员
+ * Tabs: 数据 / 成员
  * 设计语言：Ailux 蓝色系，HarmonyOS Sans SC
  */
 import { useState } from "react";
 import {
-  LayoutGrid,
   Database,
   Users,
-  Bot,
   FileText,
-  GitBranch,
-  Plus,
   Upload,
   FileSpreadsheet,
   FileJson,
@@ -20,10 +16,6 @@ import {
   Shield,
   User,
   MoreHorizontal,
-  Clock,
-  CheckCircle2,
-  Circle,
-  Archive,
   UserPlus,
   ArrowLeft,
   Settings2,
@@ -46,92 +38,13 @@ const FILE_TYPE_ICONS: Record<string, React.ReactNode> = {
   png: <Image className="h-4 w-4 text-purple-600" />,
   xlsx: <FileSpreadsheet className="h-4 w-4 text-emerald-700" />,
   pdf: <FileText className="h-4 w-4 text-red-500" />,
-};
-
-const APP_TYPE_ICONS: Record<string, React.ReactNode> = {
-  agent: <Bot className="h-4 w-4 text-[#161FAD]" />,
-  report: <FileText className="h-4 w-4 text-amber-600" />,
-  pipeline: <GitBranch className="h-4 w-4 text-emerald-600" />,
+  docx: <FileText className="h-4 w-4 text-[#161FAD]" />,
 };
 
 const ROLE_CONFIG: Record<ProjectMember["role"], { label: string; labelEn: string; icon: React.ReactNode; color: string }> = {
   admin: { label: "管理员", labelEn: "Admin", icon: <Shield className="h-3 w-3" />, color: "text-[#161FAD] bg-blue-50 border-blue-200" },
   member: { label: "成员", labelEn: "Member", icon: <User className="h-3 w-3" />, color: "text-slate-600 bg-slate-50 border-slate-200" },
 };
-
-const STATUS_CONFIG: Record<string, { label: string; labelEn: string; icon: React.ReactNode; color: string }> = {
-  active: { label: "运行中", labelEn: "Active", icon: <CheckCircle2 className="h-3.5 w-3.5" />, color: "text-emerald-600 bg-emerald-50" },
-  draft: { label: "草稿", labelEn: "Draft", icon: <Circle className="h-3.5 w-3.5" />, color: "text-slate-500 bg-slate-50" },
-  archived: { label: "已归档", labelEn: "Archived", icon: <Archive className="h-3.5 w-3.5" />, color: "text-slate-400 bg-slate-50" },
-};
-
-function AppsTab({ project, lang }: { project: Project; lang: Lang }) {
-  const apps = project.apps;
-  const appTypeLabel: Record<string, { zh: string; en: string }> = {
-    agent: { zh: "Agent 对话", en: "Agent" },
-    report: { zh: "报告", en: "Report" },
-    pipeline: { zh: "工作流", en: "Pipeline" },
-  };
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <p className="text-[12px] text-slate-400">{lang === "zh" ? `共 ${apps.length} 个应用` : `${apps.length} apps`}</p>
-        <button
-          onClick={() => toast.message(lang === "zh" ? "创建应用 — 即将上线" : "Create app — coming soon")}
-          className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.2)] hover:text-[#161FAD]"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          {lang === "zh" ? "新建" : "New"}
-        </button>
-      </div>
-
-      {apps.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 py-14 text-center">
-          <LayoutGrid className="mb-3 h-9 w-9 text-slate-300" />
-          <p className="text-[13px] text-slate-400">{lang === "zh" ? "暂无应用" : "No apps yet"}</p>
-          <p className="mt-1 text-[11px] text-slate-300">{lang === "zh" ? "创建 Agent、工作流或报告" : "Create an Agent, pipeline, or report"}</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {apps.map((app) => {
-            const status = STATUS_CONFIG[app.status];
-            return (
-              <button
-                key={app.id}
-                onClick={() => toast.message(lang === "zh" ? `打开 ${app.name}` : `Open ${app.name}`)}
-                className="flex w-full items-start gap-3 rounded-[16px] border border-slate-100 bg-slate-50/80 px-4 py-3.5 text-left transition hover:border-[rgba(23,36,216,0.12)] hover:bg-white"
-              >
-                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white">
-                  {APP_TYPE_ICONS[app.type]}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate text-[13px] font-medium text-slate-800">{app.name}</p>
-                    <span className={`flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${status.color}`}>
-                      {status.icon}
-                      {lang === "zh" ? status.label : status.labelEn}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 truncate text-[11px] text-slate-400">
-                    {appTypeLabel[app.type]?.[lang]} · {app.description}
-                  </p>
-                  {app.lastRun && (
-                    <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-300">
-                      <Clock className="h-3 w-3" />
-                      {lang === "zh" ? `上次运行 ${app.lastRun}` : `Last run ${app.lastRun}`}
-                    </p>
-                  )}
-                </div>
-                <MoreHorizontal className="mt-1 h-4 w-4 shrink-0 text-slate-300" />
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function DataTab({ project, lang }: { project: Project; lang: Lang }) {
   const { updateProjectDataAsset, deleteProjectDataAsset } = useProject();
@@ -651,8 +564,7 @@ export function ProjectPanel({ lang }: { lang: Lang }) {
     toast.success(lang === "zh" ? `已删除项目「${deletedProjectName}」` : `Deleted project "${deletedProjectName}"`);
   };
 
-  const tabs: { key: "apps" | "data" | "members"; label: string; labelEn: string; icon: React.ReactNode }[] = [
-    { key: "apps", label: "应用", labelEn: "Apps", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
+  const tabs: { key: "data" | "members"; label: string; labelEn: string; icon: React.ReactNode }[] = [
     { key: "data", label: "数据", labelEn: "Data", icon: <Database className="h-3.5 w-3.5" /> },
     { key: "members", label: "成员", labelEn: "Members", icon: <Users className="h-3.5 w-3.5" /> },
   ];
@@ -810,7 +722,6 @@ export function ProjectPanel({ lang }: { lang: Lang }) {
 
       {/* Content */}
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-        {projectDetailView === "apps" && <AppsTab project={activeProject} lang={lang} />}
         {projectDetailView === "data" && <DataTab project={activeProject} lang={lang} />}
         {projectDetailView === "members" && <MembersTab project={activeProject} lang={lang} />}
       </div>

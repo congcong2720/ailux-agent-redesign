@@ -32,7 +32,7 @@ export function ProjectSwitcher({ lang }: { lang: Lang }) {
 
   const handleOpenDetail = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setProjectDetailView("apps");
+    setProjectDetailView("data");
     setMainView("project-detail");
     setOpen(false);
   };
