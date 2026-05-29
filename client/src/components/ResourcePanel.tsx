@@ -18,38 +18,220 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useProject } from "@/contexts/ProjectContext";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 
 type Lang = "zh" | "en";
 
 // ── Mock data ──────────────────────────────────────────────────────────────
 
-const PUBLIC_DATA = [
-  { id: "pd1", name: "UniProt Human Proteome", type: "json", size: "1.2 GB", desc: "人类蛋白质组全量数据集", category: "Proteomics", tags: ["proteomics", "reference"], starred: true },
-  { id: "pd2", name: "PDB Structure Library", type: "pdb", size: "450 GB", desc: "蛋白质三维结构数据库", category: "Structure", tags: ["structure", "reference"], starred: false },
-  { id: "pd3", name: "Antibody Internalization Benchmark", type: "csv", size: "12 MB", desc: "抗体内化活性基准数据集", category: "Antibody", tags: ["antibody", "benchmark"], starred: true },
-  { id: "pd4", name: "ChEMBL Bioactivity Dataset", type: "xlsx", size: "340 MB", desc: "化合物生物活性数据", category: "Drug", tags: ["drug", "bioactivity"], starred: false },
-  { id: "pd5", name: "TCGA Cancer Genomics", type: "csv", size: "2.1 GB", desc: "肿瘤基因组图谱综合数据", category: "Genomics", tags: ["cancer", "genomics"], starred: true },
-  { id: "pd6", name: "AlphaFold DB (Human)", type: "pdb", size: "23 GB", desc: "AlphaFold 人类蛋白质预测结构", category: "Structure", tags: ["structure", "alphafold"], starred: false },
-  { id: "pd7", name: "BindingDB Affinity Data", type: "csv", size: "180 MB", desc: "蛋白质-配体结合亲和力数据", category: "Drug", tags: ["binding", "affinity"], starred: false },
-  { id: "pd8", name: "SAbDab Antibody DB", type: "json", size: "8.4 MB", desc: "抗体结构数据库", category: "Antibody", tags: ["antibody", "structure"], starred: true },
+export const PUBLIC_DATA = [
+  {
+    id: "pd-oas",
+    name: "OAS",
+    type: "csv",
+    size: "1B+ seqs",
+    desc: "Observed Antibody Space，收集并注释大规模免疫组库序列，支持抗体分析和 AI 模型训练。",
+    category: "Antibody",
+    tags: ["antibody", "repertoire", "sequence"],
+    starred: true,
+  },
+  {
+    id: "pd-udb",
+    name: "UDB",
+    type: "csv",
+    size: "14,986 pairs",
+    desc: "治疗性抗体商业数据库子集，包含成对 VH/VL 序列、靶点、专利和临床相关信息。",
+    category: "Antibody",
+    tags: ["therapeutic", "patent", "paired-vh-vl"],
+    starred: true,
+  },
+  {
+    id: "pd-zhydb",
+    name: "ZHYDB",
+    type: "csv",
+    size: "patent set",
+    desc: "智慧芽抗体专利挖掘数据集，结构化整理抗原-抗体配对、亲和力实验和表位信息。",
+    category: "Antibody",
+    tags: ["patent", "affinity", "epitope"],
+    starred: true,
+  },
+  {
+    id: "pd-sabdab",
+    name: "SAbDab",
+    type: "pdb",
+    size: "9,521 PDB",
+    desc: "结构抗体数据库，汇总 PDB 中抗体结构、抗原复合物、CDR 注释和亲和力数据。",
+    category: "Structure",
+    tags: ["antibody", "structure", "pdb"],
+    starred: true,
+  },
+  {
+    id: "pd-abnativ",
+    name: "AbNatiV",
+    type: "csv",
+    size: "VHH splits",
+    desc: "用于评估抗体和纳米抗体 nativeness 的数据集，支持人源化、hit selection 和 de novo 设计评估。",
+    category: "Nanobody",
+    tags: ["nanobody", "humanization", "nativeness"],
+    starred: false,
+  },
+  {
+    id: "pd-cycpeptmpdb",
+    name: "CycPeptMPDB",
+    type: "csv",
+    size: "7,991 peptides",
+    desc: "环肽膜通透性数据库，包含实验通透性、理化性质、HELM 序列、SMILES 和 3D 结构。",
+    category: "Peptide",
+    tags: ["cyclic-peptide", "permeability", "drug-design"],
+    starred: false,
+  },
+  {
+    id: "pd-kydab",
+    name: "KyDab",
+    type: "csv",
+    size: "120K+ seqs",
+    desc: "Kymouse 抗体发现数据集，覆盖免疫原、成对重轻链序列和实验表征克隆。",
+    category: "Antibody",
+    tags: ["kymouse", "paired-antibody", "spr"],
+    starred: false,
+  },
+  {
+    id: "pd-flab-sarscov2",
+    name: "FLAb SARS-CoV-2",
+    type: "csv",
+    size: "352K binding",
+    desc: "FLAb 上游 SARS-CoV-2 抗体结合数据集，包含大量抗体-肽结合实验记录。",
+    category: "FLAb",
+    tags: ["flab", "binding", "sars-cov-2"],
+    starred: false,
+  },
 ];
 
-const SKILLS = [
-  { id: "sk1", name: "蛋白质结构预测", desc: "基于 AlphaFold2/Boltz2 的结构预测工作流", category: "Structure", uses: 128, starred: true },
-  { id: "sk2", name: "特征工程 & 筛选", desc: "自动化特征提取、相关性分析与重要性排序", category: "ML", uses: 94, starred: false },
-  { id: "sk3", name: "抗体序列分析", desc: "CDR 区域识别、序列比对与多样性评估", category: "Antibody", uses: 76, starred: true },
-  { id: "sk4", name: "分子对接评分", desc: "Vina/GNINA 对接打分与构象采样", category: "Docking", uses: 52, starred: false },
-  { id: "sk5", name: "ML 模型评估", desc: "交叉验证、多指标对比与模型选择", category: "ML", uses: 110, starred: false },
-  { id: "sk6", name: "序列嵌入生成", desc: "ESM2/ProtTrans 蛋白质语言模型嵌入", category: "Structure", uses: 63, starred: false },
+export const SKILLS = [
+  {
+    id: "sk-prodigy",
+    skillId: "prodigy_feature_calculation",
+    name: "PRODIGY 特征计算",
+    desc: "提取抗体-抗原界面的相互作用信息，为后续双抗功能预测提供基础特征。",
+    category: "抗体设计",
+    ability: "特征计算",
+    uses: 86,
+    starred: true,
+    tags: ["interface", "csv", "XAD017"],
+    inputs: "base_path / folders",
+    outputs: "prodigy_features.csv",
+  },
+  {
+    id: "sk-rosetta",
+    skillId: "rosetta_feature_calculation",
+    name: "Rosetta 特征计算",
+    desc: "计算结构打分与能量学特征，帮助评估候选抗体结构稳定性和界面质量。",
+    category: "抗体设计",
+    ability: "特征计算",
+    uses: 74,
+    starred: true,
+    tags: ["rosetta", "energy", "structure"],
+    inputs: "base_path / folders",
+    outputs: "结构能量与运行日志",
+  },
+  {
+    id: "sk-epitope-binder",
+    skillId: "epitope_binder_feature_calculation",
+    name: "表位-结合域特征计算",
+    desc: "分析表位与结合域的上下文特征，用于解释不同 binder 的结构和功能差异。",
+    category: "抗体设计",
+    ability: "特征计算",
+    uses: 68,
+    starred: false,
+    tags: ["epitope", "binder", "pdb"],
+    inputs: "pdb_folder",
+    outputs: "表位 / binder 描述符",
+  },
+  {
+    id: "sk-bi-binder",
+    skillId: "bi_binder_feature_combination",
+    name: "双结合域特征组合",
+    desc: "把两个结合臂的特征组合成双表位双抗特征，用于比较不同组合方案。",
+    category: "抗体设计",
+    ability: "特征工程",
+    uses: 61,
+    starred: false,
+    tags: ["bispecific", "feature-combination"],
+    inputs: "base_path / folders",
+    outputs: "双抗组合特征",
+  },
+  {
+    id: "sk-correlation",
+    skillId: "feature_correlation_analysis",
+    name: "特征相关性分析",
+    desc: "分析特征之间的相关性，筛选关键特征，并辅助解释模型判断依据。",
+    category: "抗体设计",
+    ability: "结果解释",
+    uses: 93,
+    starred: true,
+    tags: ["correlation", "importance", "filtering"],
+    inputs: "base_path / folders",
+    outputs: "correlation_matrix.png / filtering CSV",
+  },
+  {
+    id: "sk-ml-regression",
+    skillId: "ml_regression",
+    name: "ML 回归建模",
+    desc: "基于结构与界面特征训练回归模型，预测候选双抗的功能表现。",
+    category: "抗体设计",
+    ability: "模型预测",
+    uses: 88,
+    starred: true,
+    tags: ["gbdt", "lightgbm", "regression"],
+    inputs: "base_path / folders",
+    outputs: "预测 CSV / 特征重要性 CSV",
+  },
 ];
 
-const TEMPLATES = [
-  { id: "tp1", name: "内化活性预测流程", desc: "双表位抗体内化活性预测完整模板", type: "pipeline", category: "Antibody", steps: 6, starred: true },
-  { id: "tp2", name: "靶点结合亲和力分析", desc: "KD 测量与结合模式分析报告模板", type: "report", category: "Drug", steps: 4, starred: false },
-  { id: "tp3", name: "CDR 优化工作流", desc: "CDR 区域突变扫描与功能预测", type: "pipeline", category: "Antibody", steps: 8, starred: true },
-  { id: "tp4", name: "多模型对比评估", desc: "多算法横向对比与最优模型推荐", type: "report", category: "ML", steps: 3, starred: false },
-  { id: "tp5", name: "结构特征提取流程", desc: "从 PDB 文件批量提取物理化学特征", type: "pipeline", category: "Structure", steps: 5, starred: false },
+export const TEMPLATES = [
+  {
+    id: "tp-bispecific-prediction",
+    name: "双抗预测流程",
+    desc: "面向双表位双抗候选物的标准预测模板，覆盖数据读取、结构特征计算、特征筛选与机器学习预测。",
+    type: "pipeline",
+    category: "抗体设计",
+    steps: 9,
+    starred: true,
+    bestFor: "已有双抗候选结构和实验表格，需要快速完成特征计算、筛选与预测建模。",
+    output: "特征表、相关性分析结果、模型预测结果和可解释报告。",
+    stepsPreview: [
+      "列出工作区根目录，确认文件结构",
+      "列出 inputs 目录，确认输入文件",
+      "读取 Excel 文件，分析数据结构和内容",
+      "运行 PRODIGY 特征计算",
+      "运行 Rosetta 特征计算",
+      "运行 Epitope-Binder 特征计算",
+      "运行 Bi-Binder 特征组合",
+      "运行特征相关性分析",
+      "运行机器学习回归模型训练",
+    ],
+  },
+  {
+    id: "tp-de-novo-design",
+    name: "De novo 设计流程",
+    desc: "从设计目标出发生成候选序列，并经过结构预测、约束筛选和打分排序得到可进入下一轮评估的分子方案。",
+    type: "pipeline",
+    category: "蛋白设计",
+    steps: 7,
+    starred: true,
+    bestFor: "只有设计目标和约束条件，需要从零生成候选序列并完成初步筛选。",
+    output: "候选序列、结构预测结果、打分排序和设计总结报告。",
+    stepsPreview: [
+      "定义设计目标与约束条件",
+      "生成初始候选序列",
+      "过滤序列质量和可开发性风险",
+      "预测候选结构",
+      "进行结构打分与稳定性评估",
+      "按目标属性筛选 Top 候选",
+      "生成设计结果报告",
+    ],
+  },
 ];
 
 const FILE_ICONS: Record<string, React.ReactNode> = {
@@ -160,7 +342,10 @@ function SkillTab({ lang }: { lang: Lang }) {
   const filtered = SKILLS.filter(
     (s) =>
       s.name.toLowerCase().includes(query.toLowerCase()) ||
-      s.category.toLowerCase().includes(query.toLowerCase())
+      s.category.toLowerCase().includes(query.toLowerCase()) ||
+      s.ability.toLowerCase().includes(query.toLowerCase()) ||
+      s.skillId.toLowerCase().includes(query.toLowerCase()) ||
+      s.tags.some((tag) => tag.toLowerCase().includes(query.toLowerCase()))
   );
   const grouped = groupBy(filtered);
 
@@ -205,7 +390,7 @@ function SkillTab({ lang }: { lang: Lang }) {
               <button
                 key={skill.id}
                 onClick={() => toast.message(lang === "zh" ? `使用 ${skill.name}` : `Use ${skill.name}`)}
-                className="group relative flex flex-col gap-2 rounded-[14px] border border-slate-200 bg-white p-4 text-left transition hover:border-[#161FAD]/30 hover:shadow-sm"
+                className="group relative flex min-h-[124px] flex-col gap-2 rounded-[14px] border border-slate-200 bg-white p-4 text-left transition hover:border-[#161FAD]/30 hover:shadow-sm"
               >
                 <div className="flex items-start gap-2">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50">
@@ -214,8 +399,8 @@ function SkillTab({ lang }: { lang: Lang }) {
                   <p className="flex-1 text-[13px] font-semibold leading-tight text-slate-800">{skill.name}</p>
                 </div>
                 <p className="line-clamp-2 text-[11px] leading-relaxed text-slate-500">{skill.desc}</p>
-                <div className="mt-auto flex items-center gap-1.5">
-                  <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] text-slate-500">{skill.category}</span>
+                <div className="mt-auto flex flex-wrap items-center gap-1">
+                  <span className="rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] text-[#161FAD]">{skill.ability}</span>
                   <span className="ml-auto flex items-center gap-1 text-[10px] text-slate-400">
                     <Clock className="h-3 w-3" />
                     {skill.uses}
@@ -239,10 +424,12 @@ function SkillTab({ lang }: { lang: Lang }) {
 
 function TemplateTab({ lang }: { lang: Lang }) {
   const [query, setQuery] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState<(typeof TEMPLATES)[number] | null>(null);
   const filtered = TEMPLATES.filter(
     (t) =>
       t.name.toLowerCase().includes(query.toLowerCase()) ||
-      t.category.toLowerCase().includes(query.toLowerCase())
+      t.category.toLowerCase().includes(query.toLowerCase()) ||
+      t.stepsPreview.some((step) => step.toLowerCase().includes(query.toLowerCase()))
   );
   const grouped = groupBy(filtered);
 
@@ -291,8 +478,8 @@ function TemplateTab({ lang }: { lang: Lang }) {
             {items.map((tpl) => (
               <button
                 key={tpl.id}
-                onClick={() => toast.message(lang === "zh" ? `使用模版 ${tpl.name}` : `Use template ${tpl.name}`)}
-                className="group relative flex flex-col gap-2 rounded-[14px] border border-slate-200 bg-white p-4 text-left transition hover:border-[#161FAD]/30 hover:shadow-sm"
+                onClick={() => setSelectedTemplate(tpl)}
+                className="group relative flex min-h-[118px] flex-col gap-2 rounded-[14px] border border-slate-200 bg-white p-4 text-left transition hover:border-[#161FAD]/30 hover:shadow-sm"
               >
                 <div className="flex items-start gap-2">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50">
@@ -321,6 +508,77 @@ function TemplateTab({ lang }: { lang: Lang }) {
           <p className="text-[13px] text-slate-400">{lang === "zh" ? "没有匹配的模版" : "No matching templates"}</p>
         </div>
       )}
+
+      <Sheet open={Boolean(selectedTemplate)} onOpenChange={(open) => !open && setSelectedTemplate(null)}>
+        <SheetContent side="right" showOverlay={false} className="w-[min(560px,92vw)] gap-0 overflow-hidden border-l border-slate-200 bg-[#f8faff] p-0 sm:max-w-none">
+          {selectedTemplate ? (
+            <>
+              <SheetHeader className="border-b border-slate-200 bg-white/92 px-5 py-5 pr-12">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50">
+                    <LayoutTemplate className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <SheetTitle className="text-[17px] font-semibold text-[#070261]">{selectedTemplate.name}</SheetTitle>
+                    <SheetDescription className="mt-1 text-[12px] leading-5 text-slate-500">
+                      {selectedTemplate.desc}
+                    </SheetDescription>
+                  </div>
+                </div>
+              </SheetHeader>
+
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] text-slate-400">{lang === "zh" ? "所属模块" : "Category"}</p>
+                    <p className="mt-1 text-[13px] font-semibold text-slate-700">{selectedTemplate.category}</p>
+                  </div>
+                  <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] text-slate-400">{lang === "zh" ? "流程步骤" : "Steps"}</p>
+                    <p className="mt-1 text-[13px] font-semibold text-slate-700">
+                      {lang === "zh" ? `${selectedTemplate.steps} 步` : `${selectedTemplate.steps} steps`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-[18px] border border-slate-200 bg-white p-4">
+                  <p className="text-[13px] font-semibold text-[#070261]">{lang === "zh" ? "适用场景" : "Best For"}</p>
+                  <p className="mt-2 text-[12px] leading-6 text-slate-600">{selectedTemplate.bestFor}</p>
+                </div>
+
+                <div className="mt-4 rounded-[18px] border border-slate-200 bg-white p-4">
+                  <p className="text-[13px] font-semibold text-[#070261]">{lang === "zh" ? "预期产出" : "Expected Output"}</p>
+                  <p className="mt-2 text-[12px] leading-6 text-slate-600">{selectedTemplate.output}</p>
+                </div>
+
+                <div className="mt-4 rounded-[18px] border border-slate-200 bg-white p-4">
+                  <div className="mb-4 flex items-center justify-between">
+                    <p className="text-[13px] font-semibold text-[#070261]">{lang === "zh" ? "流程预览" : "Workflow Preview"}</p>
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-medium text-emerald-700">
+                      {typeLabel[selectedTemplate.type]?.[lang]}
+                    </span>
+                  </div>
+                  <div className="space-y-0">
+                    {selectedTemplate.stepsPreview.map((step, index) => (
+                      <div key={step} className="relative flex gap-3 pb-4 last:pb-0">
+                        {index < selectedTemplate.stepsPreview.length - 1 ? (
+                          <span className="absolute left-[13px] top-7 h-[calc(100%-28px)] w-px bg-emerald-100" />
+                        ) : null}
+                        <span className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-[11px] font-semibold text-emerald-700">
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0 pt-1">
+                          <p className="text-[12px] leading-5 text-slate-700">{step}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

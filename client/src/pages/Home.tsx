@@ -11,15 +11,17 @@ import { CreateProjectView } from "@/components/CreateProjectView";
 import { PdbViewer } from "@/components/PdbViewer";
 import { ProjectPanel } from "@/components/ProjectPanel";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
-import { ResourcePanel } from "@/components/ResourcePanel";
+import { PUBLIC_DATA, ResourcePanel, SKILLS, TEMPLATES } from "@/components/ResourcePanel";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useProject, type ProjectDataAsset } from "@/contexts/ProjectContext";
 import { demoPdbContent } from "@/lib/demoPdb";
 import {
   ArrowDownToLine,
   ArrowUpRight,
+  AtSign,
   Bot,
   ChevronDown,
   CheckCircle2,
@@ -45,6 +47,8 @@ import {
   Upload,
   UserCircle2,
   WandSparkles,
+  X,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -1055,6 +1059,25 @@ const copy = {
     recommendedTasks: "推荐任务",
     newTaskPlaceholder: "描述你的目标，或上传数据后提问…",
     uploadFile: "上传文件",
+    resourceReference: "@ 资源",
+    attachUploadTitle: "上传本地数据",
+    attachUploadBody: "选择本地文件或文件夹，作为本轮 Agent 任务的新输入。",
+    attachResourceTitle: "引用已有资源",
+    attachResourceBody: "从项目数据或全局资源中选择已有数据，作为本轮 Agent 任务的上下文。",
+    localFiles: "本地文件",
+    localFolder: "本地文件夹",
+    projectData: "项目数据",
+    globalData: "全局资源",
+    publicData: "公共数据",
+    skills: "Skill",
+    templates: "模版",
+    searchResources: "搜索资源",
+    chooseFiles: "选择文件",
+    chooseFolder: "选择文件夹",
+    selectedInputs: "已选择输入",
+    noProjectData: "当前项目暂无数据集",
+    addToTask: "添加到任务",
+    attachedContext: "已添加上下文数据",
     send: "发送",
     conversation: "聊天",
     runningTitle: "内化预测建模工作流程",
@@ -1162,6 +1185,25 @@ const copy = {
     recommendedTasks: "Suggested tasks",
     newTaskPlaceholder: "Describe your goal, or upload files and ask a question…",
     uploadFile: "Upload file",
+    resourceReference: "@ Resources",
+    attachUploadTitle: "Upload local data",
+    attachUploadBody: "Choose local files or folders as new input for this agent task.",
+    attachResourceTitle: "Reference existing resources",
+    attachResourceBody: "Select existing project data or global resources as context for this agent task.",
+    localFiles: "Local files",
+    localFolder: "Local folder",
+    projectData: "Project data",
+    globalData: "Global resources",
+    publicData: "Public data",
+    skills: "Skills",
+    templates: "Templates",
+    searchResources: "Search resources",
+    chooseFiles: "Choose files",
+    chooseFolder: "Choose folder",
+    selectedInputs: "Selected inputs",
+    noProjectData: "No datasets in the current project",
+    addToTask: "Add to task",
+    attachedContext: "Context data added",
     send: "Send",
     conversation: "Chat",
     runningTitle: "Internalization Predictive Modeling Workflow",
@@ -1433,6 +1475,479 @@ function UserMenu({ lang, onAction }: { lang: Lang; onAction: (action: "profile"
   );
 }
 
+type AttachedInput = {
+  id: string;
+  name: string;
+  source: "local-file" | "local-folder" | "project-data" | "public-data" | "skill" | "template";
+  meta: string;
+};
+
+const attachedSourceStyle: Record<AttachedInput["source"], string> = {
+  "local-file": "border-blue-100 bg-blue-50 text-[#161FAD]",
+  "local-folder": "border-blue-100 bg-blue-50 text-[#161FAD]",
+  "project-data": "border-emerald-100 bg-emerald-50 text-emerald-700",
+  "public-data": "border-amber-100 bg-amber-50 text-amber-700",
+  skill: "border-violet-100 bg-violet-50 text-violet-700",
+  template: "border-sky-100 bg-sky-50 text-sky-700",
+};
+
+function attachedSourceLabel(source: AttachedInput["source"], lang: Lang) {
+  const zh: Record<AttachedInput["source"], string> = {
+    "local-file": "文件",
+    "local-folder": "文件夹",
+    "project-data": "项目数据",
+    "public-data": "公共数据",
+    skill: "Skill",
+    template: "模版",
+  };
+  const en: Record<AttachedInput["source"], string> = {
+    "local-file": "File",
+    "local-folder": "Folder",
+    "project-data": "Project",
+    "public-data": "Public",
+    skill: "Skill",
+    template: "Template",
+  };
+  return lang === "zh" ? zh[source] : en[source];
+}
+
+function AttachDataDialog({
+  lang,
+  open,
+  projectData,
+  variant,
+  onAttach,
+  onOpenChange,
+}: {
+  lang: Lang;
+  open: boolean;
+  projectData: ProjectDataAsset[];
+  variant: "upload" | "resource";
+  onAttach: (items: AttachedInput[]) => void;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const text = copy[lang];
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
+  const [activeTab, setActiveTab] = useState<AttachedInput["source"]>(variant === "upload" ? "local-file" : "project-data");
+  const [resourceQuery, setResourceQuery] = useState("");
+  const [localFiles, setLocalFiles] = useState<AttachedInput[]>([]);
+  const [localFolders, setLocalFolders] = useState<AttachedInput[]>([]);
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  const [selectedPublicIds, setSelectedPublicIds] = useState<string[]>([]);
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
+  const normalizedResourceQuery = resourceQuery.trim().toLowerCase();
+  const filteredProjectData = projectData.filter((asset) =>
+    `${asset.name} ${asset.type} ${asset.tags?.join(" ") ?? ""}`.toLowerCase().includes(normalizedResourceQuery),
+  );
+  const filteredPublicData = PUBLIC_DATA.filter((item) =>
+    `${item.name} ${item.desc} ${item.category} ${item.tags.join(" ")}`.toLowerCase().includes(normalizedResourceQuery),
+  );
+  const filteredSkills = SKILLS.filter((item) =>
+    `${item.name} ${item.skillId} ${item.desc} ${item.category} ${item.ability} ${item.tags.join(" ")}`.toLowerCase().includes(normalizedResourceQuery),
+  );
+  const filteredTemplates = TEMPLATES.filter((item) =>
+    `${item.name} ${item.desc} ${item.category} ${item.type}`.toLowerCase().includes(normalizedResourceQuery),
+  );
+
+  const projectItems: AttachedInput[] = projectData
+    .filter((asset) => selectedProjectIds.includes(asset.id))
+    .map((asset) => ({
+      id: `project-data-${asset.id}`,
+      name: asset.name,
+      source: "project-data",
+      meta: `${asset.type.toUpperCase()} · ${asset.size}`,
+    }));
+  const publicItems: AttachedInput[] = PUBLIC_DATA
+    .filter((item) => selectedPublicIds.includes(item.id))
+    .map((item) => ({
+      id: `public-data-${item.id}`,
+      name: item.name,
+      source: "public-data",
+      meta: `${item.category} · ${item.size}`,
+    }));
+  const skillItems: AttachedInput[] = SKILLS
+    .filter((item) => selectedSkillIds.includes(item.id))
+    .map((item) => ({
+      id: `skill-${item.id}`,
+      name: item.name,
+      source: "skill",
+      meta: `${item.category} · ${item.ability}`,
+    }));
+  const templateItems: AttachedInput[] = TEMPLATES
+    .filter((item) => selectedTemplateIds.includes(item.id))
+    .map((item) => ({
+      id: `template-${item.id}`,
+      name: item.name,
+      source: "template",
+      meta: `${item.category} · ${item.steps} steps`,
+    }));
+  const selectedItems = variant === "upload" ? [...localFiles, ...localFolders] : [...projectItems, ...publicItems, ...skillItems, ...templateItems];
+
+  const toggleSelected = (id: string, selectedIds: string[], setSelectedIds: (ids: string[]) => void) => {
+    setSelectedIds(selectedIds.includes(id) ? selectedIds.filter((item) => item !== id) : [...selectedIds, id]);
+  };
+
+  const handleFolderClick = () => {
+    const input = folderInputRef.current;
+    if (!input) return;
+    input.setAttribute("webkitdirectory", "");
+    input.setAttribute("directory", "");
+    input.click();
+  };
+
+  const handleAttach = () => {
+    if (selectedItems.length === 0) {
+      toast.message(lang === "zh" ? "请先选择至少一个输入" : "Select at least one input first");
+      return;
+    }
+    onAttach(selectedItems);
+    onOpenChange(false);
+  };
+
+  const tabs: { id: AttachedInput["source"]; label: string }[] =
+    variant === "upload"
+      ? [
+          { id: "local-file", label: text.localFiles },
+          { id: "local-folder", label: text.localFolder },
+        ]
+      : [
+          { id: "project-data", label: text.projectData },
+          { id: "public-data", label: text.publicData },
+          { id: "skill", label: text.skills },
+          { id: "template", label: text.templates },
+        ];
+  const tabCount = (id: AttachedInput["source"]) => {
+    if (id === "local-file") return localFiles.length;
+    if (id === "local-folder") return localFolders.length;
+    if (id === "project-data") return filteredProjectData.length;
+    if (id === "public-data") return filteredPublicData.length;
+    if (id === "skill") return filteredSkills.length;
+    return filteredTemplates.length;
+  };
+  const selectedTabCount = (id: AttachedInput["source"]) => {
+    if (id === "local-file") return localFiles.length;
+    if (id === "local-folder") return localFolders.length;
+    if (id === "project-data") return selectedProjectIds.length;
+    if (id === "public-data") return selectedPublicIds.length;
+    if (id === "skill") return selectedSkillIds.length;
+    return selectedTemplateIds.length;
+  };
+  const activeTabLabel = tabs.find((tab) => tab.id === activeTab)?.label ?? "";
+
+  useEffect(() => {
+    if (open) {
+      setActiveTab(variant === "upload" ? "local-file" : "project-data");
+    }
+  }, [open, variant]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[min(780px,calc(100vh-40px))] overflow-hidden rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[1080px]">
+        <DialogHeader className="border-b border-slate-100 px-5 py-4">
+          <DialogTitle className="text-[15px] font-semibold text-[#070261]">
+            {variant === "upload" ? text.attachUploadTitle : text.attachResourceTitle}
+          </DialogTitle>
+          <p className="mt-1 text-[12px] leading-5 text-slate-500">
+            {variant === "upload" ? text.attachUploadBody : text.attachResourceBody}
+          </p>
+        </DialogHeader>
+
+        <div className="grid h-[640px] min-h-0 grid-cols-[220px_minmax(0,1fr)]">
+          <aside className="flex min-h-0 flex-col border-r border-slate-100 bg-slate-50/70 p-3">
+            <div className="mb-3 rounded-[14px] border border-slate-100 bg-white px-3 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                {variant === "upload" ? (lang === "zh" ? "上传来源" : "Upload Sources") : (lang === "zh" ? "资源类型" : "Resource Types")}
+              </p>
+            </div>
+            <div className="min-h-0 space-y-1 overflow-y-auto">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[12px] font-medium transition ${
+                    activeTab === tab.id ? "bg-white text-[#161FAD] shadow-sm ring-1 ring-[#161FAD]/10" : "text-slate-500 hover:bg-white/70 hover:text-slate-700"
+                  }`}
+                >
+                  <span className="min-w-0 flex-1 truncate">{tab.label}</span>
+                  {selectedTabCount(tab.id) > 0 ? (
+                    <span className="rounded-full bg-[#161FAD] px-1.5 py-0.5 text-[9px] font-semibold text-white">
+                      {selectedTabCount(tab.id)}
+                    </span>
+                  ) : null}
+                  <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-400">
+                    {tabCount(tab.id)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </aside>
+
+          <div className="flex min-h-0 flex-col">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 bg-white/90 px-5 py-3">
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-slate-700">{activeTabLabel}</p>
+              </div>
+              {variant === "resource" ? (
+                <div className="flex w-full max-w-[330px] items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                  <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  <input
+                    value={resourceQuery}
+                    onChange={(event) => setResourceQuery(event.target.value)}
+                    className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
+                    placeholder={text.searchResources}
+                  />
+                </div>
+              ) : null}
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
+
+              {activeTab === "local-file" ? (
+                <div className="space-y-4">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(event) => {
+                      const files = Array.from(event.target.files ?? []);
+                      setLocalFiles(
+                        files.map((file, index) => ({
+                          id: `local-file-${file.name}-${index}`,
+                          name: file.name,
+                          source: "local-file",
+                          meta: `${Math.max(1, Math.round(file.size / 1024))} KB`,
+                        })),
+                      );
+                    }}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex w-full flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-10 text-center transition hover:border-[rgba(23,36,216,0.24)] hover:bg-[rgba(23,36,216,0.03)]"
+                  >
+                    <Upload className="mb-3 h-8 w-8 text-[#161FAD]" />
+                    <span className="text-[13px] font-semibold text-slate-700">{text.chooseFiles}</span>
+                    <span className="mt-1 text-[11px] text-slate-400">CSV / PDB / XLSX / JSON / PDF</span>
+                  </button>
+                </div>
+              ) : null}
+
+              {activeTab === "local-folder" ? (
+                <div className="space-y-4">
+                  <input
+                    ref={folderInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(event) => {
+                      const files = Array.from(event.target.files ?? []);
+                      const firstFile = files[0] as (File & { webkitRelativePath?: string }) | undefined;
+                      const folderName = firstFile?.webkitRelativePath?.split("/")[0] || (lang === "zh" ? "本地文件夹" : "Local folder");
+                      setLocalFolders(
+                        files.length
+                          ? [
+                              {
+                                id: `local-folder-${folderName}`,
+                                name: folderName,
+                                source: "local-folder",
+                                meta: lang === "zh" ? `${files.length} 个文件` : `${files.length} files`,
+                              },
+                            ]
+                          : [],
+                      );
+                    }}
+                  />
+                  <button
+                    onClick={handleFolderClick}
+                    className="flex w-full flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-10 text-center transition hover:border-[rgba(23,36,216,0.24)] hover:bg-[rgba(23,36,216,0.03)]"
+                  >
+                    <FolderOpen className="mb-3 h-8 w-8 text-[#161FAD]" />
+                    <span className="text-[13px] font-semibold text-slate-700">{text.chooseFolder}</span>
+                    <span className="mt-1 text-[11px] text-slate-400">{lang === "zh" ? "用于批量输入数据目录" : "Use a data directory as batch input"}</span>
+                  </button>
+                </div>
+              ) : null}
+
+              {activeTab === "project-data" ? (
+                <div className="grid grid-cols-2 gap-2.5">
+                  {filteredProjectData.length === 0 ? (
+                    <div className="col-span-2 rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-10 text-center text-[13px] text-slate-400">
+                      {text.noProjectData}
+                    </div>
+                  ) : (
+                    filteredProjectData.map((asset) => (
+                      <button
+                        key={asset.id}
+                        onClick={() => toggleSelected(asset.id, selectedProjectIds, setSelectedProjectIds)}
+                        className={`flex w-full items-center gap-3 rounded-[14px] border px-3 py-2.5 text-left transition hover:bg-white ${
+                          selectedProjectIds.includes(asset.id) ? "border-[#161FAD]/20 bg-white shadow-sm" : "border-slate-100 bg-slate-50/80"
+                        }`}
+                      >
+                        <Checkbox checked={selectedProjectIds.includes(asset.id)} />
+                        <Database className="h-4 w-4 text-[#161FAD]" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[12px] font-semibold text-slate-800">{asset.name}</p>
+                          <p className="mt-0.5 text-[10px] text-slate-400">{asset.type.toUpperCase()} · {asset.size}</p>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+
+              {activeTab === "public-data" ? (
+                <div className="grid grid-cols-2 gap-2.5">
+                  {filteredPublicData.length === 0 ? (
+                    <div className="col-span-2 rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-10 text-center text-[13px] text-slate-400">
+                      {lang === "zh" ? "没有匹配的公共数据" : "No matching public data"}
+                    </div>
+                  ) : (
+                    filteredPublicData.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => toggleSelected(item.id, selectedPublicIds, setSelectedPublicIds)}
+                        className={`flex min-h-[88px] w-full items-start gap-3 rounded-[14px] border px-3 py-2.5 text-left transition hover:bg-white ${
+                          selectedPublicIds.includes(item.id) ? "border-[#161FAD]/20 bg-white shadow-sm" : "border-slate-100 bg-slate-50/80"
+                        }`}
+                      >
+                        <Checkbox checked={selectedPublicIds.includes(item.id)} />
+                        <Globe2 className="mt-0.5 h-4 w-4 text-[#161FAD]" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[12px] font-semibold text-slate-800">{item.name}</p>
+                          <p className="mt-0.5 text-[10px] text-slate-400">{item.category} · {item.size}</p>
+                          <p className="mt-1 line-clamp-1 text-[11px] text-slate-500">{item.desc}</p>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+
+              {activeTab === "skill" ? (
+                <div className="grid grid-cols-2 gap-2.5">
+                  {filteredSkills.length === 0 ? (
+                    <div className="col-span-2 rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-10 text-center text-[13px] text-slate-400">
+                      {lang === "zh" ? "没有匹配的 Skill" : "No matching skills"}
+                    </div>
+                  ) : (
+                    filteredSkills.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => toggleSelected(item.id, selectedSkillIds, setSelectedSkillIds)}
+                        className={`flex min-h-[112px] w-full items-start gap-3 rounded-[14px] border px-3 py-2.5 text-left transition hover:bg-white ${
+                          selectedSkillIds.includes(item.id) ? "border-[#161FAD]/20 bg-white shadow-sm" : "border-slate-100 bg-slate-50/80"
+                        }`}
+                      >
+                        <Checkbox checked={selectedSkillIds.includes(item.id)} />
+                        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+                          <Zap className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="min-w-0 flex-1 truncate text-[12px] font-semibold text-slate-800">{item.name}</p>
+                            <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] text-slate-500">{item.category}</span>
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-slate-500">{item.desc}</p>
+                          <span className="mt-1.5 inline-flex rounded-full border border-violet-100 bg-violet-50 px-2 py-0.5 text-[10px] text-violet-700">{item.ability}</span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+
+              {activeTab === "template" ? (
+                <div className="grid grid-cols-2 gap-2.5">
+                  {filteredTemplates.length === 0 ? (
+                    <div className="col-span-2 rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-10 text-center text-[13px] text-slate-400">
+                      {lang === "zh" ? "没有匹配的模版" : "No matching templates"}
+                    </div>
+                  ) : (
+                    filteredTemplates.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => toggleSelected(item.id, selectedTemplateIds, setSelectedTemplateIds)}
+                        className={`flex min-h-[92px] w-full items-start gap-3 rounded-[14px] border px-3 py-2.5 text-left transition hover:bg-white ${
+                          selectedTemplateIds.includes(item.id) ? "border-[#161FAD]/20 bg-white shadow-sm" : "border-slate-100 bg-slate-50/80"
+                        }`}
+                      >
+                        <Checkbox checked={selectedTemplateIds.includes(item.id)} />
+                        <PanelRightOpen className="mt-0.5 h-4 w-4 text-[#161FAD]" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[12px] font-semibold text-slate-800">{item.name}</p>
+                          <p className="mt-0.5 text-[10px] text-slate-400">{item.category} · {lang === "zh" ? `${item.steps} 步` : `${item.steps} steps`}</p>
+                          <p className="mt-1 line-clamp-1 text-[11px] text-slate-500">{item.desc}</p>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="border-t border-slate-100 bg-slate-50/70 px-5 py-4">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-[11px] font-semibold text-slate-500">{text.selectedInputs} · {selectedItems.length}</p>
+              </div>
+              <div className="mb-4 flex max-h-[58px] min-h-7 flex-wrap gap-1.5 overflow-y-auto">
+                {selectedItems.slice(0, 6).map((item) => (
+                  <span key={item.id} className={`rounded-full border px-2 py-1 text-[10px] ${attachedSourceStyle[item.source]}`}>
+                    {attachedSourceLabel(item.source, lang)} · {item.name}
+                  </span>
+                ))}
+                {selectedItems.length > 6 ? (
+                  <span className="rounded-full bg-slate-200 px-2 py-1 text-[10px] text-slate-500">+{selectedItems.length - 6}</span>
+                ) : null}
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => onOpenChange(false)}
+                  className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-[12px] font-medium text-slate-500 transition hover:text-slate-700"
+                >
+                  {lang === "zh" ? "取消" : "Cancel"}
+                </button>
+                <button
+                  onClick={handleAttach}
+                  className="rounded-xl bg-[#161FAD] px-3.5 py-2 text-[12px] font-semibold text-white transition hover:bg-[#1724D8] active:scale-[0.97]"
+                >
+                  {text.addToTask}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AttachedContextChips({ items, lang, onRemove }: { items: AttachedInput[]; lang: Lang; onRemove: (id: string) => void }) {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5 border-t border-slate-200 pt-2">
+      {items.slice(0, 6).map((item) => (
+        <span key={item.id} className={`group inline-flex max-w-[260px] items-center gap-1.5 rounded-full border py-1 pl-2 pr-1 text-[10px] ${attachedSourceStyle[item.source]}`}>
+          <span className="shrink-0 font-medium">{attachedSourceLabel(item.source, lang)}</span>
+          <span className="truncate text-slate-600">{item.name}</span>
+          <button
+            onClick={() => onRemove(item.id)}
+            className="ml-0.5 rounded-full p-0.5 text-slate-400 transition hover:bg-white/70 hover:text-slate-700"
+            aria-label={lang === "zh" ? `移除 ${item.name}` : `Remove ${item.name}`}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </span>
+      ))}
+      {items.length > 6 ? (
+        <span className="rounded-full bg-slate-200 px-2 py-1 text-[10px] text-slate-500">+{items.length - 6}</span>
+      ) : null}
+    </div>
+  );
+}
+
 function Sidebar({
   activeView,
   lang,
@@ -1620,16 +2135,24 @@ function Sidebar({
 }
 
 function NewTaskWorkspace({
+  attachedInputs,
   lang,
   prompt,
+  onOpenResourceDialog,
+  onOpenUploadDialog,
   onPromptChange,
   onPromptPick,
+  onRemoveAttachedInput,
   onStart,
 }: {
+  attachedInputs: AttachedInput[];
   lang: Lang;
   prompt: string;
+  onOpenResourceDialog: () => void;
+  onOpenUploadDialog: () => void;
   onPromptChange: (value: string) => void;
   onPromptPick: (prompt: RecommendedPrompt) => void;
+  onRemoveAttachedInput: (id: string) => void;
   onStart: () => void;
 }) {
   const text = copy[lang];
@@ -1676,11 +2199,22 @@ function NewTaskWorkspace({
             className="min-h-[52px] w-full resize-none border-0 bg-transparent text-[13px] leading-6 outline-none placeholder:text-slate-400"
             placeholder={text.newTaskPlaceholder}
           />
+          <AttachedContextChips items={attachedInputs} lang={lang} onRemove={onRemoveAttachedInput} />
           <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-2.5">
             <div className="flex items-center gap-2">
-              <button className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]">
-                <Upload className="mr-1.5 inline h-4 w-4" />
-                {text.uploadFile}
+              <button
+                onClick={onOpenUploadDialog}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+                title={text.uploadFile}
+              >
+                <Upload className="h-4 w-4" />
+              </button>
+              <button
+                onClick={onOpenResourceDialog}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+                title={text.resourceReference}
+              >
+                <AtSign className="h-4 w-4" />
               </button>
             </div>
             <Button
@@ -2065,13 +2599,17 @@ function AgentDemoCard({
 }
 
 function RunningWorkspace({
+  attachedInputs,
   lang,
   title,
   messages,
   reports,
   prompt,
   onDownloadReport,
+  onOpenResourceDialog,
+  onOpenUploadDialog,
   onPromptChange,
+  onRemoveAttachedInput,
   onSaveReportToProject,
   onContinueRun,
   onViewResults,
@@ -2079,13 +2617,17 @@ function RunningWorkspace({
   workflowCompleted,
   compact = false,
 }: {
+  attachedInputs: AttachedInput[];
   lang: Lang;
   title: LocalizedText;
   messages: RunningMessage[];
   reports: RunReport[];
   prompt: string;
   onDownloadReport: (report: RunReport) => void;
+  onOpenResourceDialog: () => void;
+  onOpenUploadDialog: () => void;
   onPromptChange: (value: string) => void;
+  onRemoveAttachedInput: (id: string) => void;
   onSaveReportToProject: (report: RunReport) => void;
   onContinueRun: () => void;
   onViewResults: () => void;
@@ -2296,13 +2838,22 @@ function RunningWorkspace({
                 className="min-h-[40px] w-full resize-none border-0 bg-transparent text-[13px] leading-5 outline-none placeholder:text-slate-400"
                 placeholder={text.runningPlaceholder}
               />
+              <AttachedContextChips items={attachedInputs} lang={lang} onRemove={onRemoveAttachedInput} />
               <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-2">
                 <div className="flex items-center gap-1.5 text-slate-500">
-                  <button className="rounded-xl p-1.5 transition hover:bg-white hover:text-[#161FAD]">
+                  <button
+                    onClick={onOpenUploadDialog}
+                    className="rounded-xl p-1.5 transition hover:bg-white hover:text-[#161FAD]"
+                    title={text.uploadFile}
+                  >
                     <Upload className="h-4 w-4" />
                   </button>
-                  <button className="rounded-xl p-1.5 transition hover:bg-white hover:text-[#161FAD]">
-                    <Database className="h-4 w-4" />
+                  <button
+                    onClick={onOpenResourceDialog}
+                    className="rounded-xl p-1.5 transition hover:bg-white hover:text-[#161FAD]"
+                    title={text.resourceReference}
+                  >
+                    <AtSign className="h-4 w-4" />
                   </button>
                 </div>
                 <Button className="h-8 rounded-xl bg-[#161FAD] px-3.5 text-[12px] text-white hover:bg-[#1724D8]">
@@ -3542,6 +4093,8 @@ export default function Home() {
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [attachDialogVariant, setAttachDialogVariant] = useState<"upload" | "resource" | null>(null);
+  const [attachedInputs, setAttachedInputs] = useState<AttachedInput[]>([]);
   const activeScenario = demoScenarios[activeScenarioId];
   const [runtimeSteps, setRuntimeSteps] = useState<PlanStep[]>(() =>
     demoScenarios.dll3.steps.map((step): PlanStep => ({ ...step, status: "waiting" })),
@@ -3621,6 +4174,7 @@ export default function Home() {
     setSearchQuery("");
     setSideTab("plan");
     setComposerValue(pick(lang, prompt.text));
+    setAttachedInputs([]);
   };
 
   const handleStart = () => {
@@ -3672,6 +4226,27 @@ export default function Home() {
     setSelectedFileIds([]);
     setSearchQuery("");
     setUserMenuOpen(false);
+    setAttachedInputs([]);
+  };
+
+  const handleAttachInputs = (items: AttachedInput[]) => {
+    setAttachedInputs((current) => {
+      const next = [...current];
+      items.forEach((item) => {
+        const index = next.findIndex((existing) => existing.id === item.id);
+        if (index >= 0) {
+          next[index] = item;
+        } else {
+          next.push(item);
+        }
+      });
+      return next;
+    });
+    toast.success(`${text.attachedContext}: ${items.length}`);
+  };
+
+  const handleRemoveAttachedInput = (id: string) => {
+    setAttachedInputs((current) => current.filter((item) => item.id !== id));
   };
 
   const handleSelectFile = (id: string) => {
@@ -3798,21 +4373,29 @@ export default function Home() {
             <CreateProjectView lang={lang} />
           ) : activeView === "new" ? (
             <NewTaskWorkspace
+              attachedInputs={attachedInputs}
               lang={lang}
               prompt={composerValue}
+              onOpenResourceDialog={() => setAttachDialogVariant("resource")}
+              onOpenUploadDialog={() => setAttachDialogVariant("upload")}
               onPromptChange={setComposerValue}
               onPromptPick={handlePromptPick}
+              onRemoveAttachedInput={handleRemoveAttachedInput}
               onStart={handleStart}
             />
           ) : (
             <RunningWorkspace
+              attachedInputs={attachedInputs}
               lang={lang}
               title={activeScenario.title}
               messages={activeScenario.messages}
               reports={activeScenario.reports}
               prompt={composerValue}
               onDownloadReport={handleDownloadReport}
+              onOpenResourceDialog={() => setAttachDialogVariant("resource")}
+              onOpenUploadDialog={() => setAttachDialogVariant("upload")}
               onPromptChange={setComposerValue}
+              onRemoveAttachedInput={handleRemoveAttachedInput}
               onSaveReportToProject={handleSaveReportToProject}
               onContinueRun={handleContinueRun}
               onViewResults={handleViewCurrentResults}
@@ -3855,6 +4438,16 @@ export default function Home() {
           }}
           onDownloadFile={handleDownloadFile}
           onSaveFileToProject={handleSaveFileToProject}
+        />
+        <AttachDataDialog
+          lang={lang}
+          open={attachDialogVariant !== null}
+          projectData={activeProject.data}
+          variant={attachDialogVariant ?? "upload"}
+          onAttach={handleAttachInputs}
+          onOpenChange={(open) => {
+            if (!open) setAttachDialogVariant(null);
+          }}
         />
       </div>
     </div>
