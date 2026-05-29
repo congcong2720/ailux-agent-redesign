@@ -18,7 +18,6 @@ import {
   MoreHorizontal,
   UserPlus,
   ArrowLeft,
-  Settings2,
   Save,
   X,
   Mail,
@@ -587,16 +586,18 @@ export function ProjectPanel({ lang }: { lang: Lang }) {
           {activeProject.name.slice(0, 1)}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-semibold text-[#070261]">{activeProject.name}</p>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <p className="truncate text-[13px] font-semibold text-[#070261]">{activeProject.name}</p>
+            <button
+              onClick={openProjectEditor}
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-slate-300 transition hover:bg-slate-100 hover:text-[#161FAD]"
+              title={lang === "zh" ? "编辑项目信息" : "Edit project details"}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          </div>
           <p className="truncate text-[11px] text-slate-400">{activeProject.description}</p>
         </div>
-        <button
-          onClick={openProjectEditor}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-[#161FAD]"
-          title={lang === "zh" ? "项目设置" : "Project settings"}
-        >
-          <Settings2 className="h-4 w-4" />
-        </button>
       </div>
 
       {editingProject && (

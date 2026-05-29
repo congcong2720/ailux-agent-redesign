@@ -7,14 +7,11 @@
 import {
   Database,
   Zap,
-  LayoutTemplate,
   ArrowLeft,
   Search,
-  FileSpreadsheet,
-  File,
-  FileText,
-  Image,
   Clock,
+  Globe2,
+  PanelRightOpen,
 } from "lucide-react";
 import { useState } from "react";
 import { useProject } from "@/contexts/ProjectContext";
@@ -234,15 +231,6 @@ export const TEMPLATES = [
   },
 ];
 
-const FILE_ICONS: Record<string, React.ReactNode> = {
-  csv: <FileSpreadsheet className="h-4 w-4 text-emerald-600" />,
-  json: <File className="h-4 w-4 text-amber-600" />,
-  pdb: <Database className="h-4 w-4 text-[#161FAD]" />,
-  xlsx: <FileSpreadsheet className="h-4 w-4 text-emerald-700" />,
-  pdf: <FileText className="h-4 w-4 text-red-500" />,
-  png: <Image className="h-4 w-4 text-purple-600" />,
-};
-
 // ── Grouped card grid ──────────────────────────────────────────────────────
 
 function groupBy<T extends { category: string }>(items: T[]): Record<string, T[]> {
@@ -288,7 +276,7 @@ function PublicDataTab({ lang }: { lang: Lang }) {
 
       {/* Count */}
       <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
-        <Database className="h-3.5 w-3.5 text-amber-500" />
+        <Globe2 className="h-3.5 w-3.5 text-[#161FAD]" />
         <span>{lang === "zh" ? `${filtered.length} 个数据集可用` : `${filtered.length} datasets available`}</span>
       </div>
 
@@ -308,8 +296,8 @@ function PublicDataTab({ lang }: { lang: Lang }) {
               >
                 {/* Top row: icon + name */}
                 <div className="flex items-start gap-2">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-amber-100 bg-amber-50">
-                    {FILE_ICONS[item.type] ?? <File className="h-4 w-4 text-slate-400" />}
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-[#161FAD]">
+                    <Globe2 className="h-4 w-4" />
                   </div>
                   <p className="flex-1 text-[13px] font-semibold leading-tight text-slate-800">{item.name}</p>
                 </div>
@@ -393,8 +381,8 @@ function SkillTab({ lang }: { lang: Lang }) {
                 className="group relative flex min-h-[124px] flex-col gap-2 rounded-[14px] border border-slate-200 bg-white p-4 text-left transition hover:border-[#161FAD]/30 hover:shadow-sm"
               >
                 <div className="flex items-start gap-2">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50">
-                    <Zap className="h-3.5 w-3.5 text-[#161FAD]" />
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-700">
+                    <Zap className="h-3.5 w-3.5" />
                   </div>
                   <p className="flex-1 text-[13px] font-semibold leading-tight text-slate-800">{skill.name}</p>
                 </div>
@@ -463,7 +451,7 @@ function TemplateTab({ lang }: { lang: Lang }) {
 
       {/* Count */}
       <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
-        <LayoutTemplate className="h-3.5 w-3.5 text-emerald-600" />
+        <PanelRightOpen className="h-3.5 w-3.5 text-[#161FAD]" />
         <span>{lang === "zh" ? `${filtered.length} 个模版可用` : `${filtered.length} templates available`}</span>
       </div>
 
@@ -482,8 +470,8 @@ function TemplateTab({ lang }: { lang: Lang }) {
                 className="group relative flex min-h-[118px] flex-col gap-2 rounded-[14px] border border-slate-200 bg-white p-4 text-left transition hover:border-[#161FAD]/30 hover:shadow-sm"
               >
                 <div className="flex items-start gap-2">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50">
-                    <LayoutTemplate className="h-3.5 w-3.5 text-emerald-600" />
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-[#161FAD]">
+                    <PanelRightOpen className="h-3.5 w-3.5" />
                   </div>
                   <p className="flex-1 text-[13px] font-semibold leading-tight text-slate-800">{tpl.name}</p>
                 </div>
@@ -504,7 +492,7 @@ function TemplateTab({ lang }: { lang: Lang }) {
 
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <LayoutTemplate className="mb-3 h-9 w-9 text-slate-200" />
+          <PanelRightOpen className="mb-3 h-9 w-9 text-slate-200" />
           <p className="text-[13px] text-slate-400">{lang === "zh" ? "没有匹配的模版" : "No matching templates"}</p>
         </div>
       )}
@@ -515,8 +503,8 @@ function TemplateTab({ lang }: { lang: Lang }) {
             <>
               <SheetHeader className="border-b border-slate-200 bg-white/92 px-5 py-5 pr-12">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50">
-                    <LayoutTemplate className="h-5 w-5 text-emerald-600" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-[#161FAD]">
+                    <PanelRightOpen className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <SheetTitle className="text-[17px] font-semibold text-[#070261]">{selectedTemplate.name}</SheetTitle>
@@ -589,9 +577,9 @@ export function ResourcePanel({ lang }: { lang: Lang }) {
   const { resourceTab, setResourceTab, setMainView } = useProject();
 
   const tabs: { key: "data" | "skill" | "template"; label: string; labelEn: string; icon: React.ReactNode }[] = [
-    { key: "data", label: "公共数据", labelEn: "Public Data", icon: <Database className="h-3.5 w-3.5" /> },
+    { key: "data", label: "公共数据", labelEn: "Public Data", icon: <Globe2 className="h-3.5 w-3.5" /> },
     { key: "skill", label: "Skill", labelEn: "Skills", icon: <Zap className="h-3.5 w-3.5" /> },
-    { key: "template", label: "模版", labelEn: "Templates", icon: <LayoutTemplate className="h-3.5 w-3.5" /> },
+    { key: "template", label: "模版", labelEn: "Templates", icon: <PanelRightOpen className="h-3.5 w-3.5" /> },
   ];
 
   return (

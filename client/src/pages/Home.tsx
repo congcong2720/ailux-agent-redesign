@@ -12,6 +12,7 @@ import { PdbViewer } from "@/components/PdbViewer";
 import { ProjectPanel } from "@/components/ProjectPanel";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { PUBLIC_DATA, ResourcePanel, SKILLS, TEMPLATES } from "@/components/ResourcePanel";
+import { UserCenter } from "@/components/UserCenter";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -4338,6 +4339,12 @@ export default function Home() {
       return;
     }
 
+    if (action === "profile") {
+      setMainView("user-center");
+      setUserMenuOpen(false);
+      return;
+    }
+
     setUserMenuOpen(false);
     toast.message(text.comingSoon);
   };
@@ -4371,6 +4378,8 @@ export default function Home() {
             <ResourcePanel lang={lang} />
           ) : mainView === "create-project" ? (
             <CreateProjectView lang={lang} />
+          ) : mainView === "user-center" ? (
+            <UserCenter lang={lang} />
           ) : activeView === "new" ? (
             <NewTaskWorkspace
               attachedInputs={attachedInputs}

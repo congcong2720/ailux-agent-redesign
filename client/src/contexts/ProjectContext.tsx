@@ -75,7 +75,7 @@ export const SAMPLE_PROJECTS: Project[] = [
   },
 ];
 
-export type MainView = "workspace" | "project-detail" | "resource" | "create-project";
+export type MainView = "workspace" | "project-detail" | "resource" | "create-project" | "user-center";
 
 type ProjectContextType = {
   projects: Project[];
