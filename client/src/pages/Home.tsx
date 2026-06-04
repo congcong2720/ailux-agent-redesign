@@ -181,6 +181,7 @@ type DemoScenario = {
 
 const l = (zh: string, en: string): LocalizedText => ({ zh, en });
 const pick = (lang: Lang, value: LocalizedText) => value[lang];
+const PRODUCT_ICON_URL = `${import.meta.env.BASE_URL}ailux-product-icon.png`;
 const MODEL_RANKING_IMAGE_URL = "/manus-storage/ailux-model-ranking-user-final-v2_2de81eaf.png";
 const FEATURE_SCATTER_IMAGE_URL = "/manus-storage/feature_scatter_relationship_2a6adde1.png";
 
@@ -1972,8 +1973,8 @@ function Sidebar({
   if (collapsed) {
     return (
       <aside className="flex h-full min-h-0 flex-col items-center rounded-[24px] border border-white/70 bg-white/84 p-3 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#161FAD_0%,#848CFE_100%)] text-white shadow-[0_10px_22px_rgba(22,31,173,0.2)]">
-          <FlaskConical className="h-5 w-5" />
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-[18px] bg-white shadow-[0_10px_22px_rgba(22,31,173,0.18)]">
+          <img src={PRODUCT_ICON_URL} alt="Ailux Agent" className="h-12 w-12 rounded-[18px]" />
         </div>
 
         <button
@@ -2028,8 +2029,8 @@ function Sidebar({
     <aside className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       {/* Global header: Ailux Agent branding */}
       <div className="mb-4 flex items-center gap-3 px-1 py-2">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#161FAD_0%,#848CFE_100%)] text-white shadow-[0_10px_22px_rgba(22,31,173,0.2)]">
-          <FlaskConical className="h-5 w-5" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white shadow-[0_10px_22px_rgba(22,31,173,0.18)]">
+          <img src={PRODUCT_ICON_URL} alt="Ailux Agent" className="h-10 w-10 rounded-2xl" />
         </div>
         <div>
           <p className="text-[15px] font-semibold uppercase tracking-[0.08em] text-[#070261]">{text.platformSubtitle}</p>
