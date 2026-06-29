@@ -22,7 +22,9 @@ import { demoPdbContent } from "@/lib/demoPdb";
 import {
   ArrowDownToLine,
   ArrowUpRight,
+  AlertTriangle,
   AtSign,
+  Bell,
   Bot,
   ChevronDown,
   CheckCircle2,
@@ -41,10 +43,12 @@ import {
   LogOut,
   PanelRightOpen,
   Plus,
+  RefreshCw,
   Save,
   Search,
   SendHorizonal,
   Sparkles,
+  Timer,
   Upload,
   UserCircle2,
   WandSparkles,
@@ -55,7 +59,7 @@ import { toast } from "sonner";
 
 type Lang = "zh" | "en";
 type ViewMode = "new" | "running" | "result";
-type SideTab = "plan" | "results" | "reports";
+type SideTab = "plan" | "results" | "reports" | "monitor";
 type StepStatus = "done" | "running" | "waiting" | "failed";
 type ResultType = "csv" | "docx" | "json" | "png" | "xlsx" | "pdb";
 type ScenarioId = "dll3" | "a2ui";
@@ -1115,6 +1119,31 @@ const copy = {
     plan: "计划",
     results: "结果",
     reports: "报告",
+    monitor: "监控",
+    monitorTitle: "任务监控",
+    monitorBody: "运行过程中实时查看状态、资源使用、日志和异常反馈。",
+    monitorElapsed: "已运行",
+    monitorEstimate: "预计剩余",
+    monitorEstimateDone: "已完成",
+    monitorCredits: "预计 Credits",
+    monitorOutputs: "已生成产物",
+    monitorCurrentStep: "当前步骤",
+    monitorQueue: "队列位置",
+    monitorQueueValue: "优先队列 · 第 2 位",
+    monitorCluster: "集群资源",
+    monitorRuntimeLogs: "运行日志",
+    monitorResultLogs: "结果日志",
+    monitorClusterBody: "资源使用详情由集群平台提供，当前页面仅保留排查入口。",
+    monitorOpenCluster: "打开集群监控",
+    monitorCopyTaskId: "复制任务 ID",
+    monitorTaskIdCopied: "任务 ID 已复制",
+    monitorRuntimeSummary: "最近事件",
+    monitorResultSummary: "最近产物",
+    monitorViewRuntimeLogs: "查看运行日志",
+    monitorViewResultLogs: "查看结果日志",
+    monitorLogComingSoon: "日志详情将在后续接入",
+    monitorFeedback: "反馈项目组排查",
+    monitorFeedbackSent: "已生成反馈信息，可发送给项目组排查",
     history: "历史记录",
     waitingPlan: "等待生成计划",
     waitingPlanBody: "首条消息发送成功后，右侧会生成当前任务对应的步骤计划、进度条和每一步的执行摘要。当前新任务态不会展示旧任务数据。",
@@ -1241,6 +1270,31 @@ const copy = {
     plan: "Plan",
     results: "Results",
     reports: "Reports",
+    monitor: "Monitor",
+    monitorTitle: "Task monitor",
+    monitorBody: "Track status, resource usage, logs, and exception feedback while the task runs.",
+    monitorElapsed: "Elapsed",
+    monitorEstimate: "Est. remaining",
+    monitorEstimateDone: "Completed",
+    monitorCredits: "Est. credits",
+    monitorOutputs: "Outputs",
+    monitorCurrentStep: "Current step",
+    monitorQueue: "Queue",
+    monitorQueueValue: "Priority queue · #2",
+    monitorCluster: "Cluster resources",
+    monitorRuntimeLogs: "Runtime logs",
+    monitorResultLogs: "Result logs",
+    monitorClusterBody: "Resource usage details are provided by the cluster platform. This panel keeps the troubleshooting entry only.",
+    monitorOpenCluster: "Open cluster monitor",
+    monitorCopyTaskId: "Copy task ID",
+    monitorTaskIdCopied: "Task ID copied",
+    monitorRuntimeSummary: "Latest event",
+    monitorResultSummary: "Latest output",
+    monitorViewRuntimeLogs: "View runtime logs",
+    monitorViewResultLogs: "View result logs",
+    monitorLogComingSoon: "Log details will be connected later",
+    monitorFeedback: "Notify project team",
+    monitorFeedbackSent: "Feedback package prepared for the project team",
     history: "History",
     waitingPlan: "Plan pending",
     waitingPlanBody:
@@ -1442,7 +1496,9 @@ function dataAssetFromReport(report: RunReport): Omit<ProjectDataAsset, "id" | "
   };
 }
 
-function UserMenu({ lang, onAction }: { lang: Lang; onAction: (action: "profile" | "network" | "language" | "logout") => void }) {
+type UserMenuAction = "profile" | "notifications" | "network" | "language" | "logout";
+
+function UserMenu({ lang, onAction }: { lang: Lang; onAction: (action: UserMenuAction) => void }) {
   const text = copy[lang];
 
   return (
@@ -1453,6 +1509,14 @@ function UserMenu({ lang, onAction }: { lang: Lang; onAction: (action: "profile"
       >
         <UserCircle2 className="h-4 w-4" />
         {text.userCenter}
+      </button>
+
+      <button
+        onClick={() => onAction("notifications")}
+        className="flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[13px] font-medium text-slate-700 transition hover:bg-slate-50 hover:text-[#161FAD]"
+      >
+        <Bell className="h-4 w-4" />
+        {lang === "zh" ? "通知设置" : "Notification settings"}
       </button>
 
       <button
@@ -1594,8 +1658,6 @@ function AttachDataDialog({
   const handleFolderClick = () => {
     const input = folderInputRef.current;
     if (!input) return;
-    input.setAttribute("webkitdirectory", "");
-    input.setAttribute("directory", "");
     input.click();
   };
 
@@ -1611,8 +1673,7 @@ function AttachDataDialog({
   const tabs: { id: AttachedInput["source"]; label: string }[] =
     variant === "upload"
       ? [
-          { id: "local-file", label: text.localFiles },
-          { id: "local-folder", label: text.localFolder },
+          { id: "local-file", label: lang === "zh" ? "本地上传" : "Local upload" },
         ]
       : [
           { id: "project-data", label: text.projectData },
@@ -1621,7 +1682,7 @@ function AttachDataDialog({
           { id: "template", label: text.templates },
         ];
   const tabCount = (id: AttachedInput["source"]) => {
-    if (id === "local-file") return localFiles.length;
+    if (id === "local-file") return localFiles.length + localFolders.length;
     if (id === "local-folder") return localFolders.length;
     if (id === "project-data") return filteredProjectData.length;
     if (id === "public-data") return filteredPublicData.length;
@@ -1629,7 +1690,7 @@ function AttachDataDialog({
     return filteredTemplates.length;
   };
   const selectedTabCount = (id: AttachedInput["source"]) => {
-    if (id === "local-file") return localFiles.length;
+    if (id === "local-file") return localFiles.length + localFolders.length;
     if (id === "local-folder") return localFolders.length;
     if (id === "project-data") return selectedProjectIds.length;
     if (id === "public-data") return selectedPublicIds.length;
@@ -1723,23 +1784,17 @@ function AttachDataDialog({
                           meta: `${Math.max(1, Math.round(file.size / 1024))} KB`,
                         })),
                       );
+                      event.target.value = "";
                     }}
                   />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex w-full flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-10 text-center transition hover:border-[rgba(23,36,216,0.24)] hover:bg-[rgba(23,36,216,0.03)]"
-                  >
-                    <Upload className="mb-3 h-8 w-8 text-[#161FAD]" />
-                    <span className="text-[13px] font-semibold text-slate-700">{text.chooseFiles}</span>
-                    <span className="mt-1 text-[11px] text-slate-400">CSV / PDB / XLSX / JSON / PDF</span>
-                  </button>
-                </div>
-              ) : null}
-
-              {activeTab === "local-folder" ? (
-                <div className="space-y-4">
                   <input
-                    ref={folderInputRef}
+                    ref={(node) => {
+                      folderInputRef.current = node;
+                      if (node) {
+                        node.setAttribute("webkitdirectory", "");
+                        node.setAttribute("directory", "");
+                      }
+                    }}
                     type="file"
                     multiple
                     className="hidden"
@@ -1759,16 +1814,37 @@ function AttachDataDialog({
                             ]
                           : [],
                       );
+                      event.target.value = "";
                     }}
                   />
-                  <button
-                    onClick={handleFolderClick}
-                    className="flex w-full flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-10 text-center transition hover:border-[rgba(23,36,216,0.24)] hover:bg-[rgba(23,36,216,0.03)]"
-                  >
-                    <FolderOpen className="mb-3 h-8 w-8 text-[#161FAD]" />
-                    <span className="text-[13px] font-semibold text-slate-700">{text.chooseFolder}</span>
-                    <span className="mt-1 text-[11px] text-slate-400">{lang === "zh" ? "用于批量输入数据目录" : "Use a data directory as batch input"}</span>
-                  </button>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex min-h-[180px] w-full flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-10 text-center transition hover:border-[rgba(23,36,216,0.24)] hover:bg-[rgba(23,36,216,0.03)]"
+                    >
+                      <Upload className="mb-3 h-8 w-8 text-[#161FAD]" />
+                      <span className="text-[13px] font-semibold text-slate-700">{text.chooseFiles}</span>
+                      <span className="mt-1 text-[11px] text-slate-400">CSV / PDB / XLSX / JSON / PDF</span>
+                      {localFiles.length > 0 ? (
+                        <span className="mt-3 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-[#161FAD]">
+                          {lang === "zh" ? `已选择 ${localFiles.length} 个文件` : `${localFiles.length} files selected`}
+                        </span>
+                      ) : null}
+                    </button>
+                    <button
+                      onClick={handleFolderClick}
+                      className="flex min-h-[180px] w-full flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-10 text-center transition hover:border-[rgba(23,36,216,0.24)] hover:bg-[rgba(23,36,216,0.03)]"
+                    >
+                      <FolderOpen className="mb-3 h-8 w-8 text-[#161FAD]" />
+                      <span className="text-[13px] font-semibold text-slate-700">{text.chooseFolder}</span>
+                      <span className="mt-1 text-[11px] text-slate-400">{lang === "zh" ? "用于批量输入数据目录" : "Use a data directory as batch input"}</span>
+                      {localFolders.length > 0 ? (
+                        <span className="mt-3 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-[#161FAD]">
+                          {localFolders[0]?.meta}
+                        </span>
+                      ) : null}
+                    </button>
+                  </div>
                 </div>
               ) : null}
 
@@ -1964,7 +2040,7 @@ function Sidebar({
   userMenuOpen: boolean;
   onNewConversation: () => void;
   onToggleUserMenu: () => void;
-  onUserMenuAction: (action: "profile" | "network" | "language" | "logout") => void;
+  onUserMenuAction: (action: UserMenuAction) => void;
   collapsed?: boolean;
 }) {
   const text = copy[lang];
@@ -3047,13 +3123,6 @@ function FilePreviewDrawer({
   );
 }
 
-function historyRunStatusClass(status: HistoryRunStatus) {
-  if (status === "Completed") return "bg-emerald-50 text-emerald-700";
-  if (status === "Paused at HITL") return "bg-amber-50 text-amber-700";
-  if (status === "Failed") return "bg-red-50 text-red-600";
-  return "bg-[rgba(255,201,151,0.2)] text-[#8a5216]";
-}
-
 function historyStepIconClass(status: StepStatus) {
   if (status === "done") return "border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.08)] text-[#161FAD]";
   if (status === "running") return "border-[rgba(255,201,151,0.45)] bg-[rgba(255,201,151,0.2)] text-[#8a5216]";
@@ -3269,7 +3338,8 @@ function HistoryRunDetail({
   setExpandedStepId: (id: string) => void;
 }) {
   const text = copy[lang];
-  const [activeDetailTab, setActiveDetailTab] = useState<"plan" | "files">("plan");
+  const report = runReports.find((item) => item.runId === run.id) ?? null;
+  const [activeDetailTab, setActiveDetailTab] = useState<"plan" | "files" | "report">("plan");
 
   return (
     <div className="space-y-3">
@@ -3277,6 +3347,7 @@ function HistoryRunDetail({
         {[
           { id: "plan" as const, label: "Plan" },
           { id: "files" as const, label: "Files" },
+          { id: "report" as const, label: "Report" },
         ].map((tab) => {
           const active = activeDetailTab === tab.id;
           return (
@@ -3366,7 +3437,7 @@ function HistoryRunDetail({
             </div>
           </div>
         </div>
-      ) : (
+      ) : activeDetailTab === "files" ? (
         <div className="rounded-[20px] border border-slate-100 bg-white p-3.5 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
@@ -3389,6 +3460,45 @@ function HistoryRunDetail({
               </div>
             ))}
           </div>
+        </div>
+      ) : (
+        <div className="rounded-[20px] border border-slate-100 bg-white p-3.5 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
+          {report ? (
+            <div className="space-y-3">
+              <div className="rounded-[18px] border border-slate-100 bg-slate-50/90 px-3.5 py-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-semibold text-[#070261]">{pick(lang, report.title)}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-slate-400">{report.fileName}</p>
+                    <p className="mt-2 text-[11px] leading-5 text-slate-500">{pick(lang, report.summary)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {report.sections.map((section) => (
+                  <section key={section.id} className="rounded-[16px] border border-slate-100 bg-slate-50/70 px-3.5 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-semibold text-slate-800">{pick(lang, section.title)}</p>
+                        <p className="mt-1 text-[11px] leading-5 text-slate-500">{pick(lang, section.summary)}</p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${reportBadgeClass(section.tone)}`}>
+                        {section.badge}
+                      </span>
+                    </div>
+                  </section>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-10 text-center text-[13px] text-slate-400">
+              {lang === "zh" ? "当前快照暂无报告" : "No report for this snapshot"}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -3418,9 +3528,7 @@ function HistoryPanelContent({ lang }: { lang: Lang }) {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate text-[13px] font-semibold text-slate-800">{pick(lang, run.title)}</p>
-                <p className="mt-1 text-[11px] text-slate-400">{pick(lang, run.summaryLine)}</p>
               </div>
-              <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${historyRunStatusClass(run.status)}`}>{run.status}</span>
             </div>
             <p className="mt-2 text-[11px] leading-5 text-slate-500">{pick(lang, run.reason)}</p>
             <div className="mt-3 flex items-center justify-between gap-2 text-[11px]">
@@ -3441,7 +3549,7 @@ function HistoryPanelContent({ lang }: { lang: Lang }) {
               <SheetHeader className="border-b border-slate-200 bg-white/90 px-5 py-5">
                 <SheetTitle className="pr-8 text-[17px] font-semibold text-[#070261]">{pick(lang, selectedRun.title)}</SheetTitle>
                 <SheetDescription className="text-[12px] text-slate-500">
-                  {pick(lang, selectedRun.time)} · {selectedRun.status} · {pick(lang, selectedRun.summaryLine)}
+                  {pick(lang, selectedRun.time)}
                 </SheetDescription>
               </SheetHeader>
               <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
@@ -3639,6 +3747,167 @@ function WorkflowFlowDrawer({
   );
 }
 
+function MonitorPanelContent({
+  lang,
+  resultFiles,
+  steps,
+}: {
+  lang: Lang;
+  resultFiles: ResultFile[];
+  steps: PlanStep[];
+}) {
+  const text = copy[lang];
+  const doneCount = steps.filter((step) => step.status === "done").length;
+  const runningStep = steps.find((step) => step.status === "running");
+  const failedStep = steps.find((step) => step.status === "failed");
+  const waitingCount = steps.filter((step) => step.status === "waiting").length;
+  const completed = steps.length > 0 && doneCount === steps.length;
+  const elapsedMinutes = Math.max(doneCount * 6 + (runningStep ? 12 : 0), completed ? 42 : 4);
+  const remainingMinutes = completed ? 0 : Math.max(waitingCount * 7 + (runningStep ? 5 : 18), 5);
+  const currentStepLabel = runningStep
+    ? pick(lang, runningStep.title)
+    : failedStep
+      ? pick(lang, failedStep.title)
+      : completed
+        ? lang === "zh" ? "报告生成与归档" : "Report generated and archived"
+        : lang === "zh" ? "等待任务启动" : "Waiting for task start";
+  const taskId = "run-20260626-dll3-003";
+  const latestRuntimeLog = completed
+    ? lang === "zh" ? "报告生成完成，任务产物已归档。" : "Report generation completed and outputs are archived."
+    : runningStep
+      ? lang === "zh" ? "ML 回归建模运行中，等待模型评估结果写入。" : "ML regression is running and waiting for evaluation outputs."
+      : lang === "zh" ? "任务等待启动，尚未产生运行日志。" : "The task is waiting to start and has no runtime logs yet.";
+  const latestResultLog = resultFiles[0]
+    ? lang === "zh" ? `最近生成：${resultFiles[0].name}` : `Latest output: ${resultFiles[0].name}`
+    : lang === "zh" ? "暂无结果产物。" : "No result outputs yet.";
+  const handleCopyTaskId = () => {
+    void navigator.clipboard?.writeText(taskId);
+    toast.success(text.monitorTaskIdCopied);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { label: text.monitorElapsed, value: `${elapsedMinutes} min`, icon: <Timer className="h-4 w-4" /> },
+          { label: text.monitorEstimate, value: completed ? text.monitorEstimateDone : `${remainingMinutes} min`, icon: <Clock3 className="h-4 w-4" /> },
+          { label: text.monitorCredits, value: completed ? "128" : "~128", icon: <Zap className="h-4 w-4" /> },
+          { label: text.monitorOutputs, value: `${resultFiles.length}`, icon: <FileText className="h-4 w-4" /> },
+        ].map((item) => (
+          <div key={item.label} className="rounded-[18px] border border-slate-100 bg-white px-4 py-3">
+            <div className="mb-2 flex items-center justify-between text-slate-400">
+              <span className="text-[11px]">{item.label}</span>
+              {item.icon}
+            </div>
+            <p className="text-[18px] font-semibold text-[#070261]">{item.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-[18px] border border-slate-100 bg-slate-50/80 px-4 py-4">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.monitorCurrentStep}</p>
+        <p className="mt-2 text-[14px] font-semibold text-slate-800">{currentStepLabel}</p>
+        <p className="mt-1 text-[12px] leading-5 text-slate-500">
+          {runningStep
+            ? pick(lang, runningStep.detail)
+            : failedStep
+              ? pick(lang, failedStep.detail)
+              : completed
+                ? lang === "zh" ? "任务已完成，报告和结果文件已可查看。" : "The task is complete. Reports and result files are ready."
+                : lang === "zh" ? "任务尚未开始，启动后将展示实时步骤。" : "The task has not started yet. Live steps will appear after kickoff."}
+        </p>
+      </div>
+
+      <div className="rounded-[18px] border border-slate-100 bg-white px-4 py-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-[13px] font-semibold text-slate-700">{text.monitorCluster}</p>
+          <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[11px] text-slate-400">{text.monitorQueueValue}</span>
+        </div>
+        <div className="rounded-[14px] bg-slate-50/80 px-3 py-3">
+          <div className="flex items-start gap-3">
+            <Database className="mt-0.5 h-4 w-4 shrink-0 text-[#161FAD]" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] leading-5 text-slate-600">{text.monitorClusterBody}</p>
+              <p className="mt-2 font-mono text-[11px] text-slate-400">{taskId}</p>
+            </div>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={() => toast.message(lang === "zh" ? "将打开集群监控外链" : "Cluster monitor link will open")}
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#161FAD] px-3 py-2 text-[12px] font-semibold text-white transition hover:bg-[#1724D8]"
+            >
+              <ArrowUpRight className="h-3.5 w-3.5" />
+              {text.monitorOpenCluster}
+            </button>
+            <button
+              onClick={handleCopyTaskId}
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+            >
+              {text.monitorCopyTaskId}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-[18px] border border-slate-100 bg-white px-4 py-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-[13px] font-semibold text-slate-700">{text.monitorRuntimeLogs}</p>
+          <span className="text-[11px] text-slate-400">{text.monitorRuntimeSummary}</span>
+        </div>
+        <div className="rounded-[14px] bg-slate-50/80 px-3 py-3">
+          <p className="text-[12px] leading-5 text-slate-600">{latestRuntimeLog}</p>
+          <button
+            onClick={() => toast.message(text.monitorLogComingSoon)}
+            className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+          >
+            <ArrowUpRight className="h-3.5 w-3.5" />
+            {text.monitorViewRuntimeLogs}
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-[18px] border border-slate-100 bg-white px-4 py-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-[13px] font-semibold text-slate-700">{text.monitorResultLogs}</p>
+          <span className="text-[11px] text-slate-400">{text.monitorResultSummary}</span>
+        </div>
+        <div className="rounded-[14px] bg-slate-50/80 px-3 py-3">
+          <div className="flex items-start gap-2">
+            <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#161FAD]" />
+            <p className="min-w-0 flex-1 text-[12px] leading-5 text-slate-600">{latestResultLog}</p>
+          </div>
+          <button
+            onClick={() => toast.message(text.monitorLogComingSoon)}
+            className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+          >
+            <ArrowUpRight className="h-3.5 w-3.5" />
+            {text.monitorViewResultLogs}
+          </button>
+        </div>
+      </div>
+
+      {failedStep ? (
+        <div className="rounded-[18px] border border-red-100 bg-red-50 px-4 py-4">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 text-red-500" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold text-red-700">{lang === "zh" ? "发现异常" : "Exception detected"}</p>
+              <p className="mt-1 text-[12px] leading-5 text-red-600">{pick(lang, failedStep.detail)}</p>
+              <button
+                onClick={() => toast.success(text.monitorFeedbackSent)}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-[12px] font-medium text-red-600 transition hover:bg-red-100"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                {text.monitorFeedback}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function SidePanel({
   lang,
   view,
@@ -3713,7 +3982,7 @@ function SidePanel({
     const keyword = searchQuery.trim().toLowerCase();
     if (!keyword) return previousRunItems;
     return previousRunItems.filter((run) => {
-      const runText = `${pick(lang, run.title)} ${pick(lang, run.summaryLine)} ${pick(lang, run.reason)} ${run.files
+      const runText = `${pick(lang, run.title)} ${pick(lang, run.reason)} ${run.files
         .map((file) => `${file.name} ${pick(lang, file.meta)}`)
         .join(" ")}`.toLowerCase();
       return runText.includes(keyword);
@@ -3752,6 +4021,7 @@ function SidePanel({
             { id: "plan" as SideTab, label: text.plan },
             { id: "results" as SideTab, label: text.results },
             { id: "reports" as SideTab, label: text.reports },
+            { id: "monitor" as SideTab, label: text.monitor },
           ].map((tab) => {
             const active = sideTab === tab.id;
             return (
@@ -3849,6 +4119,20 @@ function SidePanel({
               reports={reports}
               onDownloadReport={onDownloadReport}
               onSaveReportToProject={onSaveReportToProject}
+            />
+          )
+        ) : sideTab === "monitor" ? (
+          showEmpty ? (
+            <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 p-5">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.monitor}</p>
+              <h3 className="mt-1 text-[15px] font-semibold text-[#070261]">{text.monitorTitle}</h3>
+              <p className="mt-3 text-[12px] leading-6 text-slate-500">{text.monitorBody}</p>
+            </div>
+          ) : (
+            <MonitorPanelContent
+              lang={lang}
+              resultFiles={resultFiles}
+              steps={steps}
             />
           )
         ) : showEmpty ? (
@@ -4067,7 +4351,6 @@ function SidePanel({
               <History className="h-4 w-4 shrink-0 text-[#161FAD]" />
               <div className="min-w-0">
                 <p className="text-[13px] font-semibold text-[#070261]">{text.history}</p>
-                <p className="truncate text-[10px] text-slate-400">{pick(lang, historyRunItems[0].summaryLine)}</p>
               </div>
             </div>
             <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${historyExpanded ? "rotate-180" : ""}`} />
@@ -4095,6 +4378,7 @@ export default function Home() {
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [userCenterTab, setUserCenterTab] = useState<"profile" | "notifications" | "usage">("profile");
   const [attachDialogVariant, setAttachDialogVariant] = useState<"upload" | "resource" | null>(null);
   const [attachedInputs, setAttachedInputs] = useState<AttachedInput[]>([]);
   const activeScenario = demoScenarios[activeScenarioId];
@@ -4331,7 +4615,7 @@ export default function Home() {
     toast.success(`${text.savedFilesToProject} ${createdCount} ${text.exportedSuffix}`);
   };
 
-  const handleUserMenuAction = (action: "profile" | "network" | "language" | "logout") => {
+  const handleUserMenuAction = (action: UserMenuAction) => {
     if (action === "language") {
       const nextLang: Lang = lang === "zh" ? "en" : "zh";
       setLang(nextLang);
@@ -4341,6 +4625,14 @@ export default function Home() {
     }
 
     if (action === "profile") {
+      setUserCenterTab("profile");
+      setMainView("user-center");
+      setUserMenuOpen(false);
+      return;
+    }
+
+    if (action === "notifications") {
+      setUserCenterTab("notifications");
       setMainView("user-center");
       setUserMenuOpen(false);
       return;
@@ -4380,7 +4672,7 @@ export default function Home() {
           ) : mainView === "create-project" ? (
             <CreateProjectView lang={lang} />
           ) : mainView === "user-center" ? (
-            <UserCenter lang={lang} />
+            <UserCenter initialTab={userCenterTab} lang={lang} />
           ) : activeView === "new" ? (
             <NewTaskWorkspace
               attachedInputs={attachedInputs}
