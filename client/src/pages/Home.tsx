@@ -11,7 +11,7 @@ import { CreateProjectView } from "@/components/CreateProjectView";
 import { PdbViewer } from "@/components/PdbViewer";
 import { ProjectPanel } from "@/components/ProjectPanel";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
-import { PUBLIC_DATA, ResourcePanel, SKILLS, TEMPLATES } from "@/components/ResourcePanel";
+import { ResourcePanel, TEMPLATES } from "@/components/ResourcePanel";
 import { UserCenter } from "@/components/UserCenter";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -48,7 +48,6 @@ import {
   Search,
   SendHorizonal,
   Sparkles,
-  Timer,
   Upload,
   UserCircle2,
   WandSparkles,
@@ -250,8 +249,8 @@ const recommendedPrompts: RecommendedPrompt[] = [
   {
     id: "dll3",
     text: l(
-      "基于输入的实验数据，分析与双表位抗体内化（内吞作用）相关的特征。设计并构建一个预测模型，对这种内化活性进行评分。",
-      "Based on input experimental data, analyze the features correlated with biparatopic antibody internalization (endocytosis). Design and build a predictive model to score this internalization activity.",
+      "使用 xtalfold3-fast 和 canonical PDB 模式预测已上传抗体 MSA 文件的 3D 结构，然后使用 xmpnn 针对每个目标结构设计 5 条新序列。随后使用 immunebuilder（type=mab）预测这些设计序列的结构。",
+      "Predict the 3D structure of the uploaded antibody MSA file using xtalfold3-fast with canonical PDB mode, then use xmpnn to design 5 new sequences per target structure. After that, predict the structures of the designed sequences using immunebuilder (type=mab).",
     ),
   },
   {
@@ -1069,14 +1068,14 @@ const copy = {
     attachUploadTitle: "上传本地数据",
     attachUploadBody: "选择本地文件或文件夹，作为本轮 Agent 任务的新输入。",
     attachResourceTitle: "引用已有资源",
-    attachResourceBody: "从项目数据或全局资源中选择已有数据，作为本轮 Agent 任务的上下文。",
+    attachResourceBody: "从项目数据或 Skill 中选择已有资源，作为本轮 Agent 任务的上下文。",
     localFiles: "本地文件",
     localFolder: "本地文件夹",
     projectData: "项目数据",
     globalData: "全局资源",
     publicData: "公共数据",
-    skills: "Skill",
-    templates: "模版",
+    skills: "工具",
+    templates: "Skill",
     searchResources: "搜索资源",
     chooseFiles: "选择文件",
     chooseFolder: "选择文件夹",
@@ -1121,26 +1120,17 @@ const copy = {
     reports: "报告",
     monitor: "监控",
     monitorTitle: "任务监控",
-    monitorBody: "运行过程中实时查看状态、资源使用、日志和异常反馈。",
-    monitorElapsed: "已运行",
-    monitorEstimate: "预计剩余",
-    monitorEstimateDone: "已完成",
-    monitorCredits: "预计 Credits",
-    monitorOutputs: "已生成产物",
-    monitorCurrentStep: "当前步骤",
+    monitorBody: "运行过程中查看集群资源、执行日志和异常反馈。",
     monitorQueue: "队列位置",
     monitorQueueValue: "优先队列 · 第 2 位",
     monitorCluster: "集群资源",
-    monitorRuntimeLogs: "运行日志",
-    monitorResultLogs: "结果日志",
+    monitorExecutionLogs: "执行日志",
     monitorClusterBody: "资源使用详情由集群平台提供，当前页面仅保留排查入口。",
     monitorOpenCluster: "打开集群监控",
     monitorCopyTaskId: "复制任务 ID",
     monitorTaskIdCopied: "任务 ID 已复制",
-    monitorRuntimeSummary: "最近事件",
-    monitorResultSummary: "最近产物",
-    monitorViewRuntimeLogs: "查看运行日志",
-    monitorViewResultLogs: "查看结果日志",
+    monitorExecutionSummary: "最近事件",
+    monitorViewExecutionLogs: "查看执行日志",
     monitorLogComingSoon: "日志详情将在后续接入",
     monitorFeedback: "反馈项目组排查",
     monitorFeedbackSent: "已生成反馈信息，可发送给项目组排查",
@@ -1220,14 +1210,14 @@ const copy = {
     attachUploadTitle: "Upload local data",
     attachUploadBody: "Choose local files or folders as new input for this agent task.",
     attachResourceTitle: "Reference existing resources",
-    attachResourceBody: "Select existing project data or global resources as context for this agent task.",
+    attachResourceBody: "Select existing project data or Skills as context for this agent task.",
     localFiles: "Local files",
     localFolder: "Local folder",
     projectData: "Project data",
     globalData: "Global resources",
     publicData: "Public data",
-    skills: "Skills",
-    templates: "Templates",
+    skills: "Tools",
+    templates: "Skills",
     searchResources: "Search resources",
     chooseFiles: "Choose files",
     chooseFolder: "Choose folder",
@@ -1272,26 +1262,17 @@ const copy = {
     reports: "Reports",
     monitor: "Monitor",
     monitorTitle: "Task monitor",
-    monitorBody: "Track status, resource usage, logs, and exception feedback while the task runs.",
-    monitorElapsed: "Elapsed",
-    monitorEstimate: "Est. remaining",
-    monitorEstimateDone: "Completed",
-    monitorCredits: "Est. credits",
-    monitorOutputs: "Outputs",
-    monitorCurrentStep: "Current step",
+    monitorBody: "Check cluster resources, execution logs, and exception feedback while the task runs.",
     monitorQueue: "Queue",
     monitorQueueValue: "Priority queue · #2",
     monitorCluster: "Cluster resources",
-    monitorRuntimeLogs: "Runtime logs",
-    monitorResultLogs: "Result logs",
+    monitorExecutionLogs: "Execution logs",
     monitorClusterBody: "Resource usage details are provided by the cluster platform. This panel keeps the troubleshooting entry only.",
     monitorOpenCluster: "Open cluster monitor",
     monitorCopyTaskId: "Copy task ID",
     monitorTaskIdCopied: "Task ID copied",
-    monitorRuntimeSummary: "Latest event",
-    monitorResultSummary: "Latest output",
-    monitorViewRuntimeLogs: "View runtime logs",
-    monitorViewResultLogs: "View result logs",
+    monitorExecutionSummary: "Latest event",
+    monitorViewExecutionLogs: "View execution logs",
     monitorLogComingSoon: "Log details will be connected later",
     monitorFeedback: "Notify project team",
     monitorFeedbackSent: "Feedback package prepared for the project team",
@@ -1563,16 +1544,16 @@ function attachedSourceLabel(source: AttachedInput["source"], lang: Lang) {
     "local-folder": "文件夹",
     "project-data": "项目数据",
     "public-data": "公共数据",
-    skill: "Skill",
-    template: "模版",
+    skill: "工具",
+    template: "Skill",
   };
   const en: Record<AttachedInput["source"], string> = {
     "local-file": "File",
     "local-folder": "Folder",
     "project-data": "Project",
     "public-data": "Public",
-    skill: "Skill",
-    template: "Template",
+    skill: "Tool",
+    template: "Skill",
   };
   return lang === "zh" ? zh[source] : en[source];
 }
@@ -1600,18 +1581,10 @@ function AttachDataDialog({
   const [localFiles, setLocalFiles] = useState<AttachedInput[]>([]);
   const [localFolders, setLocalFolders] = useState<AttachedInput[]>([]);
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
-  const [selectedPublicIds, setSelectedPublicIds] = useState<string[]>([]);
-  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
   const normalizedResourceQuery = resourceQuery.trim().toLowerCase();
   const filteredProjectData = projectData.filter((asset) =>
     `${asset.name} ${asset.type} ${asset.tags?.join(" ") ?? ""}`.toLowerCase().includes(normalizedResourceQuery),
-  );
-  const filteredPublicData = PUBLIC_DATA.filter((item) =>
-    `${item.name} ${item.desc} ${item.category} ${item.tags.join(" ")}`.toLowerCase().includes(normalizedResourceQuery),
-  );
-  const filteredSkills = SKILLS.filter((item) =>
-    `${item.name} ${item.skillId} ${item.desc} ${item.category} ${item.ability} ${item.tags.join(" ")}`.toLowerCase().includes(normalizedResourceQuery),
   );
   const filteredTemplates = TEMPLATES.filter((item) =>
     `${item.name} ${item.desc} ${item.category} ${item.type}`.toLowerCase().includes(normalizedResourceQuery),
@@ -1625,22 +1598,6 @@ function AttachDataDialog({
       source: "project-data",
       meta: `${asset.type.toUpperCase()} · ${asset.size}`,
     }));
-  const publicItems: AttachedInput[] = PUBLIC_DATA
-    .filter((item) => selectedPublicIds.includes(item.id))
-    .map((item) => ({
-      id: `public-data-${item.id}`,
-      name: item.name,
-      source: "public-data",
-      meta: `${item.category} · ${item.size}`,
-    }));
-  const skillItems: AttachedInput[] = SKILLS
-    .filter((item) => selectedSkillIds.includes(item.id))
-    .map((item) => ({
-      id: `skill-${item.id}`,
-      name: item.name,
-      source: "skill",
-      meta: `${item.category} · ${item.ability}`,
-    }));
   const templateItems: AttachedInput[] = TEMPLATES
     .filter((item) => selectedTemplateIds.includes(item.id))
     .map((item) => ({
@@ -1649,7 +1606,7 @@ function AttachDataDialog({
       source: "template",
       meta: `${item.category} · ${item.steps} steps`,
     }));
-  const selectedItems = variant === "upload" ? [...localFiles, ...localFolders] : [...projectItems, ...publicItems, ...skillItems, ...templateItems];
+  const selectedItems = variant === "upload" ? [...localFiles, ...localFolders] : [...projectItems, ...templateItems];
 
   const toggleSelected = (id: string, selectedIds: string[], setSelectedIds: (ids: string[]) => void) => {
     setSelectedIds(selectedIds.includes(id) ? selectedIds.filter((item) => item !== id) : [...selectedIds, id]);
@@ -1677,24 +1634,18 @@ function AttachDataDialog({
         ]
       : [
           { id: "project-data", label: text.projectData },
-          { id: "public-data", label: text.publicData },
-          { id: "skill", label: text.skills },
           { id: "template", label: text.templates },
         ];
   const tabCount = (id: AttachedInput["source"]) => {
     if (id === "local-file") return localFiles.length + localFolders.length;
     if (id === "local-folder") return localFolders.length;
     if (id === "project-data") return filteredProjectData.length;
-    if (id === "public-data") return filteredPublicData.length;
-    if (id === "skill") return filteredSkills.length;
     return filteredTemplates.length;
   };
   const selectedTabCount = (id: AttachedInput["source"]) => {
     if (id === "local-file") return localFiles.length + localFolders.length;
     if (id === "local-folder") return localFolders.length;
     if (id === "project-data") return selectedProjectIds.length;
-    if (id === "public-data") return selectedPublicIds.length;
-    if (id === "skill") return selectedSkillIds.length;
     return selectedTemplateIds.length;
   };
   const activeTabLabel = tabs.find((tab) => tab.id === activeTab)?.label ?? "";
@@ -1824,7 +1775,7 @@ function AttachDataDialog({
                     >
                       <Upload className="mb-3 h-8 w-8 text-[#161FAD]" />
                       <span className="text-[13px] font-semibold text-slate-700">{text.chooseFiles}</span>
-                      <span className="mt-1 text-[11px] text-slate-400">CSV / PDB / XLSX / JSON / PDF</span>
+                      <span className="mt-1 text-[11px] text-slate-400">FASTA / PDB / CIF / A3M / CSV / XLSX</span>
                       {localFiles.length > 0 ? (
                         <span className="mt-3 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-[#161FAD]">
                           {lang === "zh" ? `已选择 ${localFiles.length} 个文件` : `${localFiles.length} files selected`}
@@ -1875,72 +1826,11 @@ function AttachDataDialog({
                 </div>
               ) : null}
 
-              {activeTab === "public-data" ? (
-                <div className="grid grid-cols-2 gap-2.5">
-                  {filteredPublicData.length === 0 ? (
-                    <div className="col-span-2 rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-10 text-center text-[13px] text-slate-400">
-                      {lang === "zh" ? "没有匹配的公共数据" : "No matching public data"}
-                    </div>
-                  ) : (
-                    filteredPublicData.map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => toggleSelected(item.id, selectedPublicIds, setSelectedPublicIds)}
-                        className={`flex min-h-[88px] w-full items-start gap-3 rounded-[14px] border px-3 py-2.5 text-left transition hover:bg-white ${
-                          selectedPublicIds.includes(item.id) ? "border-[#161FAD]/20 bg-white shadow-sm" : "border-slate-100 bg-slate-50/80"
-                        }`}
-                      >
-                        <Checkbox checked={selectedPublicIds.includes(item.id)} />
-                        <Globe2 className="mt-0.5 h-4 w-4 text-[#161FAD]" />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[12px] font-semibold text-slate-800">{item.name}</p>
-                          <p className="mt-0.5 text-[10px] text-slate-400">{item.category} · {item.size}</p>
-                          <p className="mt-1 line-clamp-1 text-[11px] text-slate-500">{item.desc}</p>
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              ) : null}
-
-              {activeTab === "skill" ? (
-                <div className="grid grid-cols-2 gap-2.5">
-                  {filteredSkills.length === 0 ? (
-                    <div className="col-span-2 rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-10 text-center text-[13px] text-slate-400">
-                      {lang === "zh" ? "没有匹配的 Skill" : "No matching skills"}
-                    </div>
-                  ) : (
-                    filteredSkills.map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => toggleSelected(item.id, selectedSkillIds, setSelectedSkillIds)}
-                        className={`flex min-h-[112px] w-full items-start gap-3 rounded-[14px] border px-3 py-2.5 text-left transition hover:bg-white ${
-                          selectedSkillIds.includes(item.id) ? "border-[#161FAD]/20 bg-white shadow-sm" : "border-slate-100 bg-slate-50/80"
-                        }`}
-                      >
-                        <Checkbox checked={selectedSkillIds.includes(item.id)} />
-                        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
-                          <Zap className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="min-w-0 flex-1 truncate text-[12px] font-semibold text-slate-800">{item.name}</p>
-                            <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] text-slate-500">{item.category}</span>
-                          </div>
-                          <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-slate-500">{item.desc}</p>
-                          <span className="mt-1.5 inline-flex rounded-full border border-violet-100 bg-violet-50 px-2 py-0.5 text-[10px] text-violet-700">{item.ability}</span>
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              ) : null}
-
               {activeTab === "template" ? (
                 <div className="grid grid-cols-2 gap-2.5">
                   {filteredTemplates.length === 0 ? (
                     <div className="col-span-2 rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-10 text-center text-[13px] text-slate-400">
-                      {lang === "zh" ? "没有匹配的模版" : "No matching templates"}
+                      {lang === "zh" ? "没有匹配的 Skill" : "No matching Skills"}
                     </div>
                   ) : (
                     filteredTemplates.map((item) => (
@@ -3749,37 +3639,24 @@ function WorkflowFlowDrawer({
 
 function MonitorPanelContent({
   lang,
-  resultFiles,
   steps,
 }: {
   lang: Lang;
-  resultFiles: ResultFile[];
   steps: PlanStep[];
 }) {
   const text = copy[lang];
   const doneCount = steps.filter((step) => step.status === "done").length;
   const runningStep = steps.find((step) => step.status === "running");
   const failedStep = steps.find((step) => step.status === "failed");
-  const waitingCount = steps.filter((step) => step.status === "waiting").length;
   const completed = steps.length > 0 && doneCount === steps.length;
-  const elapsedMinutes = Math.max(doneCount * 6 + (runningStep ? 12 : 0), completed ? 42 : 4);
-  const remainingMinutes = completed ? 0 : Math.max(waitingCount * 7 + (runningStep ? 5 : 18), 5);
-  const currentStepLabel = runningStep
-    ? pick(lang, runningStep.title)
-    : failedStep
-      ? pick(lang, failedStep.title)
-      : completed
-        ? lang === "zh" ? "报告生成与归档" : "Report generated and archived"
-        : lang === "zh" ? "等待任务启动" : "Waiting for task start";
   const taskId = "run-20260626-dll3-003";
-  const latestRuntimeLog = completed
-    ? lang === "zh" ? "报告生成完成，任务产物已归档。" : "Report generation completed and outputs are archived."
+  const latestExecutionLog = failedStep
+    ? lang === "zh" ? "任务执行异常，已生成排查信息。" : "The task hit an exception and troubleshooting details are ready."
+    : completed
+      ? lang === "zh" ? "任务执行完成，结果文件和报告可在结果/报告页查看。" : "Execution is complete. Result files and reports are available in their tabs."
     : runningStep
-      ? lang === "zh" ? "ML 回归建模运行中，等待模型评估结果写入。" : "ML regression is running and waiting for evaluation outputs."
-      : lang === "zh" ? "任务等待启动，尚未产生运行日志。" : "The task is waiting to start and has no runtime logs yet.";
-  const latestResultLog = resultFiles[0]
-    ? lang === "zh" ? `最近生成：${resultFiles[0].name}` : `Latest output: ${resultFiles[0].name}`
-    : lang === "zh" ? "暂无结果产物。" : "No result outputs yet.";
+      ? lang === "zh" ? `${pick(lang, runningStep.title)} 正在执行，详细事件会持续写入日志。` : `${pick(lang, runningStep.title)} is running. Detailed events will continue to be written to logs.`
+      : lang === "zh" ? "任务等待启动，执行事件会在此处展示。" : "The task is waiting to start. Execution events will appear here.";
   const handleCopyTaskId = () => {
     void navigator.clipboard?.writeText(taskId);
     toast.success(text.monitorTaskIdCopied);
@@ -3787,37 +3664,6 @@ function MonitorPanelContent({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { label: text.monitorElapsed, value: `${elapsedMinutes} min`, icon: <Timer className="h-4 w-4" /> },
-          { label: text.monitorEstimate, value: completed ? text.monitorEstimateDone : `${remainingMinutes} min`, icon: <Clock3 className="h-4 w-4" /> },
-          { label: text.monitorCredits, value: completed ? "128" : "~128", icon: <Zap className="h-4 w-4" /> },
-          { label: text.monitorOutputs, value: `${resultFiles.length}`, icon: <FileText className="h-4 w-4" /> },
-        ].map((item) => (
-          <div key={item.label} className="rounded-[18px] border border-slate-100 bg-white px-4 py-3">
-            <div className="mb-2 flex items-center justify-between text-slate-400">
-              <span className="text-[11px]">{item.label}</span>
-              {item.icon}
-            </div>
-            <p className="text-[18px] font-semibold text-[#070261]">{item.value}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="rounded-[18px] border border-slate-100 bg-slate-50/80 px-4 py-4">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.monitorCurrentStep}</p>
-        <p className="mt-2 text-[14px] font-semibold text-slate-800">{currentStepLabel}</p>
-        <p className="mt-1 text-[12px] leading-5 text-slate-500">
-          {runningStep
-            ? pick(lang, runningStep.detail)
-            : failedStep
-              ? pick(lang, failedStep.detail)
-              : completed
-                ? lang === "zh" ? "任务已完成，报告和结果文件已可查看。" : "The task is complete. Reports and result files are ready."
-                : lang === "zh" ? "任务尚未开始，启动后将展示实时步骤。" : "The task has not started yet. Live steps will appear after kickoff."}
-        </p>
-      </div>
-
       <div className="rounded-[18px] border border-slate-100 bg-white px-4 py-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <p className="text-[13px] font-semibold text-slate-700">{text.monitorCluster}</p>
@@ -3851,37 +3697,17 @@ function MonitorPanelContent({
 
       <div className="rounded-[18px] border border-slate-100 bg-white px-4 py-4">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="text-[13px] font-semibold text-slate-700">{text.monitorRuntimeLogs}</p>
-          <span className="text-[11px] text-slate-400">{text.monitorRuntimeSummary}</span>
+          <p className="text-[13px] font-semibold text-slate-700">{text.monitorExecutionLogs}</p>
+          <span className="text-[11px] text-slate-400">{text.monitorExecutionSummary}</span>
         </div>
         <div className="rounded-[14px] bg-slate-50/80 px-3 py-3">
-          <p className="text-[12px] leading-5 text-slate-600">{latestRuntimeLog}</p>
+          <p className="text-[12px] leading-5 text-slate-600">{latestExecutionLog}</p>
           <button
             onClick={() => toast.message(text.monitorLogComingSoon)}
             className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
           >
             <ArrowUpRight className="h-3.5 w-3.5" />
-            {text.monitorViewRuntimeLogs}
-          </button>
-        </div>
-      </div>
-
-      <div className="rounded-[18px] border border-slate-100 bg-white px-4 py-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="text-[13px] font-semibold text-slate-700">{text.monitorResultLogs}</p>
-          <span className="text-[11px] text-slate-400">{text.monitorResultSummary}</span>
-        </div>
-        <div className="rounded-[14px] bg-slate-50/80 px-3 py-3">
-          <div className="flex items-start gap-2">
-            <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#161FAD]" />
-            <p className="min-w-0 flex-1 text-[12px] leading-5 text-slate-600">{latestResultLog}</p>
-          </div>
-          <button
-            onClick={() => toast.message(text.monitorLogComingSoon)}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
-          >
-            <ArrowUpRight className="h-3.5 w-3.5" />
-            {text.monitorViewResultLogs}
+            {text.monitorViewExecutionLogs}
           </button>
         </div>
       </div>
@@ -4131,7 +3957,6 @@ function SidePanel({
           ) : (
             <MonitorPanelContent
               lang={lang}
-              resultFiles={resultFiles}
               steps={steps}
             />
           )

@@ -14,10 +14,10 @@ type Lang = "zh" | "en";
 type UserCenterTab = "profile" | "notifications" | "usage";
 
 const usageRecords = [
-  { id: "u1", time: "2026-05-29 14:36", item: "DLL3 双抗预测流程", type: "工作流运行", credits: "-128", project: "DLL3 抗体研究" },
-  { id: "u2", time: "2026-05-29 11:08", item: "Rosetta 特征计算", type: "Skill 调用", credits: "-42", project: "DLL3 抗体研究" },
-  { id: "u3", time: "2026-05-28 18:12", item: "ML 回归建模", type: "模型计算", credits: "-76", project: "DLL3 抗体研究" },
-  { id: "u4", time: "2026-05-28 09:30", item: "公共数据引用", type: "资源读取", credits: "-6", project: "EGFR 靶向优化" },
+  { id: "u1", runId: "RUN-20260529-1436", time: "2026-05-29 14:36", item: "DLL3 双抗预测流程", type: "工作流运行", credits: "-128", project: "DLL3 抗体研究" },
+  { id: "u2", runId: "RUN-20260529-1108", time: "2026-05-29 11:08", item: "Rosetta 特征计算", type: "Skill 调用", credits: "-42", project: "DLL3 抗体研究" },
+  { id: "u3", runId: "RUN-20260528-1812", time: "2026-05-28 18:12", item: "ML 回归建模", type: "模型计算", credits: "-76", project: "DLL3 抗体研究" },
+  { id: "u4", runId: "RUN-20260528-0930", time: "2026-05-28 09:30", item: "公共数据引用", type: "资源读取", credits: "-6", project: "EGFR 靶向优化" },
 ];
 
 const notificationRules = [
@@ -252,8 +252,9 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
               ))}
             </div>
             <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-white">
-              <div className="grid grid-cols-[minmax(220px,1fr)_160px_160px_100px] gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-2.5 text-[11px] font-medium text-slate-400">
+              <div className="grid grid-cols-[minmax(180px,1fr)_150px_150px_150px_90px] gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-2.5 text-[11px] font-medium text-slate-400">
                 <span>{lang === "zh" ? "任务名称" : "Task name"}</span>
+                <span>Run ID</span>
                 <span>{lang === "zh" ? "所属项目" : "Project"}</span>
                 <span>{lang === "zh" ? "时间" : "Time"}</span>
                 <span>Credits</span>
@@ -261,11 +262,12 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
               {usageRecords.map((record, index) => (
                 <div
                   key={record.id}
-                  className={`grid grid-cols-[minmax(220px,1fr)_160px_160px_100px] items-center gap-3 px-5 py-4 text-[12px] ${
+                  className={`grid grid-cols-[minmax(180px,1fr)_150px_150px_150px_90px] items-center gap-3 px-5 py-4 text-[12px] ${
                     index !== 0 ? "border-t border-slate-100" : ""
                   }`}
                 >
                   <span className="truncate font-medium text-slate-800">{record.item}</span>
+                  <span className="truncate font-mono text-[11px] text-slate-500">{record.runId}</span>
                   <span className="truncate text-slate-400">{record.project}</span>
                   <span className="text-slate-400">{record.time}</span>
                   <span className="font-semibold text-[#161FAD]">{record.credits}</span>
