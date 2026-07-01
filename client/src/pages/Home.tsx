@@ -41,13 +41,16 @@ import {
   Globe2,
   History,
   LogOut,
+  MoreHorizontal,
   PanelRightOpen,
+  Pencil,
   Plus,
   RefreshCw,
   Save,
   Search,
   SendHorizonal,
   Sparkles,
+  Trash2,
   Upload,
   UserCircle2,
   WandSparkles,
@@ -101,7 +104,10 @@ type ResultFile = {
 type HistoryTask = {
   id: string;
   title: LocalizedText;
-  meta: LocalizedText;
+  runId?: string;
+  status?: "queued" | "running" | "success" | "failed" | "cancelled";
+  submittedAt?: string;
+  submittedAtLabel?: LocalizedText;
   isDraft?: boolean;
 };
 
@@ -131,6 +137,8 @@ type HistoryRunItem = {
   title: LocalizedText;
   status: HistoryRunStatus;
   time: LocalizedText;
+  startedAt: LocalizedText;
+  completedAt: LocalizedText;
   summaryLine: LocalizedText;
   reason: LocalizedText;
   baseRun: LocalizedText;
@@ -234,15 +242,24 @@ const firstReplySections = [
 ];
 
 const historyTasks: HistoryTask[] = [
-  { id: "draft", title: l("新任务", "New task"), meta: l("创建任务", "Create task"), isDraft: true },
+  { id: "draft", title: l("新任务", "New task"), submittedAtLabel: l("创建任务", "Create task"), isDraft: true },
   {
     id: "t1",
     title: l("内化预测建模工作流程", "Internalization Predictive Modeling Workflow"),
-    meta: l("当前任务", "Current task"),
+    runId: "run-20260626-dll3-003",
+    status: "running",
+    submittedAt: "2026-06-26T14:36:00",
+    submittedAtLabel: l("06-26 14:36", "Jun 26 14:36"),
   },
-  { id: "t2", title: l("内吞特征关联分析", "Endocytosis feature analysis"), meta: l("3 分钟前", "3 min ago") },
-  { id: "t3", title: l("EGFR 抗体优化", "EGFR antibody optimization"), meta: l("昨天 18:20", "Yesterday 18:20") },
-  { id: "t4", title: l("CDR 区域内吞影响评估", "CDR region impact assessment"), meta: l("04-12 14:32", "04-12 14:32") },
+  { id: "t2", title: l("DLL3 双抗预测 Skill", "DLL3 bispecific prediction Skill"), runId: "run-20260626-dll3-002", status: "success", submittedAt: "2026-06-26T11:08:00", submittedAtLabel: l("06-26 11:08", "Jun 26 11:08") },
+  { id: "t3", title: l("内吞特征关联分析", "Endocytosis feature analysis"), runId: "run-20260625-endo-009", status: "success", submittedAt: "2026-06-25T18:20:00", submittedAtLabel: l("昨天 18:20", "Yesterday 18:20") },
+  { id: "t4", title: l("EGFR 抗体优化", "EGFR antibody optimization"), runId: "run-20260625-egfr-006", status: "failed", submittedAt: "2026-06-25T14:32:00", submittedAtLabel: l("昨天 14:32", "Yesterday 14:32") },
+  { id: "t5", title: l("CDR 区域内吞影响评估", "CDR region impact assessment"), runId: "run-20260624-cdr-004", status: "success", submittedAt: "2026-06-24T09:18:00", submittedAtLabel: l("06-24 09:18", "Jun 24 09:18") },
+  { id: "t6", title: l("抗体 MSA 结构预测", "Antibody MSA structure prediction"), runId: "run-20260623-msa-012", status: "queued", submittedAt: "2026-06-23T16:42:00", submittedAtLabel: l("06-23 16:42", "Jun 23 16:42") },
+  { id: "t7", title: l("XMPNN 序列设计评估", "XMPNN sequence design review"), runId: "run-20260622-xmpnn-018", status: "cancelled", submittedAt: "2026-06-22T13:20:00", submittedAtLabel: l("06-22 13:20", "Jun 22 13:20") },
+  { id: "t8", title: l("PD-L1 亲和力回归建模", "PD-L1 affinity regression modeling"), runId: "run-20260621-pdl1-005", status: "success", submittedAt: "2026-06-21T10:05:00", submittedAtLabel: l("06-21 10:05", "Jun 21 10:05") },
+  { id: "t9", title: l("候选抗体稳定性预测", "Candidate antibody stability prediction"), runId: "run-20260620-stab-014", status: "success", submittedAt: "2026-06-20T15:10:00", submittedAtLabel: l("06-20 15:10", "Jun 20 15:10") },
+  { id: "t10", title: l("免疫原性风险初筛", "Immunogenicity risk pre-screen"), runId: "run-20260619-immuno-008", status: "success", submittedAt: "2026-06-19T19:44:00", submittedAtLabel: l("06-19 19:44", "Jun 19 19:44") },
 ];
 
 const recommendedPrompts: RecommendedPrompt[] = [
@@ -815,6 +832,8 @@ const historyRunItems: HistoryRunItem[] = [
     title: l("Run #3 · DLL3 功能预测标准流程", "Run #3 · DLL3 functional prediction workflow"),
     status: "Completed",
     time: l("今天 15:42", "Today 15:42"),
+    startedAt: l("今天 15:31:08", "Today 15:31:08"),
+    completedAt: l("今天 15:42:03", "Today 15:42:03"),
     summaryLine: l("Completed · 6 steps · 3 inputs · 12 files", "Completed · 6 steps · 3 inputs · 12 files"),
     reason: l("基于 Run #2 调整 Top K=12 后重跑，并保留 HITL 决策记录。", "Reran from Run #2 with Top K=12 and kept the HITL decision trace."),
     baseRun: l("Run #2", "Run #2"),
@@ -909,6 +928,8 @@ const historyRunItems: HistoryRunItem[] = [
     title: l("Run #2 · 调整 cutoff 后重跑", "Run #2 · Rerun with adjusted cutoff"),
     status: "Paused at HITL",
     time: l("今天 15:18", "Today 15:18"),
+    startedAt: l("今天 15:02:14", "Today 15:02:14"),
+    completedAt: l("等待人工确认", "Waiting for HITL"),
     summaryLine: l("Paused at HITL · 4/6 steps · 3 inputs · 6 files", "Paused at HITL · 4/6 steps · 3 inputs · 6 files"),
     reason: l("用户追问 10nM cutoff 下是否更稳定，Agent 生成 Plan B 并在异常候选处暂停。", "The user asked whether 10nM cutoff is more stable. The agent generated Plan B and paused at anomalous candidates."),
     baseRun: l("Run #1", "Run #1"),
@@ -963,6 +984,8 @@ const historyRunItems: HistoryRunItem[] = [
     title: l("Run #1 · 初始 Plan A", "Run #1 · Initial Plan A"),
     status: "Completed",
     time: l("今天 14:56", "Today 14:56"),
+    startedAt: l("今天 14:48:12", "Today 14:48:12"),
+    completedAt: l("今天 14:56:21", "Today 14:56:21"),
     summaryLine: l("Completed · 6 steps · 3 inputs · 8 files", "Completed · 6 steps · 3 inputs · 8 files"),
     reason: l("首次基于用户原始问题生成 Plan A，完成基础结构特征和初版模型分析。", "First generated Plan A from the original prompt and completed baseline structural features and model analysis."),
     baseRun: l("无", "None"),
@@ -1035,6 +1058,29 @@ const statusStyles: Record<StepStatus, { icon: string }> = {
   },
 };
 
+const taskStatusMeta: Record<NonNullable<HistoryTask["status"]>, { label: LocalizedText; className: string }> = {
+  queued: {
+    label: l("排队中", "Queued"),
+    className: "bg-slate-100 text-slate-500",
+  },
+  running: {
+    label: l("运行中", "Running"),
+    className: "bg-amber-50 text-amber-700",
+  },
+  success: {
+    label: l("成功", "Success"),
+    className: "bg-emerald-50 text-emerald-700",
+  },
+  failed: {
+    label: l("失败", "Failed"),
+    className: "bg-red-50 text-red-600",
+  },
+  cancelled: {
+    label: l("取消", "Cancelled"),
+    className: "bg-slate-100 text-slate-500",
+  },
+};
+
 const runningStepDurationsMs = [1400, 1500, 1600, 1700, 1800];
 
 const createRuntimeSteps = (steps: PlanStep[]): PlanStep[] =>
@@ -1048,6 +1094,9 @@ const copy = {
     platformSubtitle: "AILUX AGENT",
     newConversation: "新任务",
     tasksLabel: "任务列表",
+    searchTasks: "搜索任务名称 / ID / 关键词",
+    noMatchedTasks: "没有匹配的任务",
+    noMatchedTasksBody: "换个关键词试试，或清空搜索查看全部任务。",
     signedInRole: "已登录 · 项目成员",
     userCenter: "用户中心",
     networkDiagnostic: "网络检测工具",
@@ -1121,6 +1170,15 @@ const copy = {
     monitor: "监控",
     monitorTitle: "任务监控",
     monitorBody: "运行过程中查看集群资源、执行日志和异常反馈。",
+    monitorTaskCard: "任务状态",
+    monitorTaskStatus: "运行状态",
+    monitorSubmittedAt: "创建时间",
+    monitorCompletedAt: "完成时间",
+    monitorTaskStatusQueued: "排队中",
+    monitorTaskStatusRunning: "运行中",
+    monitorTaskStatusSuccess: "成功",
+    monitorTaskStatusFailed: "失败",
+    monitorTaskStatusCancelled: "取消",
     monitorQueue: "队列位置",
     monitorQueueValue: "优先队列 · 第 2 位",
     monitorCluster: "集群资源",
@@ -1130,6 +1188,9 @@ const copy = {
     monitorCopyTaskId: "复制任务 ID",
     monitorTaskIdCopied: "任务 ID 已复制",
     monitorExecutionSummary: "最近事件",
+    monitorExecutionLogSummary: "最近日志：任务执行事件已写入，可打开查看完整实时日志。",
+    monitorLogDialogTitle: "执行日志",
+    monitorLogDialogBody: "展示当前任务的实时日志；任务结束后保留为历史日志。",
     monitorViewExecutionLogs: "查看执行日志",
     monitorLogComingSoon: "日志详情将在后续接入",
     monitorFeedback: "反馈项目组排查",
@@ -1160,6 +1221,11 @@ const copy = {
     selectFile: "选择",
     batchDownload: "批量下载",
     batchSave: "批量保存",
+    saveBatchTitle: "保存至项目数据集",
+    saveBatchBody: "将所选结果文件保存到当前项目的数据集中，并记录来源任务信息。",
+    saveBatchDescription: "描述",
+    saveBatchDescriptionPlaceholder: "说明这批文件的用途或来源，例如：用于后续结构复核和特征建模。",
+    confirmSaveBatch: "确认保存",
     selectedCount: "已选择",
     download: "下载",
     downloading: "已开始下载",
@@ -1167,6 +1233,9 @@ const copy = {
     selectBeforeExport: "请先选择需要导出的文件",
     exportedFiles: "已导出",
     savedFilesToProject: "已保存到项目数据",
+    sourceTask: "来源任务",
+    sourceTaskId: "任务 ID",
+    savedAt: "保存时间",
     exportedSuffix: "个文件",
     runHistoryTitle: "Run / Plan 版本历史",
     runHistoryBody: "当前任务内每次确认 Plan、重跑或 HITL 分支都会生成不可变 Run 快照。",
@@ -1190,6 +1259,9 @@ const copy = {
     platformSubtitle: "AILUX AGENT",
     newConversation: "New task",
     tasksLabel: "Task list",
+    searchTasks: "Search task name / ID / keyword",
+    noMatchedTasks: "No matching tasks",
+    noMatchedTasksBody: "Try another keyword or clear search to view all tasks.",
     signedInRole: "Signed in · Project member",
     userCenter: "User center",
     networkDiagnostic: "Network diagnostics",
@@ -1263,6 +1335,15 @@ const copy = {
     monitor: "Monitor",
     monitorTitle: "Task monitor",
     monitorBody: "Check cluster resources, execution logs, and exception feedback while the task runs.",
+    monitorTaskCard: "Task status",
+    monitorTaskStatus: "Status",
+    monitorSubmittedAt: "Created",
+    monitorCompletedAt: "Completed",
+    monitorTaskStatusQueued: "Queued",
+    monitorTaskStatusRunning: "Running",
+    monitorTaskStatusSuccess: "Success",
+    monitorTaskStatusFailed: "Failed",
+    monitorTaskStatusCancelled: "Cancelled",
     monitorQueue: "Queue",
     monitorQueueValue: "Priority queue · #2",
     monitorCluster: "Cluster resources",
@@ -1272,6 +1353,9 @@ const copy = {
     monitorCopyTaskId: "Copy task ID",
     monitorTaskIdCopied: "Task ID copied",
     monitorExecutionSummary: "Latest event",
+    monitorExecutionLogSummary: "Latest log events are available. Open to inspect full live logs.",
+    monitorLogDialogTitle: "Execution logs",
+    monitorLogDialogBody: "Shows live logs for the current task. After completion, it remains available as historical logs.",
     monitorViewExecutionLogs: "View execution logs",
     monitorLogComingSoon: "Log details will be connected later",
     monitorFeedback: "Notify project team",
@@ -1304,6 +1388,11 @@ const copy = {
     selectFile: "Select",
     batchDownload: "Download",
     batchSave: "Save",
+    saveBatchTitle: "Save to project data",
+    saveBatchBody: "Save selected result files to the current project data and record task provenance.",
+    saveBatchDescription: "Description",
+    saveBatchDescriptionPlaceholder: "Describe the purpose or source, e.g. for downstream structure review and feature modeling.",
+    confirmSaveBatch: "Save",
     selectedCount: "Selected",
     download: "Download",
     downloading: "Started downloading",
@@ -1311,6 +1400,9 @@ const copy = {
     selectBeforeExport: "Please select files to export first",
     exportedFiles: "Exported",
     savedFilesToProject: "Saved to project data",
+    sourceTask: "Source task",
+    sourceTaskId: "Task ID",
+    savedAt: "Saved at",
     exportedSuffix: "files",
     runHistoryTitle: "Run / Plan version history",
     runHistoryBody: "Every confirmed plan, rerun, or HITL branch in the current task creates an immutable run snapshot.",
@@ -1459,11 +1551,23 @@ function dataAssetTypeFromResult(type: ResultType): ProjectDataAsset["type"] {
   return type;
 }
 
-function dataAssetFromResultFile(file: ResultFile): Omit<ProjectDataAsset, "id" | "source" | "updatedAt"> {
+function dataAssetFromResultFile(
+  file: ResultFile,
+  source?: {
+    description?: string;
+    sourceTaskName?: string;
+    sourceTaskId?: string;
+    savedAt?: string;
+  },
+): Omit<ProjectDataAsset, "id" | "source" | "updatedAt"> {
   return {
     name: file.name,
     type: dataAssetTypeFromResult(file.type),
     size: file.type === "pdb" ? "2.4 MB" : file.type === "png" ? "320 KB" : file.type === "docx" ? "1.2 MB" : "128 KB",
+    description: source?.description,
+    sourceTaskName: source?.sourceTaskName,
+    sourceTaskId: source?.sourceTaskId,
+    savedAt: source?.savedAt,
     tags: ["run-output"],
   };
 }
@@ -1806,22 +1910,31 @@ function AttachDataDialog({
                       {text.noProjectData}
                     </div>
                   ) : (
-                    filteredProjectData.map((asset) => (
-                      <button
-                        key={asset.id}
-                        onClick={() => toggleSelected(asset.id, selectedProjectIds, setSelectedProjectIds)}
-                        className={`flex w-full items-center gap-3 rounded-[14px] border px-3 py-2.5 text-left transition hover:bg-white ${
-                          selectedProjectIds.includes(asset.id) ? "border-[#161FAD]/20 bg-white shadow-sm" : "border-slate-100 bg-slate-50/80"
-                        }`}
-                      >
-                        <Checkbox checked={selectedProjectIds.includes(asset.id)} />
-                        <Database className="h-4 w-4 text-[#161FAD]" />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[12px] font-semibold text-slate-800">{asset.name}</p>
-                          <p className="mt-0.5 text-[10px] text-slate-400">{asset.type.toUpperCase()} · {asset.size}</p>
-                        </div>
-                      </button>
-                    ))
+                    filteredProjectData.map((asset) => {
+                      const sourceText = asset.sourceTaskName
+                        ? `${lang === "zh" ? "来源任务" : "Source task"}：${asset.sourceTaskName}`
+                        : asset.description || (asset.source === "uploaded" ? (lang === "zh" ? "本地上传数据" : "Uploaded data") : (lang === "zh" ? "Run 产物" : "Run output"));
+                      return (
+                        <button
+                          key={asset.id}
+                          onClick={() => toggleSelected(asset.id, selectedProjectIds, setSelectedProjectIds)}
+                          className={`flex min-h-[92px] w-full items-start gap-3 rounded-[14px] border px-3 py-2.5 text-left transition hover:bg-white ${
+                            selectedProjectIds.includes(asset.id) ? "border-[#161FAD]/20 bg-white shadow-sm" : "border-slate-100 bg-slate-50/80"
+                          }`}
+                        >
+                          <Checkbox checked={selectedProjectIds.includes(asset.id)} className="mt-1" />
+                          <Database className="mt-1 h-4 w-4 shrink-0 text-[#161FAD]" />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[12px] font-semibold text-slate-800">{asset.name}</p>
+                            <p className="mt-0.5 text-[10px] text-slate-400">{asset.type.toUpperCase()} · {asset.size}</p>
+                            <p className="mt-1 line-clamp-1 text-[11px] text-slate-500">{sourceText}</p>
+                            {asset.sourceTaskId ? (
+                              <p className="mt-0.5 truncate font-mono text-[10px] text-slate-400">{asset.sourceTaskId}</p>
+                            ) : null}
+                          </div>
+                        </button>
+                      );
+                    })
                   )}
                 </div>
               ) : null}
@@ -1921,6 +2034,7 @@ function Sidebar({
   lang,
   userMenuOpen,
   onNewConversation,
+  onOpenTask,
   onToggleUserMenu,
   onUserMenuAction,
   collapsed = false,
@@ -1929,12 +2043,70 @@ function Sidebar({
   lang: Lang;
   userMenuOpen: boolean;
   onNewConversation: () => void;
+  onOpenTask: (task: HistoryTask) => void;
   onToggleUserMenu: () => void;
   onUserMenuAction: (action: UserMenuAction) => void;
   collapsed?: boolean;
 }) {
   const text = copy[lang];
   const { mainView, setMainView, setResourceTab } = useProject();
+  const [taskSearchQuery, setTaskSearchQuery] = useState("");
+  const [hiddenTaskIds, setHiddenTaskIds] = useState<string[]>([]);
+  const [taskTitleOverrides, setTaskTitleOverrides] = useState<Record<string, string>>({});
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingTaskTitle, setEditingTaskTitle] = useState("");
+  const [openTaskMenuId, setOpenTaskMenuId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState("t1");
+  const renameCanceledRef = useRef(false);
+  const normalizedTaskQuery = taskSearchQuery.trim().toLowerCase();
+  const baseTaskItems = useMemo(
+    () =>
+      historyTasks
+        .filter((task) => !task.isDraft)
+        .sort((a, b) => (b.submittedAt ?? "").localeCompare(a.submittedAt ?? "")),
+    [],
+  );
+  const taskItems = useMemo(
+    () =>
+      baseTaskItems
+        .filter((task) => !hiddenTaskIds.includes(task.id))
+        .map((task) => (taskTitleOverrides[task.id] ? { ...task, title: l(taskTitleOverrides[task.id], taskTitleOverrides[task.id]) } : task)),
+    [baseTaskItems, hiddenTaskIds, taskTitleOverrides],
+  );
+  const filteredTaskItems = useMemo(() => {
+    if (!normalizedTaskQuery) return taskItems;
+    return taskItems.filter((task) =>
+      `${pick(lang, task.title)} ${task.runId ?? ""} ${pick(lang, task.submittedAtLabel ?? l("", ""))}`
+        .toLowerCase()
+        .includes(normalizedTaskQuery),
+    );
+  }, [lang, normalizedTaskQuery, taskItems]);
+  const startRenameTask = (task: HistoryTask) => {
+    renameCanceledRef.current = false;
+    setEditingTaskId(task.id);
+    setEditingTaskTitle(pick(lang, task.title));
+    setOpenTaskMenuId(null);
+  };
+  const saveRenamedTask = () => {
+    if (!editingTaskId) return;
+    if (renameCanceledRef.current) {
+      renameCanceledRef.current = false;
+      setEditingTaskId(null);
+      setEditingTaskTitle("");
+      return;
+    }
+    const nextTitle = editingTaskTitle.trim();
+    if (nextTitle) {
+      setTaskTitleOverrides((current) => ({ ...current, [editingTaskId]: nextTitle }));
+    }
+    setEditingTaskId(null);
+    setEditingTaskTitle("");
+  };
+  const openTask = (task: HistoryTask) => {
+    setSelectedTaskId(task.id);
+    setOpenTaskMenuId(null);
+    onOpenTask(task);
+  };
 
   if (collapsed) {
     return (
@@ -1956,14 +2128,13 @@ function Sidebar({
         </div>
 
         <div className="flex flex-1 flex-col items-center gap-2">
-          {historyTasks
-            .filter((task) => !task.isDraft)
-            .map((task) => {
-              const active = activeView !== "new" && task.id === "t1";
+          {taskItems.map((task) => {
+              const active = activeView !== "new" && task.id === selectedTaskId;
               const taskTitle = pick(lang, task.title);
               return (
                 <button
                   key={task.id}
+                  onClick={() => openTask(task)}
                   className={`flex h-12 w-12 items-center justify-center rounded-2xl border text-[11px] font-semibold transition ${
                     active
                       ? "border-[rgba(23,36,216,0.12)] bg-[linear-gradient(180deg,rgba(23,36,216,0.08),rgba(132,140,254,0.08))] text-[#161FAD] shadow-[0_12px_28px_rgba(23,36,216,0.08)]"
@@ -2018,7 +2189,7 @@ function Sidebar({
         <Database className="h-4 w-4" />
         <div>
           <p className="text-[13px] font-semibold">{lang === "zh" ? "全局资源" : "Global resources"}</p>
-          <p className="mt-0.5 text-[11px] opacity-70">{lang === "zh" ? "数据 · Skill · 模版" : "Data · Skills · Templates"}</p>
+          <p className="mt-0.5 text-[11px] opacity-70">{lang === "zh" ? "数据 · Tool · Skill" : "Data · Tools · Skills"}</p>
         </div>
       </button>
 
@@ -2042,13 +2213,20 @@ function Sidebar({
       {/* Tasks section */}
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-[13px] font-semibold text-slate-500">{text.tasksLabel}</h2>
-        <button className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-50 hover:text-[#161FAD] active:scale-[0.92]">
-          <PanelRightOpen className="h-4 w-4" />
-        </button>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
-        {historyTasks.filter((task) => !task.isDraft).length === 0 ? (
+      <div className="mb-2 flex items-center gap-2 rounded-[14px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
+        <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+        <input
+          value={taskSearchQuery}
+          onChange={(event) => setTaskSearchQuery(event.target.value)}
+          className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
+          placeholder={text.searchTasks}
+        />
+      </div>
+
+      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {taskItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center">
             <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100">
               <PanelRightOpen className="h-4 w-4 text-slate-400" />
@@ -2056,29 +2234,97 @@ function Sidebar({
             <p className="text-[12px] font-medium text-slate-500">{lang === "zh" ? "暂无任务" : "No tasks yet"}</p>
             <p className="mt-1 text-[11px] text-slate-400">{lang === "zh" ? "新建对话后任务将显示在这里" : "Tasks will appear here"}</p>
           </div>
+        ) : filteredTaskItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center">
+            <Search className="mb-2 h-5 w-5 text-slate-300" />
+            <p className="text-[12px] font-medium text-slate-500">{text.noMatchedTasks}</p>
+            <p className="mt-1 text-[11px] leading-5 text-slate-400">{text.noMatchedTasksBody}</p>
+          </div>
         ) : (
-          historyTasks
-            .filter((task) => !task.isDraft)
-            .map((task) => {
-              const active = activeView !== "new" && task.id === "t1";
+          <>
+            {filteredTaskItems.map((task) => {
+              const active = activeView !== "new" && task.id === selectedTaskId;
+              const isEditing = editingTaskId === task.id;
               return (
-                <button
+                <div
                   key={task.id}
-                  className={`group w-full rounded-[18px] border px-3.5 py-3 text-left transition duration-150 active:scale-[0.98] ${
+                  className={`group relative w-full rounded-[14px] border px-3 py-2.5 text-left transition duration-150 active:scale-[0.98] ${
                     active
                       ? "border-[rgba(23,36,216,0.12)] bg-[linear-gradient(180deg,rgba(23,36,216,0.08),rgba(132,140,254,0.08))] shadow-[0_12px_28px_rgba(23,36,216,0.08)]"
                       : "border-transparent bg-slate-50/80 hover:border-slate-200 hover:bg-white hover:shadow-[0_4px_12px_rgba(15,23,42,0.05)]"
                   }`}
                 >
-                  <p className={`truncate text-[13px] transition-colors ${
-                    active ? "font-semibold text-[#070261]" : "font-medium text-slate-700 group-hover:text-[#070261]"
-                  }`}>
-                    {pick(lang, task.title)}
-                  </p>
-                  <p className="mt-1 text-[11px] text-slate-400">{pick(lang, task.meta)}</p>
-                </button>
+                  {isEditing ? (
+                    <input
+                      value={editingTaskTitle}
+                      autoFocus
+                      onBlur={saveRenamedTask}
+                      onChange={(event) => setEditingTaskTitle(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") saveRenamedTask();
+                        if (event.key === "Escape") {
+                          renameCanceledRef.current = true;
+                          setEditingTaskId(null);
+                          setEditingTaskTitle("");
+                        }
+                      }}
+                      className="w-full rounded-lg border border-[rgba(23,36,216,0.18)] bg-white px-2 py-1 text-[12px] font-medium text-slate-700 outline-none"
+                    />
+                  ) : (
+                    <>
+                      <button onClick={() => openTask(task)} className="block w-full pr-16 text-left">
+                        <p className={`truncate text-[12px] transition-colors ${
+                          active ? "font-semibold text-[#070261]" : "font-medium text-slate-700 group-hover:text-[#070261]"
+                        }`}>
+                          {pick(lang, task.title)}
+                        </p>
+                      </button>
+                      <span className="pointer-events-none absolute right-9 top-1/2 -translate-y-1/2 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-medium text-slate-400 opacity-0 shadow-sm ring-1 ring-slate-100 transition group-hover:opacity-100">
+                        {pick(lang, task.submittedAtLabel ?? l("", ""))}
+                      </span>
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenTaskMenuId((current) => (current === task.id ? null : task.id));
+                        }}
+                        className={`absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-lg text-slate-300 transition hover:bg-slate-100 hover:text-slate-600 ${
+                          openTaskMenuId === task.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                        }`}
+                        aria-label={lang === "zh" ? "任务操作" : "Task actions"}
+                      >
+                        <MoreHorizontal className="h-3.5 w-3.5" />
+                      </button>
+                      {openTaskMenuId === task.id ? (
+                        <div className="absolute right-1 top-[calc(100%-2px)] z-20 w-28 rounded-xl border border-slate-200 bg-white p-1 shadow-[0_16px_34px_rgba(15,23,42,0.14)]">
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              startRenameTask(task);
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[11px] text-slate-600 transition hover:bg-slate-50 hover:text-[#161FAD]"
+                          >
+                            <Pencil className="h-3 w-3" />
+                            {lang === "zh" ? "重命名" : "Rename"}
+                          </button>
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setHiddenTaskIds((current) => [...current, task.id]);
+                              setOpenTaskMenuId(null);
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[11px] text-red-500 transition hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            {lang === "zh" ? "删除" : "Delete"}
+                          </button>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+                </div>
               );
-            })
+            })}
+          </>
         )}
       </div>
 
@@ -3229,7 +3475,7 @@ function HistoryRunDetail({
 }) {
   const text = copy[lang];
   const report = runReports.find((item) => item.runId === run.id) ?? null;
-  const [activeDetailTab, setActiveDetailTab] = useState<"plan" | "files" | "report">("plan");
+  const [activeDetailTab, setActiveDetailTab] = useState<"plan" | "files" | "monitor" | "report">("plan");
 
   return (
     <div className="space-y-3">
@@ -3238,6 +3484,7 @@ function HistoryRunDetail({
           { id: "plan" as const, label: "Plan" },
           { id: "files" as const, label: "Files" },
           { id: "report" as const, label: "Report" },
+          { id: "monitor" as const, label: "Monitor" },
         ].map((tab) => {
           const active = activeDetailTab === tab.id;
           return (
@@ -3349,6 +3596,42 @@ function HistoryRunDetail({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      ) : activeDetailTab === "monitor" ? (
+        <div className="rounded-[20px] border border-slate-100 bg-white p-3.5 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[13px] font-semibold text-[#070261]">{text.monitorTitle}</p>
+              <p className="mt-1 text-[11px] text-slate-400">{run.id}</p>
+            </div>
+            <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-medium text-slate-500">{run.status}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="rounded-[14px] bg-slate-50/90 px-3 py-2.5">
+              <p className="text-[11px] text-slate-400">{text.monitorSubmittedAt}</p>
+              <p className="mt-1 text-[12px] font-medium text-slate-700">{pick(lang, run.startedAt)}</p>
+            </div>
+            <div className="rounded-[14px] bg-slate-50/90 px-3 py-2.5">
+              <p className="text-[11px] text-slate-400">{text.monitorCompletedAt}</p>
+              <p className="mt-1 text-[12px] font-medium text-slate-700">{pick(lang, run.completedAt)}</p>
+            </div>
+          </div>
+          <div className="mt-3 space-y-2">
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">{text.historyLogs}</p>
+            {run.logs.map((log) => (
+              <div key={`${log.time}-${log.event}`} className="rounded-[14px] border border-slate-100 bg-slate-50/90 px-3 py-2.5">
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-white px-2 py-0.5 font-mono text-[10px] text-slate-500">{log.event}</span>
+                  <span className="font-mono text-[10px] text-slate-400">{log.time}</span>
+                </div>
+                <p className="text-[11px] leading-5 text-slate-600">{pick(lang, log.message)}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 rounded-[16px] bg-slate-950 px-3 py-3">
+            <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500">{lang === "zh" ? "原始日志预览" : "Raw log preview"}</p>
+            <pre className="max-h-[180px] overflow-y-auto whitespace-pre-wrap break-words font-mono text-[10px] leading-5 text-slate-100">{run.logs.map((log) => `${log.time} [${log.event}] ${pick(lang, log.message)}`).join("\n")}</pre>
           </div>
         </div>
       ) : (
@@ -3645,18 +3928,48 @@ function MonitorPanelContent({
   steps: PlanStep[];
 }) {
   const text = copy[lang];
+  const [logDialogOpen, setLogDialogOpen] = useState(false);
   const doneCount = steps.filter((step) => step.status === "done").length;
   const runningStep = steps.find((step) => step.status === "running");
   const failedStep = steps.find((step) => step.status === "failed");
   const completed = steps.length > 0 && doneCount === steps.length;
   const taskId = "run-20260626-dll3-003";
-  const latestExecutionLog = failedStep
-    ? lang === "zh" ? "任务执行异常，已生成排查信息。" : "The task hit an exception and troubleshooting details are ready."
+  const taskStatusKey: NonNullable<HistoryTask["status"]> = failedStep
+    ? "failed"
     : completed
-      ? lang === "zh" ? "任务执行完成，结果文件和报告可在结果/报告页查看。" : "Execution is complete. Result files and reports are available in their tabs."
-    : runningStep
-      ? lang === "zh" ? `${pick(lang, runningStep.title)} 正在执行，详细事件会持续写入日志。` : `${pick(lang, runningStep.title)} is running. Detailed events will continue to be written to logs.`
-      : lang === "zh" ? "任务等待启动，执行事件会在此处展示。" : "The task is waiting to start. Execution events will appear here.";
+      ? "success"
+      : runningStep
+        ? "running"
+        : "queued";
+  const taskStatusLabel: Record<NonNullable<HistoryTask["status"]>, string> = {
+    queued: text.monitorTaskStatusQueued,
+    running: text.monitorTaskStatusRunning,
+    success: text.monitorTaskStatusSuccess,
+    failed: text.monitorTaskStatusFailed,
+    cancelled: text.monitorTaskStatusCancelled,
+  };
+  const taskStatusClass = taskStatusMeta[taskStatusKey].className;
+  const executionLogText = completed
+    ? `2026-07-01 11:26:21.287585 2026-07-01 03:26:21,287 [INFO] STEP(antibody_structure_prediction): Step now status: SUCCESS.
+2026-07-01 11:26:21.026030 2026-07-01 03:26:21,025 [INFO] STEP(immunebuilder_mab): Result files archived to ./saveto/results
+2026-07-01 11:26:20.539006 2026-07-01 03:26:20,538 [INFO] JOB(s3://ailux-agent-prod/runs/run-20260626-dll3-003): Other job all over: {'xfold3_fast': 'DONE', 'xmpnn_design': 'DONE'}
+2026-07-01 11:26:19.072515 2026-07-01 03:26:19,072 [INFO] JOB(s3://ailux-agent-prod/runs/run-20260626-dll3-003): Run Loader over. Return code: 0, Cost: 928.8619058132172 seconds.
+2026-07-01 11:26:17.786537 2026-07-01 03:26:17,786 [INFO] JOB(s3://ailux-agent-prod/runs/run-20260626-dll3-003): Push Job inout finished
+2026-07-01 11:25:57.844117 [2026-07-01 03:25:57][INFO] The Finally COST : {'calls': {'xtalfold3_fast': 4, 'xmpnn': 20, 'immunebuilder': 20}, 'gpu_cost': 0.49666807360119286, 'sum_cost': 2.996625593601193}
+2026-07-01 11:25:53.096825 [2026-07-01 03:25:53][INFO] Generated antibody structures: Mcb008_model_1.pdb, ZG006_design_04.pdb
+2026-07-01 11:22:31.217138 [2026-07-01 03:22:31][INFO] Begin immunebuilder(type=mab) prediction ...
+2026-07-01 11:18:40.210395 2026-07-01 03:18:40,210 [INFO] STEP(xmpnn_design): Sequence design completed, candidates=20
+2026-07-01 11:10:49.764017 Start SteropeCli: /home/job/run; SDK version: 0.2.23`
+    : `2026-07-01 11:26:21.600029 sterope.exceptions.JobRunError: Step not done and Job.run() return code is not 0, exit
+2026-07-01 11:26:21.600019     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-07-01 11:26:21.599941     raise JobRunError(failed_reason)
+2026-07-01 11:26:21.599885   File "/root/conda/bin/sterope_cli.py", line 43, in raise_with_is_success
+2026-07-01 11:26:21.599779   File "/root/conda/bin/sterope_cli.py", line 161, in <module>
+2026-07-01 11:26:21.599765 Traceback (most recent call last):
+2026-07-01 11:26:21.287585 2026-07-01 03:26:21,287 [INFO] STEP(antibody_structure_prediction): Step now status: RUNNING.
+2026-07-01 11:26:20.035213 2026-07-01 03:26:20,035 [INFO] JOB(s3://ailux-agent-prod/runs/run-20260626-dll3-003): Extend leader lock
+2026-07-01 11:26:19.314534 2026-07-01 03:26:19,314 [INFO] JOB(s3://ailux-agent-prod/runs/run-20260626-dll3-003): Is leader, try get lock
+2026-07-01 11:10:49.764017 Start SteropeCli: /home/job/run; SDK version: 0.2.23`;
   const handleCopyTaskId = () => {
     void navigator.clipboard?.writeText(taskId);
     toast.success(text.monitorTaskIdCopied);
@@ -3664,6 +3977,25 @@ function MonitorPanelContent({
 
   return (
     <div className="space-y-4">
+      <div className="rounded-[18px] border border-slate-100 bg-white px-4 py-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-[13px] font-semibold text-slate-700">{text.monitorTaskCard}</p>
+          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${taskStatusClass}`}>
+            {taskStatusLabel[taskStatusKey]}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5 text-[11px]">
+          <div className="rounded-[14px] bg-slate-50/80 px-3 py-2">
+            <p className="text-slate-400">{text.monitorSubmittedAt}</p>
+            <p className="mt-1 font-medium text-slate-700">{lang === "zh" ? "06-26 14:36" : "Jun 26 14:36"}</p>
+          </div>
+          <div className="rounded-[14px] bg-slate-50/80 px-3 py-2">
+            <p className="text-slate-400">{text.monitorCompletedAt}</p>
+            <p className="mt-1 font-medium text-slate-700">{completed ? (lang === "zh" ? "06-26 15:18" : "Jun 26 15:18") : "-"}</p>
+          </div>
+        </div>
+      </div>
+
       <div className="rounded-[18px] border border-slate-100 bg-white px-4 py-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <p className="text-[13px] font-semibold text-slate-700">{text.monitorCluster}</p>
@@ -3701,9 +4033,14 @@ function MonitorPanelContent({
           <span className="text-[11px] text-slate-400">{text.monitorExecutionSummary}</span>
         </div>
         <div className="rounded-[14px] bg-slate-50/80 px-3 py-3">
-          <p className="text-[12px] leading-5 text-slate-600">{latestExecutionLog}</p>
+          <p className="text-[12px] leading-5 text-slate-600">{text.monitorExecutionLogSummary}</p>
+          <p className="mt-2 truncate font-mono text-[10px] text-slate-400">
+            {completed
+              ? "2026-07-01 11:26:21.287585 [INFO] STEP(antibody_structure_prediction): Step now status: SUCCESS."
+              : "2026-07-01 11:26:21.287585 [INFO] STEP(antibody_structure_prediction): Step now status: RUNNING."}
+          </p>
           <button
-            onClick={() => toast.message(text.monitorLogComingSoon)}
+            onClick={() => setLogDialogOpen(true)}
             className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
           >
             <ArrowUpRight className="h-3.5 w-3.5" />
@@ -3711,6 +4048,27 @@ function MonitorPanelContent({
           </button>
         </div>
       </div>
+
+      <Dialog open={logDialogOpen} onOpenChange={setLogDialogOpen}>
+        <DialogContent className="flex h-[min(860px,92vh)] max-h-[92vh] flex-col overflow-hidden rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[1180px]">
+          <DialogHeader className="border-b border-slate-100 px-5 py-4">
+            <DialogTitle className="text-[15px] font-semibold text-[#070261]">{text.monitorLogDialogTitle}</DialogTitle>
+            <p className="mt-1 text-[12px] leading-5 text-slate-500">{text.monitorLogDialogBody}</p>
+          </DialogHeader>
+          <div className="flex min-h-0 flex-1 flex-col p-5">
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-[14px] bg-slate-50 px-3 py-2">
+              <div className="min-w-0">
+                <p className="text-[12px] font-medium text-slate-700">{pick(lang, taskStatusMeta[taskStatusKey].label)}</p>
+                <p className="mt-0.5 truncate font-mono text-[10px] text-slate-400">{taskId}</p>
+              </div>
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${taskStatusClass}`}>
+                {taskStatusLabel[taskStatusKey]}
+              </span>
+            </div>
+            <pre className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap break-words rounded-[18px] bg-slate-950 px-4 py-4 font-mono text-[10px] leading-5 text-slate-100">{executionLogText}</pre>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {failedStep ? (
         <div className="rounded-[18px] border border-red-100 bg-red-50 px-4 py-4">
@@ -4206,7 +4564,10 @@ export default function Home() {
   const [userCenterTab, setUserCenterTab] = useState<"profile" | "notifications" | "usage">("profile");
   const [attachDialogVariant, setAttachDialogVariant] = useState<"upload" | "resource" | null>(null);
   const [attachedInputs, setAttachedInputs] = useState<AttachedInput[]>([]);
+  const [pendingSaveFiles, setPendingSaveFiles] = useState<ResultFile[]>([]);
+  const [saveDescription, setSaveDescription] = useState("");
   const activeScenario = demoScenarios[activeScenarioId];
+  const currentTaskId = "run-20260626-dll3-003";
   const [runtimeSteps, setRuntimeSteps] = useState<PlanStep[]>(() =>
     demoScenarios.dll3.steps.map((step): PlanStep => ({ ...step, status: "waiting" })),
   );
@@ -4411,8 +4772,20 @@ export default function Home() {
     toast.success(`${text.savedToProjectData}: ${fileName}`);
   };
 
+  const buildResultSourceInfo = (description?: string) => ({
+    description,
+    sourceTaskName: pick(lang, activeScenario.title),
+    sourceTaskId: currentTaskId,
+    savedAt: new Date().toLocaleString(lang === "zh" ? "zh-CN" : "en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  });
+
   const handleSaveFileToProject = (file: ResultFile) => {
-    const result = addProjectDataAsset(activeProject.id, dataAssetFromResultFile(file));
+    const result = addProjectDataAsset(activeProject.id, dataAssetFromResultFile(file, buildResultSourceInfo()));
     showSaveResultToast(result, file.name);
   };
 
@@ -4421,16 +4794,30 @@ export default function Home() {
     showSaveResultToast(result, report.fileName);
   };
 
-  const handleSaveFilesToProject = (files: ResultFile[]) => {
+  const openBatchSaveDialog = (files: ResultFile[]) => {
     if (files.length === 0) {
       toast.message(text.selectBeforeExport);
       return;
     }
 
-    const createdCount = files.reduce((count, file) => {
-      const result = addProjectDataAsset(activeProject.id, dataAssetFromResultFile(file));
+    setPendingSaveFiles(files);
+    setSaveDescription(
+      lang === "zh"
+        ? `由任务「${pick(lang, activeScenario.title)}」生成，保存到项目数据用于后续复用。`
+        : `Generated by "${pick(lang, activeScenario.title)}" and saved for downstream reuse.`,
+    );
+  };
+
+  const handleConfirmSaveFilesToProject = () => {
+    if (pendingSaveFiles.length === 0) return;
+
+    const createdCount = pendingSaveFiles.reduce((count, file) => {
+      const result = addProjectDataAsset(activeProject.id, dataAssetFromResultFile(file, buildResultSourceInfo(saveDescription.trim())));
       return result === "created" ? count + 1 : count;
     }, 0);
+
+    setPendingSaveFiles([]);
+    setSaveDescription("");
 
     if (createdCount === 0) {
       toast.message(text.alreadyInProjectData);
@@ -4485,6 +4872,7 @@ export default function Home() {
             lang={lang}
             userMenuOpen={userMenuOpen}
             onNewConversation={() => { setMainView("workspace"); handleNewConversation(); }}
+            onOpenTask={() => handleViewCurrentResults()}
             onToggleUserMenu={() => setUserMenuOpen((current) => !current)}
             onUserMenuAction={handleUserMenuAction}
             collapsed={mainView === "workspace" && activeView === "result"}
@@ -4552,7 +4940,7 @@ export default function Home() {
               onDownloadReport={handleDownloadReport}
               onDownloadFiles={handleDownloadFiles}
               onSaveFileToProject={handleSaveFileToProject}
-              onSaveFilesToProject={handleSaveFilesToProject}
+              onSaveFilesToProject={openBatchSaveDialog}
               onSaveReportToProject={handleSaveReportToProject}
             />
           ) : null}
@@ -4576,6 +4964,64 @@ export default function Home() {
             if (!open) setAttachDialogVariant(null);
           }}
         />
+        <Dialog open={pendingSaveFiles.length > 0} onOpenChange={(open) => {
+          if (!open) {
+            setPendingSaveFiles([]);
+            setSaveDescription("");
+          }
+        }}>
+          <DialogContent className="rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[520px]">
+            <DialogHeader className="border-b border-slate-100 px-5 py-4">
+              <DialogTitle className="text-[15px] font-semibold text-[#070261]">{text.saveBatchTitle}</DialogTitle>
+              <p className="mt-1 text-[12px] leading-5 text-slate-500">{text.saveBatchBody}</p>
+            </DialogHeader>
+            <div className="grid gap-4 px-5 py-5">
+              <div className="rounded-[16px] border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+                <p className="text-[11px] text-slate-400">{text.selectedCount} {pendingSaveFiles.length}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {pendingSaveFiles.slice(0, 4).map((file) => (
+                    <span key={file.id} className="max-w-[210px] truncate rounded-full bg-white px-2 py-1 text-[11px] text-slate-600">
+                      {file.name}
+                    </span>
+                  ))}
+                  {pendingSaveFiles.length > 4 ? (
+                    <span className="rounded-full bg-white px-2 py-1 text-[11px] text-slate-400">+{pendingSaveFiles.length - 4}</span>
+                  ) : null}
+                </div>
+              </div>
+              <label className="grid gap-1.5">
+                <span className="text-[11px] font-medium text-slate-500">{text.saveBatchDescription}</span>
+                <textarea
+                  value={saveDescription}
+                  onChange={(event) => setSaveDescription(event.target.value)}
+                  rows={4}
+                  className="resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] leading-6 text-slate-700 outline-none transition placeholder:text-slate-300 focus:border-[rgba(23,36,216,0.3)]"
+                  placeholder={text.saveBatchDescriptionPlaceholder}
+                />
+              </label>
+              <div className="rounded-[14px] bg-blue-50/70 px-3 py-2 text-[11px] leading-5 text-[#161FAD]">
+                {text.sourceTask}: {pick(lang, activeScenario.title)} · {text.sourceTaskId}: {currentTaskId}
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setPendingSaveFiles([]);
+                    setSaveDescription("");
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-medium text-slate-500 transition hover:text-slate-700"
+                >
+                  {lang === "zh" ? "取消" : "Cancel"}
+                </button>
+                <button
+                  onClick={handleConfirmSaveFilesToProject}
+                  className="rounded-xl bg-[#161FAD] px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-[#111996] active:scale-[0.97]"
+                >
+                  {text.confirmSaveBatch}
+                </button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

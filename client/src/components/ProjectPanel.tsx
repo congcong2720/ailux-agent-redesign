@@ -45,6 +45,13 @@ const ROLE_CONFIG: Record<ProjectMember["role"], { label: string; labelEn: strin
   member: { label: "成员", labelEn: "Member", icon: <User className="h-3 w-3" />, color: "text-slate-600 bg-slate-50 border-slate-200" },
 };
 
+const XPMP_PROJECT_OPTIONS = [
+  { code: "", zh: "请选择 XPMP 项目编号", en: "Select an XPMP project code" },
+  { code: "CADD-DLL3-2026", zh: "CADD-DLL3-2026 · DLL3 抗体研究", en: "CADD-DLL3-2026 · DLL3 antibody research" },
+  { code: "CADD-EGFR-2026", zh: "CADD-EGFR-2026 · EGFR 靶向优化", en: "CADD-EGFR-2026 · EGFR optimization" },
+  { code: "CADD-PDL1-2026", zh: "CADD-PDL1-2026 · PD-L1 结合分析", en: "CADD-PDL1-2026 · PD-L1 binding analysis" },
+];
+
 function DataTab({ project, lang }: { project: Project; lang: Lang }) {
   const { updateProjectDataAsset, deleteProjectDataAsset } = useProject();
   const assets = project.data;
@@ -125,18 +132,18 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
         </div>
       ) : (
         <div className="overflow-hidden rounded-[18px] border border-slate-100 bg-white">
-          <div className="grid grid-cols-[minmax(220px,1.4fr)_88px_96px_104px_minmax(120px,1fr)_96px] items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-2.5 text-[11px] font-medium text-slate-400">
+          <div className="grid grid-cols-[minmax(200px,1.2fr)_82px_92px_96px_minmax(180px,1fr)_88px] items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-2.5 text-[11px] font-medium text-slate-400">
             <span>{lang === "zh" ? "名称" : "Name"}</span>
             <span>{lang === "zh" ? "大小" : "Size"}</span>
             <span>{lang === "zh" ? "来源" : "Source"}</span>
             <span>{lang === "zh" ? "更新时间" : "Updated"}</span>
-            <span>{lang === "zh" ? "标签" : "Tags"}</span>
+            <span>{lang === "zh" ? "描述 / 来源任务" : "Description / source task"}</span>
             <span className="text-right">{lang === "zh" ? "操作" : "Actions"}</span>
           </div>
           {filtered.map((asset, idx) => (
             <div
               key={asset.id}
-              className={`grid grid-cols-[minmax(220px,1.4fr)_88px_96px_104px_minmax(120px,1fr)_96px] items-center gap-3 px-5 py-4 transition hover:bg-slate-50/80 ${
+              className={`grid grid-cols-[minmax(200px,1.2fr)_82px_92px_96px_minmax(180px,1fr)_88px] items-center gap-3 px-5 py-4 transition hover:bg-slate-50/80 ${
                 idx !== 0 ? "border-t border-slate-100" : ""
               }`}
             >
@@ -162,19 +169,11 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
                   : lang === "zh" ? "Run 产物" : "Run output"}
               </span>
               <span className="text-[12px] text-slate-400">{asset.updatedAt}</span>
-              <div className="flex min-w-0 flex-wrap gap-1">
-                {asset.tags && asset.tags.length > 0 ? (
-                  asset.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500"
-                    >
-                      {tag}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-[12px] text-slate-300">-</span>
-                )}
+              <div className="min-w-0">
+                <p className="truncate text-[11px] text-slate-500">{asset.description || (asset.sourceTaskName ? `${lang === "zh" ? "来自" : "From"} ${asset.sourceTaskName}` : "-")}</p>
+                {asset.sourceTaskId ? (
+                  <p className="mt-0.5 truncate font-mono text-[10px] text-slate-400">{asset.sourceTaskId}{asset.savedAt ? ` · ${asset.savedAt}` : ""}</p>
+                ) : null}
               </div>
               <div className="flex justify-end gap-1.5">
                 <button
@@ -523,11 +522,13 @@ export function ProjectPanel({ lang }: { lang: Lang }) {
   const { projects, activeProject, projectDetailView, setProjectDetailView, setMainView, updateProject, deleteProject } = useProject();
   const [editingProject, setEditingProject] = useState(false);
   const [projectName, setProjectName] = useState(activeProject.name);
+  const [projectCode, setProjectCode] = useState(activeProject.projectCode ?? "");
   const [projectDescription, setProjectDescription] = useState(activeProject.description);
   const [deleteProjectOpen, setDeleteProjectOpen] = useState(false);
 
   const openProjectEditor = () => {
     setProjectName(activeProject.name);
+    setProjectCode(activeProject.projectCode ?? "");
     setProjectDescription(activeProject.description);
     setEditingProject(true);
   };
@@ -544,6 +545,7 @@ export function ProjectPanel({ lang }: { lang: Lang }) {
 
     updateProject(activeProject.id, {
       name: nextName,
+      projectCode: projectCode.trim() || undefined,
       description: nextDescription || (lang === "zh" ? "暂无项目描述" : "No project description"),
     });
     setEditingProject(false);
@@ -596,7 +598,9 @@ export function ProjectPanel({ lang }: { lang: Lang }) {
               <Pencil className="h-3.5 w-3.5" />
             </button>
           </div>
-          <p className="truncate text-[11px] text-slate-400">{activeProject.description}</p>
+          <p className="truncate text-[11px] text-slate-400">
+            {activeProject.projectCode ? `${activeProject.projectCode} · ` : ""}{activeProject.description}
+          </p>
         </div>
       </div>
 
@@ -630,6 +634,22 @@ export function ProjectPanel({ lang }: { lang: Lang }) {
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 outline-none transition focus:border-[rgba(23,36,216,0.3)]"
                 placeholder={lang === "zh" ? "输入项目名称" : "Enter project name"}
               />
+            </label>
+            <label className="grid gap-1.5">
+              <span className="text-[11px] font-medium text-slate-500">
+                {lang === "zh" ? "项目编号" : "Project code"}
+              </span>
+              <select
+                value={projectCode}
+                onChange={(e) => setProjectCode(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 outline-none transition focus:border-[rgba(23,36,216,0.3)]"
+              >
+                {XPMP_PROJECT_OPTIONS.map((option) => (
+                  <option key={option.code || "empty"} value={option.code}>
+                    {lang === "zh" ? option.zh : option.en}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="grid gap-1.5">
               <span className="text-[11px] font-medium text-slate-500">

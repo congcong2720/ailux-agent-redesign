@@ -1,6 +1,6 @@
 /*
  * CreateProjectView — 创建新项目的右侧全屏表单视图
- * 只包含：项目名称 + 项目描述
+ * 包含：项目名称 + 项目编号 + 项目描述
  * 设计语言：Ailux 蓝色系，HarmonyOS Sans SC
  */
 import { useState, useRef, useEffect } from "react";
@@ -10,9 +10,17 @@ import { toast } from "sonner";
 
 type Lang = "zh" | "en";
 
+const XPMP_PROJECT_OPTIONS = [
+  { code: "", zh: "请选择 XPMP 项目编号", en: "Select an XPMP project code" },
+  { code: "CADD-DLL3-2026", zh: "CADD-DLL3-2026 · DLL3 抗体研究", en: "CADD-DLL3-2026 · DLL3 antibody research" },
+  { code: "CADD-EGFR-2026", zh: "CADD-EGFR-2026 · EGFR 靶向优化", en: "CADD-EGFR-2026 · EGFR optimization" },
+  { code: "CADD-PDL1-2026", zh: "CADD-PDL1-2026 · PD-L1 结合分析", en: "CADD-PDL1-2026 · PD-L1 binding analysis" },
+];
+
 export function CreateProjectView({ lang }: { lang: Lang }) {
   const { createProject, setActiveProject, setMainView, setProjectDetailView } = useProject();
   const [name, setName] = useState("");
+  const [projectCode, setProjectCode] = useState("");
   const [desc, setDesc] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -28,7 +36,7 @@ export function CreateProjectView({ lang }: { lang: Lang }) {
     }
     setSubmitting(true);
     setTimeout(() => {
-      const project = createProject(name.trim(), desc.trim());
+      const project = createProject(name.trim(), desc.trim(), projectCode.trim());
       setActiveProject(project);
       setProjectDetailView("data");
       setMainView("project-detail");
@@ -78,6 +86,24 @@ export function CreateProjectView({ lang }: { lang: Lang }) {
               placeholder={lang === "zh" ? "例如：DLL3 抗体研究" : "e.g. DLL3 Antibody Research"}
               className="w-full rounded-[14px] border border-slate-200 bg-white px-4 py-3 text-[14px] text-slate-800 outline-none placeholder:text-slate-400 transition focus:border-[rgba(23,36,216,0.4)] focus:shadow-[0_0_0_3px_rgba(23,36,216,0.06)]"
             />
+          </div>
+
+          {/* Project code */}
+          <div>
+            <label className="mb-2 block text-[13px] font-semibold text-slate-700">
+              {lang === "zh" ? "项目编号" : "Project code"}
+            </label>
+            <select
+              value={projectCode}
+              onChange={(e) => setProjectCode(e.target.value)}
+              className="w-full rounded-[14px] border border-slate-200 bg-white px-4 py-3 text-[14px] text-slate-800 outline-none placeholder:text-slate-400 transition focus:border-[rgba(23,36,216,0.4)] focus:shadow-[0_0_0_3px_rgba(23,36,216,0.06)]"
+            >
+              {XPMP_PROJECT_OPTIONS.map((option) => (
+                <option key={option.code || "empty"} value={option.code}>
+                  {lang === "zh" ? option.zh : option.en}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Description */}

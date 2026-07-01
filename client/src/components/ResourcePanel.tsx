@@ -1,6 +1,6 @@
 /*
  * ResourcePanel — 全局资源视图（内嵌在主区域）
- * Tabs: 公共数据 / Skill / 模版
+ * Tabs: 公共数据 / 工具 / Skill
  * 设计语言：3列卡片网格 + 分类标题 + 搜索栏 + 说明提示条，参考 Biomni 风格
  * 字体：HarmonyOS Sans SC，主色 #161FAD
  */
@@ -347,7 +347,7 @@ function SkillTab({ lang }: { lang: Lang }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
-            placeholder={lang === "zh" ? "搜索 Skill…" : "Search skills…"}
+            placeholder={lang === "zh" ? "搜索工具…" : "Search tools…"}
           />
         </div>
         <div className="min-h-8 flex-1" />
@@ -356,14 +356,14 @@ function SkillTab({ lang }: { lang: Lang }) {
       {/* Hint bar */}
       <div className="rounded-[12px] border border-blue-100 bg-blue-50/50 px-4 py-3 text-[12px] text-blue-800">
         {lang === "zh"
-          ? "在对话中使用 @ 引用这些技能。Agent 可在执行流程中自动调用对应工具。"
-          : "Use @ in conversation to reference these skills. Agent can automatically invoke the corresponding tools."}
+          ? "在对话中使用 @ 引用这些工具。Agent 可在执行流程中自动调用对应能力。"
+          : "Use @ in conversation to reference these tools. Agent can automatically invoke the corresponding capabilities."}
       </div>
 
       {/* Count */}
       <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
         <Zap className="h-3.5 w-3.5 text-[#161FAD]" />
-        <span>{lang === "zh" ? `${filtered.length} 个技能可用` : `${filtered.length} skills available`}</span>
+        <span>{lang === "zh" ? `${filtered.length} 个工具可用` : `${filtered.length} tools available`}</span>
       </div>
 
       {/* Grouped grid */}
@@ -403,7 +403,7 @@ function SkillTab({ lang }: { lang: Lang }) {
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Zap className="mb-3 h-9 w-9 text-slate-200" />
-          <p className="text-[13px] text-slate-400">{lang === "zh" ? "没有匹配的技能" : "No matching skills"}</p>
+          <p className="text-[13px] text-slate-400">{lang === "zh" ? "没有匹配的工具" : "No matching tools"}</p>
         </div>
       )}
     </div>
@@ -436,7 +436,7 @@ function TemplateTab({ lang }: { lang: Lang }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
-            placeholder={lang === "zh" ? "搜索模版…" : "Search templates…"}
+            placeholder={lang === "zh" ? "搜索 Skill…" : "Search skills…"}
           />
         </div>
         <div className="min-h-8 flex-1" />
@@ -445,14 +445,14 @@ function TemplateTab({ lang }: { lang: Lang }) {
       {/* Hint bar */}
       <div className="rounded-[12px] border border-emerald-100 bg-emerald-50/50 px-4 py-3 text-[12px] text-emerald-800">
         {lang === "zh"
-          ? "选择模版可快速创建标准化的 Agent 执行流程，也可在新建项目时直接选用。"
-          : "Select a template to quickly create standardized Agent pipelines, or use them when creating a new project."}
+          ? "选择 Skill 可快速创建标准化的 Agent 执行流程，也可在新建项目时直接选用。"
+          : "Select a skill to quickly create standardized Agent pipelines, or use it when creating a new project."}
       </div>
 
       {/* Count */}
       <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
         <PanelRightOpen className="h-3.5 w-3.5 text-[#161FAD]" />
-        <span>{lang === "zh" ? `${filtered.length} 个模版可用` : `${filtered.length} templates available`}</span>
+        <span>{lang === "zh" ? `${filtered.length} 个 Skill 可用` : `${filtered.length} skills available`}</span>
       </div>
 
       {/* Grouped grid */}
@@ -493,7 +493,7 @@ function TemplateTab({ lang }: { lang: Lang }) {
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <PanelRightOpen className="mb-3 h-9 w-9 text-slate-200" />
-          <p className="text-[13px] text-slate-400">{lang === "zh" ? "没有匹配的模版" : "No matching templates"}</p>
+          <p className="text-[13px] text-slate-400">{lang === "zh" ? "没有匹配的 Skill" : "No matching skills"}</p>
         </div>
       )}
 
@@ -578,8 +578,8 @@ export function ResourcePanel({ lang }: { lang: Lang }) {
 
   const tabs: { key: "data" | "skill" | "template"; label: string; labelEn: string; icon: React.ReactNode }[] = [
     { key: "data", label: "公共数据", labelEn: "Public Data", icon: <Globe2 className="h-3.5 w-3.5" /> },
-    { key: "skill", label: "Skill", labelEn: "Skills", icon: <Zap className="h-3.5 w-3.5" /> },
-    { key: "template", label: "模版", labelEn: "Templates", icon: <PanelRightOpen className="h-3.5 w-3.5" /> },
+    { key: "skill", label: "工具", labelEn: "Tools", icon: <Zap className="h-3.5 w-3.5" /> },
+    { key: "template", label: "Skill", labelEn: "Skills", icon: <PanelRightOpen className="h-3.5 w-3.5" /> },
   ];
 
   return (
@@ -601,7 +601,7 @@ export function ResourcePanel({ lang }: { lang: Lang }) {
             {lang === "zh" ? "全局资源" : "Global Resources"}
           </p>
           <p className="text-[11px] text-slate-400">
-            {lang === "zh" ? "跨项目共享的数据、技能与模版" : "Shared data, skills & templates across projects"}
+            {lang === "zh" ? "跨项目共享的数据、工具与 Skill" : "Shared data, tools & skills across projects"}
           </p>
         </div>
       </div>

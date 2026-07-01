@@ -15,6 +15,10 @@ export type ProjectDataAsset = {
   size: string;
   updatedAt: string;
   source: "uploaded" | "run-saved";
+  description?: string;
+  sourceTaskName?: string;
+  sourceTaskId?: string;
+  savedAt?: string;
   tags?: string[];
 };
 
@@ -24,6 +28,7 @@ export type Project = {
   id: string;
   name: string;
   description: string;
+  projectCode?: string;
   color: string;
   isDefault?: boolean;
   members: ProjectMember[];
@@ -38,10 +43,22 @@ const defaultMembers: ProjectMember[] = [
 ];
 
 const defaultData: ProjectDataAsset[] = [
-  { id: "d1", name: "DLL3_Mcb008_model_1.pdb", type: "pdb", size: "2.4 MB", updatedAt: "2026-04-29", source: "run-saved", tags: ["structure"] },
-  { id: "d2", name: "physical_energy_combined_features.csv", type: "csv", size: "128 KB", updatedAt: "2026-04-29", source: "run-saved", tags: ["features"] },
-  { id: "d3", name: "all_ml_evaluation_results_stage2.csv", type: "csv", size: "64 KB", updatedAt: "2026-04-28", source: "run-saved", tags: ["model", "evaluation"] },
-  { id: "d4", name: "internalization_experiment_raw.csv", type: "csv", size: "48 KB", updatedAt: "2026-04-20", source: "uploaded", tags: ["raw-data"] },
+  {
+    id: "d1",
+    name: "DLL3_Mcb008_model_1.pdb",
+    type: "pdb",
+    size: "2.4 MB",
+    updatedAt: "2026-04-29",
+    source: "run-saved",
+    description: "由任务「DLL3 双抗预测流程」生成，用于后续结构分析复用。",
+    sourceTaskName: "DLL3 双抗预测流程",
+    sourceTaskId: "run-20260626-dll3-003",
+    savedAt: "2026-04-29 14:36",
+    tags: ["structure"],
+  },
+  { id: "d2", name: "physical_energy_combined_features.csv", type: "csv", size: "128 KB", updatedAt: "2026-04-29", source: "run-saved", sourceTaskName: "DLL3 双抗预测流程", sourceTaskId: "run-20260626-dll3-003", savedAt: "2026-04-29 14:36", tags: ["features"] },
+  { id: "d3", name: "all_ml_evaluation_results_stage2.csv", type: "csv", size: "64 KB", updatedAt: "2026-04-28", source: "run-saved", sourceTaskName: "内化预测建模工作流程", sourceTaskId: "run-20260428-model-002", savedAt: "2026-04-28 18:12", tags: ["model", "evaluation"] },
+  { id: "d4", name: "internalization_experiment_raw.csv", type: "csv", size: "48 KB", updatedAt: "2026-04-20", source: "uploaded", description: "项目初始化时上传的实验原始数据。", tags: ["raw-data"] },
 ];
 
 export const SAMPLE_PROJECTS: Project[] = [
@@ -49,6 +66,7 @@ export const SAMPLE_PROJECTS: Project[] = [
     id: "proj-default",
     name: "DLL3 抗体研究",
     description: "双表位抗体内化活性预测与特征分析",
+    projectCode: "CADD-DLL3-2026",
     color: "#161FAD",
     isDefault: true,
     members: defaultMembers,
@@ -59,6 +77,7 @@ export const SAMPLE_PROJECTS: Project[] = [
     id: "proj-2",
     name: "EGFR 靶向优化",
     description: "EGFR 抗体 CDR 区域优化项目",
+    projectCode: "CADD-EGFR-2026",
     color: "#0891b2",
     members: [defaultMembers[0], defaultMembers[1]],
     data: [defaultData[3]],
@@ -68,6 +87,7 @@ export const SAMPLE_PROJECTS: Project[] = [
     id: "proj-3",
     name: "PD-L1 结合分析",
     description: "PD-L1 抗体结合亲和力分析",
+    projectCode: "CADD-PDL1-2026",
     color: "#7c3aed",
     members: [defaultMembers[0]],
     data: [],
@@ -81,8 +101,8 @@ type ProjectContextType = {
   projects: Project[];
   activeProject: Project;
   setActiveProject: (project: Project) => void;
-  createProject: (name: string, description: string) => Project;
-  updateProject: (projectId: string, updates: Pick<Project, "name" | "description">) => void;
+  createProject: (name: string, description: string, projectCode?: string) => Project;
+  updateProject: (projectId: string, updates: Pick<Project, "name" | "description" | "projectCode">) => void;
   deleteProject: (projectId: string) => void;
   addProjectDataAsset: (projectId: string, asset: Omit<ProjectDataAsset, "id" | "source" | "updatedAt">) => "created" | "existing";
   updateProjectDataAsset: (projectId: string, assetId: string, name: string) => void;
@@ -112,12 +132,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [projectDetailView, setProjectDetailView] = useState<ProjectDetailView>("data");
   const [resourceTab, setResourceTab] = useState<"data" | "skill" | "template">("data");
 
-  const createProject = (name: string, description: string): Project => {
+  const createProject = (name: string, description: string, projectCode?: string): Project => {
     const colors = ["#161FAD", "#0891b2", "#7c3aed", "#059669", "#dc2626", "#d97706"];
     const newProject: Project = {
       id: `proj-${Date.now()}`,
       name,
       description,
+      projectCode: projectCode || undefined,
       color: colors[projects.length % colors.length],
       members: [defaultMembers[0]],
       data: [],
@@ -134,7 +155,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setActiveProject((current) => (current.id === projectId ? updater(current) : current));
   };
 
-  const updateProject = (projectId: string, updates: Pick<Project, "name" | "description">) => {
+  const updateProject = (projectId: string, updates: Pick<Project, "name" | "description" | "projectCode">) => {
     syncProject(projectId, (project) => ({ ...project, ...updates }));
   };
 
