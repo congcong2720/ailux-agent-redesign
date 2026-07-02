@@ -3,12 +3,14 @@
  * Tabs: 数据 / 成员
  * 设计语言：Ailux 蓝色系，HarmonyOS Sans SC
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Database,
   Users,
   FileText,
   Upload,
+  FolderUp,
+  Search,
   FileSpreadsheet,
   FileJson,
   Image,
@@ -34,10 +36,14 @@ const FILE_TYPE_ICONS: Record<string, React.ReactNode> = {
   csv: <FileSpreadsheet className="h-4 w-4 text-emerald-600" />,
   json: <FileJson className="h-4 w-4 text-amber-600" />,
   pdb: <File className="h-4 w-4 text-[#161FAD]" />,
+  fasta: <FileText className="h-4 w-4 text-[#161FAD]" />,
+  cif: <File className="h-4 w-4 text-[#161FAD]" />,
+  a3m: <FileText className="h-4 w-4 text-purple-600" />,
   png: <Image className="h-4 w-4 text-purple-600" />,
   xlsx: <FileSpreadsheet className="h-4 w-4 text-emerald-700" />,
   pdf: <FileText className="h-4 w-4 text-red-500" />,
   docx: <FileText className="h-4 w-4 text-[#161FAD]" />,
+  folder: <FolderUp className="h-4 w-4 text-amber-600" />,
 };
 
 const ROLE_CONFIG: Record<ProjectMember["role"], { label: string; labelEn: string; icon: React.ReactNode; color: string }> = {
@@ -52,16 +58,112 @@ const XPMP_PROJECT_OPTIONS = [
   { code: "CADD-PDL1-2026", zh: "CADD-PDL1-2026 · PD-L1 结合分析", en: "CADD-PDL1-2026 · PD-L1 binding analysis" },
 ];
 
+function formatFileSize(size: number) {
+  if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`;
+  if (size >= 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+  return `${size} B`;
+}
+
+function dataTypeFromName(name: string): Project["data"][number]["type"] {
+  const extension = name.split(".").pop()?.toLowerCase();
+  if (extension === "csv") return "csv";
+  if (extension === "json") return "json";
+  if (extension === "pdb") return "pdb";
+  if (extension === "png") return "png";
+  if (extension === "xlsx") return "xlsx";
+  if (extension === "pdf") return "pdf";
+  if (extension === "docx") return "docx";
+  if (extension === "fasta" || extension === "fa") return "fasta";
+  if (extension === "cif") return "cif";
+  if (extension === "a3m") return "a3m";
+  return "csv";
+}
+
 function DataTab({ project, lang }: { project: Project; lang: Lang }) {
-  const { updateProjectDataAsset, deleteProjectDataAsset } = useProject();
+  const { addProjectDataAsset, updateProjectDataAsset, deleteProjectDataAsset } = useProject();
   const assets = project.data;
   const [filter, setFilter] = useState<"all" | "uploaded" | "run-saved">("all");
+  const [dataSearchQuery, setDataSearchQuery] = useState("");
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
   const [editingAssetName, setEditingAssetName] = useState("");
   const [deleteAssetId, setDeleteAssetId] = useState<string | null>(null);
-  const filtered = filter === "all" ? assets : assets.filter((a) => a.source === filter);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
+  const normalizedDataQuery = dataSearchQuery.trim().toLowerCase();
+  const filteredBySource = filter === "all" ? assets : assets.filter((a) => a.source === filter);
+  const filtered = normalizedDataQuery
+    ? filteredBySource.filter((asset) =>
+        [
+          asset.name,
+          asset.type,
+          asset.size,
+          asset.updatedAt,
+          asset.source,
+          asset.description,
+          asset.sourceTaskName,
+          asset.sourceTaskId,
+          asset.savedAt,
+          ...(asset.tags ?? []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedDataQuery),
+      )
+    : filteredBySource;
   const editingAsset = assets.find((asset) => asset.id === editingAssetId);
   const deleteAsset = assets.find((asset) => asset.id === deleteAssetId);
+
+  const handleUploadFiles = (files: FileList | null) => {
+    const selectedFiles = Array.from(files ?? []);
+    if (selectedFiles.length === 0) return;
+
+    let createdCount = 0;
+    selectedFiles.forEach((file) => {
+      const result = addProjectDataAsset(project.id, {
+        name: file.name,
+        type: dataTypeFromName(file.name),
+        size: formatFileSize(file.size),
+        source: "uploaded",
+        description: lang === "zh" ? "从本地文件上传到项目数据集。" : "Uploaded from local file.",
+        tags: ["uploaded", dataTypeFromName(file.name)],
+      });
+      if (result === "created") createdCount += 1;
+    });
+
+    toast.success(lang === "zh" ? `已上传 ${createdCount} 个文件` : `Uploaded ${createdCount} files`);
+    setUploadDialogOpen(false);
+  };
+
+  const handleUploadFolder = (files: FileList | null) => {
+    const selectedFiles = Array.from(files ?? []);
+    if (selectedFiles.length === 0) return;
+
+    const folderStats = new Map<string, { count: number; size: number }>();
+    selectedFiles.forEach((file) => {
+      const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
+      const folderName = relativePath?.split("/")[0] || (lang === "zh" ? "本地文件夹" : "Local folder");
+      const current = folderStats.get(folderName) ?? { count: 0, size: 0 };
+      folderStats.set(folderName, { count: current.count + 1, size: current.size + file.size });
+    });
+
+    let createdCount = 0;
+    folderStats.forEach((stat, folderName) => {
+      const result = addProjectDataAsset(project.id, {
+        name: folderName,
+        type: "folder",
+        size: `${stat.count} ${lang === "zh" ? "个文件" : "files"} · ${formatFileSize(stat.size)}`,
+        source: "uploaded",
+        description: lang === "zh" ? "从本地文件夹上传到项目数据集。" : "Uploaded from local folder.",
+        tags: ["folder", "uploaded"],
+      });
+      if (result === "created") createdCount += 1;
+    });
+
+    toast.success(lang === "zh" ? `已上传 ${createdCount} 个文件夹` : `Uploaded ${createdCount} folders`);
+    setUploadDialogOpen(false);
+  };
 
   const openAssetEditor = (asset: Project["data"][number]) => {
     setEditingAssetId(asset.id);
@@ -92,7 +194,7 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
           {(["all", "uploaded", "run-saved"] as const).map((f) => {
             const labels: Record<typeof f, { zh: string; en: string }> = {
@@ -113,21 +215,60 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
             );
           })}
         </div>
-        <button
-          onClick={() => toast.message(lang === "zh" ? "上传文件 — 即将上线" : "Upload file — coming soon")}
-          className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.2)] hover:text-[#161FAD]"
-        >
-          <Upload className="h-3.5 w-3.5" />
-          {lang === "zh" ? "上传" : "Upload"}
-        </button>
+        <div className="flex flex-1 items-center justify-end gap-2">
+          <div className="flex min-w-[220px] max-w-[320px] flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5">
+            <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+            <input
+              value={dataSearchQuery}
+              onChange={(event) => setDataSearchQuery(event.target.value)}
+              className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
+              placeholder={lang === "zh" ? "搜索名称 / 类型 / 描述 / 来源" : "Search name / type / description / source"}
+            />
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".fasta,.fa,.pdb,.cif,.a3m,.csv,.xlsx,.json,.pdf,.docx,.png"
+            onChange={(event) => {
+              handleUploadFiles(event.target.files);
+              event.target.value = "";
+            }}
+            className="hidden"
+          />
+          <input
+            ref={folderInputRef}
+            type="file"
+            multiple
+            onChange={(event) => {
+              handleUploadFolder(event.target.files);
+              event.target.value = "";
+            }}
+            className="hidden"
+            {...{ webkitdirectory: "", directory: "" }}
+          />
+          <button
+            onClick={() => setUploadDialogOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.2)] hover:text-[#161FAD]"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            {lang === "zh" ? "上传" : "Upload"}
+          </button>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 py-14 text-center">
           <Database className="mb-3 h-9 w-9 text-slate-300" />
-          <p className="text-[13px] text-slate-400">{lang === "zh" ? "暂无数据资产" : "No data assets"}</p>
+          <p className="text-[13px] text-slate-400">
+            {assets.length === 0
+              ? lang === "zh" ? "暂无数据资产" : "No data assets"
+              : lang === "zh" ? "没有匹配的数据" : "No matching data"}
+          </p>
           <p className="mt-1 text-[11px] text-slate-300">
-            {lang === "zh" ? "上传文件或从 Run 产物中保存" : "Upload files or save from Run outputs"}
+            {assets.length === 0
+              ? lang === "zh" ? "上传文件、文件夹或从 Run 产物中保存" : "Upload files, folders, or save from Run outputs"
+              : lang === "zh" ? "换个关键词试试，或清空搜索查看全部数据" : "Try another keyword or clear search"}
           </p>
         </div>
       ) : (
@@ -195,6 +336,58 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
           ))}
         </div>
       )}
+
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent className="overflow-hidden rounded-[28px] border-white/70 bg-white p-0 shadow-[0_28px_90px_rgba(15,23,42,0.22)] sm:max-w-[760px]">
+          <DialogHeader className="border-b border-slate-100 px-6 py-5">
+            <DialogTitle className="text-[16px] font-semibold text-[#070261]">
+              {lang === "zh" ? "上传项目数据" : "Upload project data"}
+            </DialogTitle>
+            <p className="mt-1 text-[12px] font-normal text-slate-400">
+              {lang === "zh"
+                ? "选择本地文件或文件夹，作为当前项目的数据资产。"
+                : "Select local files or folders as data assets for this project."}
+            </p>
+          </DialogHeader>
+          <div className="grid gap-5 px-6 py-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="group flex min-h-[170px] flex-col items-center justify-center rounded-[22px] border border-dashed border-slate-200 bg-slate-50/45 px-6 py-8 text-center transition hover:border-[rgba(23,36,216,0.28)] hover:bg-[rgba(23,36,216,0.03)]"
+              >
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#161FAD] shadow-sm transition group-hover:shadow-[0_10px_24px_rgba(22,31,173,0.14)]">
+                  <Upload className="h-6 w-6" />
+                </div>
+                <p className="text-[14px] font-semibold text-slate-800">{lang === "zh" ? "选择文件" : "Select files"}</p>
+                <p className="mt-2 text-[11px] text-slate-400">FASTA / PDB / CIF / A3M / CSV / XLSX</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => folderInputRef.current?.click()}
+                className="group flex min-h-[170px] flex-col items-center justify-center rounded-[22px] border border-dashed border-slate-200 bg-slate-50/45 px-6 py-8 text-center transition hover:border-[rgba(23,36,216,0.28)] hover:bg-[rgba(23,36,216,0.03)]"
+              >
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#161FAD] shadow-sm transition group-hover:shadow-[0_10px_24px_rgba(22,31,173,0.14)]">
+                  <FolderUp className="h-6 w-6" />
+                </div>
+                <p className="text-[14px] font-semibold text-slate-800">{lang === "zh" ? "选择文件夹" : "Select folder"}</p>
+                <p className="mt-2 text-[11px] text-slate-400">
+                  {lang === "zh" ? "用于批量导入数据目录" : "Import a data directory in batch"}
+                </p>
+              </button>
+            </div>
+            <div className="flex items-center justify-end border-t border-slate-100 pt-4">
+              <button
+                type="button"
+                onClick={() => setUploadDialogOpen(false)}
+                className="rounded-xl bg-[#161FAD] px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-[#111996] active:scale-[0.97]"
+              >
+                {lang === "zh" ? "确定" : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(editingAssetId)} onOpenChange={(open) => !open && setEditingAssetId(null)}>
         <DialogContent className="rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[440px]">

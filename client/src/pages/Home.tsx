@@ -1094,7 +1094,7 @@ const copy = {
     platformSubtitle: "AILUX AGENT",
     newConversation: "新任务",
     tasksLabel: "任务列表",
-    searchTasks: "搜索任务名称 / ID / 关键词",
+    searchTasks: "搜索任务名称",
     noMatchedTasks: "没有匹配的任务",
     noMatchedTasksBody: "换个关键词试试，或清空搜索查看全部任务。",
     signedInRole: "已登录 · 项目成员",
@@ -1259,7 +1259,7 @@ const copy = {
     platformSubtitle: "AILUX AGENT",
     newConversation: "New task",
     tasksLabel: "Task list",
-    searchTasks: "Search task name / ID / keyword",
+    searchTasks: "Search task name",
     noMatchedTasks: "No matching tasks",
     noMatchedTasksBody: "Try another keyword or clear search to view all tasks.",
     signedInRole: "Signed in · Project member",
@@ -2075,11 +2075,7 @@ function Sidebar({
   );
   const filteredTaskItems = useMemo(() => {
     if (!normalizedTaskQuery) return taskItems;
-    return taskItems.filter((task) =>
-      `${pick(lang, task.title)} ${task.runId ?? ""} ${pick(lang, task.submittedAtLabel ?? l("", ""))}`
-        .toLowerCase()
-        .includes(normalizedTaskQuery),
-    );
+    return taskItems.filter((task) => pick(lang, task.title).toLowerCase().includes(normalizedTaskQuery));
   }, [lang, normalizedTaskQuery, taskItems]);
   const startRenameTask = (task: HistoryTask) => {
     renameCanceledRef.current = false;

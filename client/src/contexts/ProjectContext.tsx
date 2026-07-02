@@ -11,7 +11,7 @@ export type ProjectMember = {
 export type ProjectDataAsset = {
   id: string;
   name: string;
-  type: "csv" | "json" | "pdb" | "png" | "xlsx" | "pdf" | "docx";
+  type: "csv" | "json" | "pdb" | "png" | "xlsx" | "pdf" | "docx" | "fasta" | "cif" | "a3m" | "folder";
   size: string;
   updatedAt: string;
   source: "uploaded" | "run-saved";
@@ -104,7 +104,7 @@ type ProjectContextType = {
   createProject: (name: string, description: string, projectCode?: string) => Project;
   updateProject: (projectId: string, updates: Pick<Project, "name" | "description" | "projectCode">) => void;
   deleteProject: (projectId: string) => void;
-  addProjectDataAsset: (projectId: string, asset: Omit<ProjectDataAsset, "id" | "source" | "updatedAt">) => "created" | "existing";
+  addProjectDataAsset: (projectId: string, asset: Omit<ProjectDataAsset, "id" | "source" | "updatedAt"> & { source?: ProjectDataAsset["source"] }) => "created" | "existing";
   updateProjectDataAsset: (projectId: string, assetId: string, name: string) => void;
   deleteProjectDataAsset: (projectId: string, assetId: string) => void;
   addProjectMember: (projectId: string, email: string, role: ProjectMember["role"]) => ProjectMember | null;
@@ -168,7 +168,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setMainView("workspace");
   };
 
-  const addProjectDataAsset = (projectId: string, asset: Omit<ProjectDataAsset, "id" | "source" | "updatedAt">) => {
+  const addProjectDataAsset = (projectId: string, asset: Omit<ProjectDataAsset, "id" | "source" | "updatedAt"> & { source?: ProjectDataAsset["source"] }) => {
     let result: "created" | "existing" = "created";
 
     syncProject(projectId, (project) => {
@@ -185,7 +185,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
             ...asset,
             id: `d-${Date.now()}-${project.data.length}`,
             updatedAt: new Date().toISOString().slice(0, 10),
-            source: "run-saved",
+            source: asset.source ?? "run-saved",
           },
           ...project.data,
         ],
