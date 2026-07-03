@@ -196,6 +196,33 @@ const PRODUCT_ICON_URL = `${import.meta.env.BASE_URL}ailux-product-icon.png`;
 const MODEL_RANKING_IMAGE_URL = "/manus-storage/ailux-model-ranking-user-final-v2_2de81eaf.png";
 const FEATURE_SCATTER_IMAGE_URL = "/manus-storage/feature_scatter_relationship_2a6adde1.png";
 
+function formatTaskRelativeTime(submittedAt: string | undefined, lang: Lang, fallback: LocalizedText | undefined) {
+  if (!submittedAt) return pick(lang, fallback ?? l("", ""));
+
+  const submittedTime = new Date(submittedAt).getTime();
+  if (Number.isNaN(submittedTime)) return pick(lang, fallback ?? l("", ""));
+
+  const diffMs = Date.now() - submittedTime;
+  const absDiffMs = Math.max(0, diffMs);
+  const minuteMs = 60 * 1000;
+  const hourMs = 60 * minuteMs;
+  const dayMs = 24 * hourMs;
+
+  if (absDiffMs < minuteMs) return lang === "zh" ? "刚刚" : "now";
+  if (absDiffMs < hourMs) {
+    const minutes = Math.max(1, Math.floor(absDiffMs / minuteMs));
+    return lang === "zh" ? `${minutes}分钟前` : `${minutes}m ago`;
+  }
+  if (absDiffMs < dayMs) {
+    const hours = Math.max(1, Math.floor(absDiffMs / hourMs));
+    return lang === "zh" ? `${hours}小时前` : `${hours}h ago`;
+  }
+
+  const days = Math.max(1, Math.floor(absDiffMs / dayMs));
+  if (days === 1) return lang === "zh" ? "昨天" : "yesterday";
+  return lang === "zh" ? `${days}天前` : `${days}d ago`;
+}
+
 const firstReplyIntro = l(
   "好的，我将基于输入的实验数据，围绕双表位抗体内化活性建立分析与建模流程。",
   "Understood. I will build an analysis and modeling workflow around biparatopic antibody internalization activity from the input experimental data.",
@@ -260,6 +287,26 @@ const historyTasks: HistoryTask[] = [
   { id: "t8", title: l("PD-L1 亲和力回归建模", "PD-L1 affinity regression modeling"), runId: "run-20260621-pdl1-005", status: "success", submittedAt: "2026-06-21T10:05:00", submittedAtLabel: l("06-21 10:05", "Jun 21 10:05") },
   { id: "t9", title: l("候选抗体稳定性预测", "Candidate antibody stability prediction"), runId: "run-20260620-stab-014", status: "success", submittedAt: "2026-06-20T15:10:00", submittedAtLabel: l("06-20 15:10", "Jun 20 15:10") },
   { id: "t10", title: l("免疫原性风险初筛", "Immunogenicity risk pre-screen"), runId: "run-20260619-immuno-008", status: "success", submittedAt: "2026-06-19T19:44:00", submittedAtLabel: l("06-19 19:44", "Jun 19 19:44") },
+  { id: "t11", title: l("DLL3 序列去重与聚类", "DLL3 sequence deduplication and clustering"), runId: "run-20260618-dll3-017", status: "success", submittedAt: "2026-06-18T17:26:00", submittedAtLabel: l("06-18 17:26", "Jun 18 17:26") },
+  { id: "t12", title: l("抗体表达可开发性评分", "Antibody developability scoring"), runId: "run-20260618-dev-011", status: "success", submittedAt: "2026-06-18T09:52:00", submittedAtLabel: l("06-18 09:52", "Jun 18 09:52") },
+  { id: "t13", title: l("CDR 突变位点批量扫描", "CDR mutation site batch scan"), runId: "run-20260617-cdr-020", status: "running", submittedAt: "2026-06-17T20:14:00", submittedAtLabel: l("06-17 20:14", "Jun 17 20:14") },
+  { id: "t14", title: l("抗体-抗原 docking 复核", "Antibody-antigen docking review"), runId: "run-20260617-dock-007", status: "success", submittedAt: "2026-06-17T15:38:00", submittedAtLabel: l("06-17 15:38", "Jun 17 15:38") },
+  { id: "t15", title: l("亲和力热点残基分析", "Affinity hotspot residue analysis"), runId: "run-20260616-hotspot-013", status: "success", submittedAt: "2026-06-16T18:02:00", submittedAtLabel: l("06-16 18:02", "Jun 16 18:02") },
+  { id: "t16", title: l("Fc 片段稳定性对比", "Fc fragment stability comparison"), runId: "run-20260616-fc-004", status: "failed", submittedAt: "2026-06-16T10:30:00", submittedAtLabel: l("06-16 10:30", "Jun 16 10:30") },
+  { id: "t17", title: l("抗体结构批量质检", "Antibody structure batch QC"), runId: "run-20260615-qc-016", status: "success", submittedAt: "2026-06-15T16:45:00", submittedAtLabel: l("06-15 16:45", "Jun 15 16:45") },
+  { id: "t18", title: l("人源化候选序列评估", "Humanized candidate sequence evaluation"), runId: "run-20260615-human-010", status: "success", submittedAt: "2026-06-15T11:24:00", submittedAtLabel: l("06-15 11:24", "Jun 15 11:24") },
+  { id: "t19", title: l("双抗 linker 长度筛选", "Bispecific linker length screening"), runId: "run-20260614-linker-019", status: "queued", submittedAt: "2026-06-14T19:36:00", submittedAtLabel: l("06-14 19:36", "Jun 14 19:36") },
+  { id: "t20", title: l("结合界面疏水性评估", "Binding interface hydrophobicity assessment"), runId: "run-20260614-interface-002", status: "success", submittedAt: "2026-06-14T08:58:00", submittedAtLabel: l("06-14 08:58", "Jun 14 08:58") },
+  { id: "t21", title: l("抗体聚集风险预测", "Antibody aggregation risk prediction"), runId: "run-20260613-agg-021", status: "success", submittedAt: "2026-06-13T21:10:00", submittedAtLabel: l("06-13 21:10", "Jun 13 21:10") },
+  { id: "t22", title: l("序列库相似性检索", "Sequence library similarity search"), runId: "run-20260613-search-015", status: "success", submittedAt: "2026-06-13T14:44:00", submittedAtLabel: l("06-13 14:44", "Jun 13 14:44") },
+  { id: "t23", title: l("抗原表位覆盖分析", "Antigen epitope coverage analysis"), runId: "run-20260612-epitope-009", status: "success", submittedAt: "2026-06-12T18:28:00", submittedAtLabel: l("06-12 18:28", "Jun 12 18:28") },
+  { id: "t24", title: l("变体序列结构回填", "Variant sequence structure backfill"), runId: "run-20260612-variant-006", status: "cancelled", submittedAt: "2026-06-12T09:16:00", submittedAtLabel: l("06-12 09:16", "Jun 12 09:16") },
+  { id: "t25", title: l("抗体电荷分布计算", "Antibody charge distribution calculation"), runId: "run-20260611-charge-018", status: "success", submittedAt: "2026-06-11T17:55:00", submittedAtLabel: l("06-11 17:55", "Jun 11 17:55") },
+  { id: "t26", title: l("脱酰胺风险位点识别", "Deamidation risk site detection"), runId: "run-20260611-deam-003", status: "success", submittedAt: "2026-06-11T13:08:00", submittedAtLabel: l("06-11 13:08", "Jun 11 13:08") },
+  { id: "t27", title: l("糖基化位点风险评估", "Glycosylation site risk assessment"), runId: "run-20260610-glyco-022", status: "success", submittedAt: "2026-06-10T20:22:00", submittedAtLabel: l("06-10 20:22", "Jun 10 20:22") },
+  { id: "t28", title: l("抗体候选分子排序", "Antibody candidate ranking"), runId: "run-20260610-rank-012", status: "success", submittedAt: "2026-06-10T15:40:00", submittedAtLabel: l("06-10 15:40", "Jun 10 15:40") },
+  { id: "t29", title: l("项目数据质量巡检", "Project data quality inspection"), runId: "run-20260609-data-001", status: "success", submittedAt: "2026-06-09T11:12:00", submittedAtLabel: l("06-09 11:12", "Jun 09 11:12") },
+  { id: "t30", title: l("周度候选抗体汇总报告", "Weekly candidate antibody summary report"), runId: "run-20260609-report-010", status: "success", submittedAt: "2026-06-09T08:30:00", submittedAtLabel: l("06-09 08:30", "Jun 09 08:30") },
 ];
 
 const recommendedPrompts: RecommendedPrompt[] = [
@@ -2057,8 +2104,12 @@ function Sidebar({
   const [editingTaskTitle, setEditingTaskTitle] = useState("");
   const [openTaskMenuId, setOpenTaskMenuId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState("t1");
+  const [taskSearchExpanded, setTaskSearchExpanded] = useState(false);
+  const [taskListScrolled, setTaskListScrolled] = useState(false);
   const renameCanceledRef = useRef(false);
+  const taskListScrollTopRef = useRef(0);
   const normalizedTaskQuery = taskSearchQuery.trim().toLowerCase();
+  const showTaskSearch = taskSearchExpanded || Boolean(normalizedTaskQuery);
   const baseTaskItems = useMemo(
     () =>
       historyTasks
@@ -2102,6 +2153,24 @@ function Sidebar({
     setSelectedTaskId(task.id);
     setOpenTaskMenuId(null);
     onOpenTask(task);
+  };
+  const handleTaskListScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const nextScrollTop = event.currentTarget.scrollTop;
+    taskListScrollTopRef.current = nextScrollTop;
+
+    if (nextScrollTop <= 1) {
+      setTaskListScrolled(false);
+    }
+  };
+  const handleTaskListWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (event.deltaY > 8) {
+      setTaskListScrolled(true);
+      return;
+    }
+
+    if (event.deltaY < -8 && event.currentTarget.scrollTop <= 1) {
+      setTaskListScrolled(false);
+    }
   };
 
   if (collapsed) {
@@ -2161,37 +2230,41 @@ function Sidebar({
   return (
     <aside className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       {/* Global header: Ailux Agent branding */}
-      <div className="mb-4 flex items-center gap-3 px-1 py-2">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white shadow-[0_10px_22px_rgba(22,31,173,0.18)]">
-          <img src={PRODUCT_ICON_URL} alt="Ailux Agent" className="h-10 w-10 rounded-2xl" />
+      <div className={`overflow-hidden transition-all duration-300 ${
+        taskListScrolled ? "max-h-0 opacity-0" : "max-h-[230px] opacity-100"
+      }`}>
+        <div className="mb-4 flex items-center gap-3 px-1 py-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white shadow-[0_10px_22px_rgba(22,31,173,0.18)]">
+            <img src={PRODUCT_ICON_URL} alt="Ailux Agent" className="h-10 w-10 rounded-2xl" />
+          </div>
+          <div>
+            <p className="text-[15px] font-semibold uppercase tracking-[0.08em] text-[#070261]">{text.platformSubtitle}</p>
+          </div>
         </div>
-        <div>
-          <p className="text-[15px] font-semibold uppercase tracking-[0.08em] text-[#070261]">{text.platformSubtitle}</p>
-        </div>
-      </div>
 
-      {/* Global resources */}
-      <button
-        onClick={() => {
-          setResourceTab("data");
-          setMainView("resource");
-        }}
-        className={`mb-3 flex w-full items-center gap-3 rounded-[18px] border px-3.5 py-3 text-left transition active:scale-[0.98] ${
-          mainView === "resource"
-            ? "border-[rgba(23,36,216,0.14)] bg-[linear-gradient(180deg,rgba(23,36,216,0.07),rgba(132,140,254,0.07))] text-[#161FAD] shadow-[0_12px_28px_rgba(22,31,173,0.08)]"
-            : "border-slate-100 bg-slate-50/80 text-slate-700 hover:border-[rgba(23,36,216,0.12)] hover:bg-[rgba(23,36,216,0.04)] hover:text-[#161FAD]"
-        }`}
-      >
-        <Database className="h-4 w-4" />
-        <div>
-          <p className="text-[13px] font-semibold">{lang === "zh" ? "全局资源" : "Global resources"}</p>
-          <p className="mt-0.5 text-[11px] opacity-70">{lang === "zh" ? "数据 · Tool · Skill" : "Data · Tools · Skills"}</p>
-        </div>
-      </button>
+        {/* Global resources */}
+        <button
+          onClick={() => {
+            setResourceTab("data");
+            setMainView("resource");
+          }}
+          className={`mb-3 flex w-full items-center gap-3 rounded-[18px] border px-3.5 py-3 text-left transition active:scale-[0.98] ${
+            mainView === "resource"
+              ? "border-[rgba(23,36,216,0.14)] bg-[linear-gradient(180deg,rgba(23,36,216,0.07),rgba(132,140,254,0.07))] text-[#161FAD] shadow-[0_12px_28px_rgba(22,31,173,0.08)]"
+              : "border-slate-100 bg-slate-50/80 text-slate-700 hover:border-[rgba(23,36,216,0.12)] hover:bg-[rgba(23,36,216,0.04)] hover:text-[#161FAD]"
+          }`}
+        >
+          <Database className="h-4 w-4" />
+          <div>
+            <p className="text-[13px] font-semibold">{lang === "zh" ? "全局资源" : "Global resources"}</p>
+            <p className="mt-0.5 text-[11px] opacity-70">{lang === "zh" ? "数据 · Tool · Skill" : "Data · Tools · Skills"}</p>
+          </div>
+        </button>
 
-      <div className="mb-4">
-        <p className="mb-2 px-1 text-[11px] uppercase tracking-[0.18em] text-slate-400">{lang === "zh" ? "项目" : "Projects"}</p>
-        <ProjectSwitcher lang={lang} />
+        <div className="mb-4">
+          <p className="mb-2 px-1 text-[11px] uppercase tracking-[0.18em] text-slate-400">{lang === "zh" ? "项目" : "Projects"}</p>
+          <ProjectSwitcher lang={lang} />
+        </div>
       </div>
 
       <button
@@ -2209,19 +2282,54 @@ function Sidebar({
       {/* Tasks section */}
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-[13px] font-semibold text-slate-500">{text.tasksLabel}</h2>
+        <button
+          onClick={() => setTaskSearchExpanded((current) => !current)}
+          className={`flex h-7 w-7 items-center justify-center rounded-xl transition ${
+            showTaskSearch
+              ? "bg-[rgba(23,36,216,0.08)] text-[#161FAD]"
+              : "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          }`}
+          aria-label={text.searchTasks}
+        >
+          <Search className="h-3.5 w-3.5" />
+        </button>
       </div>
 
-      <div className="mb-2 flex items-center gap-2 rounded-[14px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
-        <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-        <input
-          value={taskSearchQuery}
-          onChange={(event) => setTaskSearchQuery(event.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
-          placeholder={text.searchTasks}
-        />
+      <div className={`overflow-hidden transition-all duration-200 ${
+        showTaskSearch ? "mb-2 max-h-12 opacity-100" : "mb-0 max-h-0 opacity-0"
+      }`}>
+        <div className="flex items-center gap-2 rounded-[14px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
+          <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <input
+            value={taskSearchQuery}
+            onChange={(event) => setTaskSearchQuery(event.target.value)}
+            onBlur={() => {
+              if (!taskSearchQuery.trim()) setTaskSearchExpanded(false);
+            }}
+            autoFocus={showTaskSearch}
+            className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
+            placeholder={text.searchTasks}
+          />
+          {taskSearchQuery ? (
+            <button
+              onClick={() => {
+                setTaskSearchQuery("");
+                setTaskSearchExpanded(false);
+              }}
+              className="flex h-5 w-5 items-center justify-center rounded-lg text-slate-300 transition hover:bg-slate-100 hover:text-slate-500"
+              aria-label={lang === "zh" ? "清空搜索" : "Clear search"}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div
+        onScroll={handleTaskListScroll}
+        onWheel={handleTaskListWheel}
+        className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1 [scrollbar-color:rgba(148,163,184,0.45)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300/70 [&::-webkit-scrollbar-track]:bg-transparent"
+      >
         {taskItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center">
             <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100">
@@ -2276,7 +2384,7 @@ function Sidebar({
                         </p>
                       </button>
                       <span className="pointer-events-none absolute right-9 top-1/2 -translate-y-1/2 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-medium text-slate-400 opacity-0 shadow-sm ring-1 ring-slate-100 transition group-hover:opacity-100">
-                        {pick(lang, task.submittedAtLabel ?? l("", ""))}
+                        {formatTaskRelativeTime(task.submittedAt, lang, task.submittedAtLabel)}
                       </span>
                       <button
                         onClick={(event) => {
@@ -3916,6 +4024,106 @@ function WorkflowFlowDrawer({
   );
 }
 
+function getStepLogTitle(step: PlanStep, lang: Lang) {
+  if (step.status === "running") return lang === "zh" ? "实时日志" : "Live logs";
+  if (step.status === "failed") return lang === "zh" ? "异常日志" : "Error logs";
+  if (step.status === "done") return lang === "zh" ? "结果日志" : "Result logs";
+  return lang === "zh" ? "节点日志" : "Step logs";
+}
+
+function buildStepLogText(step: PlanStep, lang: Lang) {
+  const stepName = pick(lang, step.title);
+  const message = step.status === "done" ? pick(lang, step.summary) : step.status === "running" ? pick(lang, step.detail) : pick(lang, step.waiting);
+  const stepKey = step.id.replace(/[^a-zA-Z0-9-]/g, "_");
+
+  if (step.status === "waiting") {
+    return `2026-07-01 11:10:49.764017 [INFO] STEP(${stepKey}): ${stepName} registered, status=WAITING.
+2026-07-01 11:10:49.764021 [INFO] STEP(${stepKey}): Waiting for upstream dependency.
+2026-07-01 11:10:49.764025 [INFO] STEP(${stepKey}): ${message}`;
+  }
+
+  if (step.status === "failed") {
+    return `2026-07-01 11:26:21.600029 [ERROR] STEP(${stepKey}): ${stepName} status=FAILED.
+2026-07-01 11:26:21.599941 [ERROR] STEP(${stepKey}): Job.run() return code is not 0.
+2026-07-01 11:26:21.599885 [ERROR] STEP(${stepKey}): ${message}
+2026-07-01 11:26:21.599765 [INFO] STEP(${stepKey}): Failure package generated for project-team triage.`;
+  }
+
+  if (step.status === "running") {
+    return `2026-07-01 11:22:31.217138 [INFO] STEP(${stepKey}): ${stepName} status=RUNNING.
+2026-07-01 11:22:33.096825 [INFO] STEP(${stepKey}): ${message}
+2026-07-01 11:22:45.210395 [INFO] STEP(${stepKey}): Streaming live logs ...
+2026-07-01 11:23:10.539006 [INFO] STEP(${stepKey}): Resource heartbeat received, queue=priority, gpu=1.`;
+  }
+
+  return `2026-07-01 11:26:17.786537 [INFO] STEP(${stepKey}): ${stepName} output archived.
+2026-07-01 11:26:20.539006 [INFO] STEP(${stepKey}): ${message}
+2026-07-01 11:26:21.026030 [INFO] STEP(${stepKey}): Result files archived to ./saveto/results.
+2026-07-01 11:26:21.287585 [INFO] STEP(${stepKey}): Step now status=SUCCESS. Cost: ${step.duration}.`;
+}
+
+function formatMonitorTime(date: Date, lang: Lang) {
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  const hour = `${date.getHours()}`.padStart(2, "0");
+  const minute = `${date.getMinutes()}`.padStart(2, "0");
+  const second = `${date.getSeconds()}`.padStart(2, "0");
+  if (lang === "zh") return `${month}-${day} ${hour}:${minute}:${second}`;
+  return `Jun ${day} ${hour}:${minute}:${second}`;
+}
+
+function getStepTiming(step: PlanStep, index: number, lang: Lang) {
+  if (step.status === "waiting") {
+    return { start: "-", end: "-" };
+  }
+
+  const start = new Date(2026, 5, 26, 14, 36 + index * 2, 2 + index * 8);
+  const durationSeconds = Number.parseInt(step.duration, 10) || 0;
+  const end = new Date(start.getTime() + durationSeconds * 1000);
+
+  return {
+    start: formatMonitorTime(start, lang),
+    end: step.status === "done" || step.status === "failed" ? formatMonitorTime(end, lang) : "-",
+  };
+}
+
+function StepLogDialog({
+  lang,
+  step,
+  open,
+  onOpenChange,
+}: {
+  lang: Lang;
+  step: PlanStep | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  if (!step) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex h-[min(760px,88vh)] max-h-[88vh] flex-col overflow-hidden rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[980px]">
+        <DialogHeader className="border-b border-slate-100 px-5 py-4">
+          <DialogTitle className="text-[15px] font-semibold text-[#070261]">{getStepLogTitle(step, lang)} · {pick(lang, step.title)}</DialogTitle>
+          <p className="mt-1 text-[12px] leading-5 text-slate-500">
+            {lang === "zh" ? "展示该节点的运行记录；运行中为实时日志，完成后保留为结果日志。" : "Shows logs for this step. Running steps show live logs; completed steps keep result logs."}
+          </p>
+        </DialogHeader>
+        <div className="flex min-h-0 flex-1 flex-col p-5">
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-[14px] bg-slate-50 px-3 py-2">
+            <div className="min-w-0">
+              <p className="text-[12px] font-medium text-slate-700">{pick(lang, step.title)}</p>
+              <p className="mt-0.5 truncate text-[10px] text-slate-400">{lang === "zh" ? "节点耗时" : "Duration"} · {step.duration}</p>
+            </div>
+            <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-slate-500">{step.status}</span>
+          </div>
+          <pre className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap break-words rounded-[18px] bg-slate-950 px-4 py-4 font-mono text-[10px] leading-5 text-slate-100">{buildStepLogText(step, lang)}</pre>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function MonitorPanelContent({
   lang,
   steps,
@@ -3924,7 +4132,7 @@ function MonitorPanelContent({
   steps: PlanStep[];
 }) {
   const text = copy[lang];
-  const [logDialogOpen, setLogDialogOpen] = useState(false);
+  const [selectedStepLog, setSelectedStepLog] = useState<PlanStep | null>(null);
   const doneCount = steps.filter((step) => step.status === "done").length;
   const runningStep = steps.find((step) => step.status === "running");
   const failedStep = steps.find((step) => step.status === "failed");
@@ -3945,27 +4153,6 @@ function MonitorPanelContent({
     cancelled: text.monitorTaskStatusCancelled,
   };
   const taskStatusClass = taskStatusMeta[taskStatusKey].className;
-  const executionLogText = completed
-    ? `2026-07-01 11:26:21.287585 2026-07-01 03:26:21,287 [INFO] STEP(antibody_structure_prediction): Step now status: SUCCESS.
-2026-07-01 11:26:21.026030 2026-07-01 03:26:21,025 [INFO] STEP(immunebuilder_mab): Result files archived to ./saveto/results
-2026-07-01 11:26:20.539006 2026-07-01 03:26:20,538 [INFO] JOB(s3://ailux-agent-prod/runs/run-20260626-dll3-003): Other job all over: {'xfold3_fast': 'DONE', 'xmpnn_design': 'DONE'}
-2026-07-01 11:26:19.072515 2026-07-01 03:26:19,072 [INFO] JOB(s3://ailux-agent-prod/runs/run-20260626-dll3-003): Run Loader over. Return code: 0, Cost: 928.8619058132172 seconds.
-2026-07-01 11:26:17.786537 2026-07-01 03:26:17,786 [INFO] JOB(s3://ailux-agent-prod/runs/run-20260626-dll3-003): Push Job inout finished
-2026-07-01 11:25:57.844117 [2026-07-01 03:25:57][INFO] The Finally COST : {'calls': {'xtalfold3_fast': 4, 'xmpnn': 20, 'immunebuilder': 20}, 'gpu_cost': 0.49666807360119286, 'sum_cost': 2.996625593601193}
-2026-07-01 11:25:53.096825 [2026-07-01 03:25:53][INFO] Generated antibody structures: Mcb008_model_1.pdb, ZG006_design_04.pdb
-2026-07-01 11:22:31.217138 [2026-07-01 03:22:31][INFO] Begin immunebuilder(type=mab) prediction ...
-2026-07-01 11:18:40.210395 2026-07-01 03:18:40,210 [INFO] STEP(xmpnn_design): Sequence design completed, candidates=20
-2026-07-01 11:10:49.764017 Start SteropeCli: /home/job/run; SDK version: 0.2.23`
-    : `2026-07-01 11:26:21.600029 sterope.exceptions.JobRunError: Step not done and Job.run() return code is not 0, exit
-2026-07-01 11:26:21.600019     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-2026-07-01 11:26:21.599941     raise JobRunError(failed_reason)
-2026-07-01 11:26:21.599885   File "/root/conda/bin/sterope_cli.py", line 43, in raise_with_is_success
-2026-07-01 11:26:21.599779   File "/root/conda/bin/sterope_cli.py", line 161, in <module>
-2026-07-01 11:26:21.599765 Traceback (most recent call last):
-2026-07-01 11:26:21.287585 2026-07-01 03:26:21,287 [INFO] STEP(antibody_structure_prediction): Step now status: RUNNING.
-2026-07-01 11:26:20.035213 2026-07-01 03:26:20,035 [INFO] JOB(s3://ailux-agent-prod/runs/run-20260626-dll3-003): Extend leader lock
-2026-07-01 11:26:19.314534 2026-07-01 03:26:19,314 [INFO] JOB(s3://ailux-agent-prod/runs/run-20260626-dll3-003): Is leader, try get lock
-2026-07-01 11:10:49.764017 Start SteropeCli: /home/job/run; SDK version: 0.2.23`;
   const handleCopyTaskId = () => {
     void navigator.clipboard?.writeText(taskId);
     toast.success(text.monitorTaskIdCopied);
@@ -3973,25 +4160,6 @@ function MonitorPanelContent({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-[18px] border border-slate-100 bg-white px-4 py-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="text-[13px] font-semibold text-slate-700">{text.monitorTaskCard}</p>
-          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${taskStatusClass}`}>
-            {taskStatusLabel[taskStatusKey]}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 gap-2.5 text-[11px]">
-          <div className="rounded-[14px] bg-slate-50/80 px-3 py-2">
-            <p className="text-slate-400">{text.monitorSubmittedAt}</p>
-            <p className="mt-1 font-medium text-slate-700">{lang === "zh" ? "06-26 14:36" : "Jun 26 14:36"}</p>
-          </div>
-          <div className="rounded-[14px] bg-slate-50/80 px-3 py-2">
-            <p className="text-slate-400">{text.monitorCompletedAt}</p>
-            <p className="mt-1 font-medium text-slate-700">{completed ? (lang === "zh" ? "06-26 15:18" : "Jun 26 15:18") : "-"}</p>
-          </div>
-        </div>
-      </div>
-
       <div className="rounded-[18px] border border-slate-100 bg-white px-4 py-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <p className="text-[13px] font-semibold text-slate-700">{text.monitorCluster}</p>
@@ -4025,46 +4193,50 @@ function MonitorPanelContent({
 
       <div className="rounded-[18px] border border-slate-100 bg-white px-4 py-4">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="text-[13px] font-semibold text-slate-700">{text.monitorExecutionLogs}</p>
-          <span className="text-[11px] text-slate-400">{text.monitorExecutionSummary}</span>
+          <p className="text-[13px] font-semibold text-slate-700">{lang === "zh" ? "节点日志" : "Step logs"}</p>
+          <span className="text-[11px] text-slate-400">{doneCount}/{steps.length}</span>
         </div>
-        <div className="rounded-[14px] bg-slate-50/80 px-3 py-3">
-          <p className="text-[12px] leading-5 text-slate-600">{text.monitorExecutionLogSummary}</p>
-          <p className="mt-2 truncate font-mono text-[10px] text-slate-400">
-            {completed
-              ? "2026-07-01 11:26:21.287585 [INFO] STEP(antibody_structure_prediction): Step now status: SUCCESS."
-              : "2026-07-01 11:26:21.287585 [INFO] STEP(antibody_structure_prediction): Step now status: RUNNING."}
-          </p>
-          <button
-            onClick={() => setLogDialogOpen(true)}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
-          >
-            <ArrowUpRight className="h-3.5 w-3.5" />
-            {text.monitorViewExecutionLogs}
-          </button>
+        <div className="space-y-2">
+          {steps.map((step, index) => {
+            const style = statusStyles[step.status];
+            const iconDone = step.status === "done";
+            const timing = getStepTiming(step, index, lang);
+            return (
+              <div key={step.id} className="rounded-[14px] bg-slate-50/80 px-3 py-2.5">
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${style.icon}`}>
+                    {iconDone ? <CheckCircle2 className="h-3.5 w-3.5" /> : <CircleDashed className="h-3.5 w-3.5" />}
+                  </div>
+                  <p className="min-w-0 flex-1 truncate text-[12px] font-medium text-slate-700">{pick(lang, step.title)}</p>
+                  <button
+                    onClick={() => setSelectedStepLog(step)}
+                    className="shrink-0 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-slate-500 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+                  >
+                    {lang === "zh" ? "查看日志" : "View logs"}
+                  </button>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 pl-10 text-[10px]">
+                  <div className="rounded-xl bg-white px-2.5 py-1.5">
+                    <p className="text-slate-400">{lang === "zh" ? "开始时间" : "Start"}</p>
+                    <p className="mt-0.5 whitespace-nowrap font-medium text-slate-600">{timing.start}</p>
+                  </div>
+                  <div className="rounded-xl bg-white px-2.5 py-1.5">
+                    <p className="text-slate-400">{lang === "zh" ? "结束时间" : "End"}</p>
+                    <p className="mt-0.5 whitespace-nowrap font-medium text-slate-600">{timing.end}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      <Dialog open={logDialogOpen} onOpenChange={setLogDialogOpen}>
-        <DialogContent className="flex h-[min(860px,92vh)] max-h-[92vh] flex-col overflow-hidden rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[1180px]">
-          <DialogHeader className="border-b border-slate-100 px-5 py-4">
-            <DialogTitle className="text-[15px] font-semibold text-[#070261]">{text.monitorLogDialogTitle}</DialogTitle>
-            <p className="mt-1 text-[12px] leading-5 text-slate-500">{text.monitorLogDialogBody}</p>
-          </DialogHeader>
-          <div className="flex min-h-0 flex-1 flex-col p-5">
-            <div className="mb-3 flex items-center justify-between gap-3 rounded-[14px] bg-slate-50 px-3 py-2">
-              <div className="min-w-0">
-                <p className="text-[12px] font-medium text-slate-700">{pick(lang, taskStatusMeta[taskStatusKey].label)}</p>
-                <p className="mt-0.5 truncate font-mono text-[10px] text-slate-400">{taskId}</p>
-              </div>
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${taskStatusClass}`}>
-                {taskStatusLabel[taskStatusKey]}
-              </span>
-            </div>
-            <pre className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap break-words rounded-[18px] bg-slate-950 px-4 py-4 font-mono text-[10px] leading-5 text-slate-100">{executionLogText}</pre>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <StepLogDialog
+        lang={lang}
+        step={selectedStepLog}
+        open={Boolean(selectedStepLog)}
+        onOpenChange={(open) => !open && setSelectedStepLog(null)}
+      />
 
       {failedStep ? (
         <div className="rounded-[18px] border border-red-100 bg-red-50 px-4 py-4">
@@ -4136,6 +4308,7 @@ function SidePanel({
   const [flowOpen, setFlowOpen] = useState(false);
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [expandedPreviousRunIds, setExpandedPreviousRunIds] = useState<string[]>([]);
+  const [selectedStepLog, setSelectedStepLog] = useState<PlanStep | null>(null);
   const progressPercent = useMemo(() => {
     const doneCount = steps.filter((step) => step.status === "done").length;
     const hasRunning = steps.some((step) => step.status === "running");
@@ -4267,7 +4440,7 @@ function SidePanel({
                         ? "text-slate-500"
                         : "text-slate-400";
                   return (
-                    <article key={step.id} className="rounded-[18px] border border-slate-100 bg-slate-50/90 p-3.5">
+                    <article key={step.id} className="group rounded-[18px] border border-slate-100 bg-slate-50/90 p-3.5">
                       <div className="flex items-start gap-3">
                         <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border ${style.icon}`}>
                           {iconDone ? <CheckCircle2 className="h-4 w-4" /> : <CircleDashed className="h-4 w-4" />}
@@ -4275,7 +4448,15 @@ function SidePanel({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-3">
                             <p className="text-[13px] font-semibold text-slate-800">{pick(lang, step.title)}</p>
-                            <span className="text-[11px] text-slate-400">{step.duration}</span>
+                            <div className="flex shrink-0 items-center gap-1.5">
+                              <button
+                                onClick={() => setSelectedStepLog(step)}
+                                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-medium text-slate-500 opacity-0 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD] group-hover:opacity-100"
+                              >
+                                {getStepLogTitle(step, lang)}
+                              </button>
+                              <span className="text-[11px] text-slate-400">{step.duration}</span>
+                            </div>
                           </div>
                           <p className={`mt-1 text-[11px] leading-5 ${messageTone}`}>{message}</p>
                         </div>
@@ -4284,6 +4465,12 @@ function SidePanel({
                   );
                 })}
               </div>
+              <StepLogDialog
+                lang={lang}
+                step={selectedStepLog}
+                open={Boolean(selectedStepLog)}
+                onOpenChange={(open) => !open && setSelectedStepLog(null)}
+              />
 
             </div>
           )
