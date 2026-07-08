@@ -85,8 +85,10 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
   const [filter, setFilter] = useState<"all" | "uploaded" | "run-saved">("all");
   const [dataSearchQuery, setDataSearchQuery] = useState("");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploadDescription, setUploadDescription] = useState("");
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
   const [editingAssetName, setEditingAssetName] = useState("");
+  const [editingAssetDescription, setEditingAssetDescription] = useState("");
   const [deleteAssetId, setDeleteAssetId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
@@ -120,13 +122,16 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
     if (selectedFiles.length === 0) return;
 
     let createdCount = 0;
+    const description =
+      uploadDescription.trim() ||
+      (lang === "zh" ? "从本地文件上传到项目数据集。" : "Uploaded from local file.");
     selectedFiles.forEach((file) => {
       const result = addProjectDataAsset(project.id, {
         name: file.name,
         type: dataTypeFromName(file.name),
         size: formatFileSize(file.size),
         source: "uploaded",
-        description: lang === "zh" ? "从本地文件上传到项目数据集。" : "Uploaded from local file.",
+        description,
         tags: ["uploaded", dataTypeFromName(file.name)],
       });
       if (result === "created") createdCount += 1;
@@ -134,6 +139,7 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
 
     toast.success(lang === "zh" ? `已上传 ${createdCount} 个文件` : `Uploaded ${createdCount} files`);
     setUploadDialogOpen(false);
+    setUploadDescription("");
   };
 
   const handleUploadFolder = (files: FileList | null) => {
@@ -149,13 +155,16 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
     });
 
     let createdCount = 0;
+    const description =
+      uploadDescription.trim() ||
+      (lang === "zh" ? "从本地文件夹上传到项目数据集。" : "Uploaded from local folder.");
     folderStats.forEach((stat, folderName) => {
       const result = addProjectDataAsset(project.id, {
         name: folderName,
         type: "folder",
         size: `${stat.count} ${lang === "zh" ? "个文件" : "files"} · ${formatFileSize(stat.size)}`,
         source: "uploaded",
-        description: lang === "zh" ? "从本地文件夹上传到项目数据集。" : "Uploaded from local folder.",
+        description,
         tags: ["folder", "uploaded"],
       });
       if (result === "created") createdCount += 1;
@@ -163,11 +172,13 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
 
     toast.success(lang === "zh" ? `已上传 ${createdCount} 个文件夹` : `Uploaded ${createdCount} folders`);
     setUploadDialogOpen(false);
+    setUploadDescription("");
   };
 
   const openAssetEditor = (asset: Project["data"][number]) => {
     setEditingAssetId(asset.id);
     setEditingAssetName(asset.name);
+    setEditingAssetDescription(asset.description ?? "");
   };
 
   const handleSaveAssetName = (e: React.FormEvent) => {
@@ -180,9 +191,13 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
       return;
     }
 
-    updateProjectDataAsset(project.id, editingAssetId, nextName);
+    updateProjectDataAsset(project.id, editingAssetId, {
+      name: nextName,
+      description: editingAssetDescription.trim() || undefined,
+    });
     setEditingAssetId(null);
-    toast.success(lang === "zh" ? "数据名称已更新" : "Data name updated");
+    setEditingAssetDescription("");
+    toast.success(lang === "zh" ? "数据信息已更新" : "Data details updated");
   };
 
   const handleDeleteAsset = () => {
@@ -337,7 +352,10 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
         </div>
       )}
 
-      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+      <Dialog open={uploadDialogOpen} onOpenChange={(open) => {
+        setUploadDialogOpen(open);
+        if (!open) setUploadDescription("");
+      }}>
         <DialogContent className="overflow-hidden rounded-[28px] border-white/70 bg-white p-0 shadow-[0_28px_90px_rgba(15,23,42,0.22)] sm:max-w-[760px]">
           <DialogHeader className="border-b border-slate-100 px-6 py-5">
             <DialogTitle className="text-[16px] font-semibold text-[#070261]">
@@ -350,6 +368,18 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
             </p>
           </DialogHeader>
           <div className="grid gap-5 px-6 py-6">
+            <label className="grid gap-1.5">
+              <span className="text-[11px] font-medium text-slate-500">
+                {lang === "zh" ? "描述" : "Description"}
+              </span>
+              <textarea
+                value={uploadDescription}
+                onChange={(event) => setUploadDescription(event.target.value)}
+                rows={3}
+                className="resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] leading-6 text-slate-700 outline-none transition placeholder:text-slate-300 focus:border-[rgba(23,36,216,0.3)]"
+                placeholder={lang === "zh" ? "说明这批数据的用途、来源或适用场景" : "Describe usage, source, or suitable scenarios"}
+              />
+            </label>
             <div className="grid gap-4 md:grid-cols-2">
               <button
                 type="button"
@@ -389,7 +419,12 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(editingAssetId)} onOpenChange={(open) => !open && setEditingAssetId(null)}>
+      <Dialog open={Boolean(editingAssetId)} onOpenChange={(open) => {
+        if (!open) {
+          setEditingAssetId(null);
+          setEditingAssetDescription("");
+        }
+      }}>
         <DialogContent className="rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[440px]">
           <DialogHeader className="border-b border-slate-100 px-5 py-4">
             <DialogTitle className="text-[15px] font-semibold text-[#070261]">
@@ -406,6 +441,18 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
                 onChange={(e) => setEditingAssetName(e.target.value)}
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 outline-none transition focus:border-[rgba(23,36,216,0.3)]"
                 placeholder={editingAsset?.name}
+              />
+            </label>
+            <label className="grid gap-1.5">
+              <span className="text-[11px] font-medium text-slate-500">
+                {lang === "zh" ? "描述" : "Description"}
+              </span>
+              <textarea
+                value={editingAssetDescription}
+                onChange={(event) => setEditingAssetDescription(event.target.value)}
+                rows={3}
+                className="resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] leading-6 text-slate-700 outline-none transition placeholder:text-slate-300 focus:border-[rgba(23,36,216,0.3)]"
+                placeholder={lang === "zh" ? "补充数据用途、来源或适用场景" : "Add usage, source, or suitable scenarios"}
               />
             </label>
             <div className="flex justify-end gap-2">

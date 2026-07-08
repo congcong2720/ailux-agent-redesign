@@ -11,7 +11,7 @@ import { CreateProjectView } from "@/components/CreateProjectView";
 import { PdbViewer } from "@/components/PdbViewer";
 import { ProjectPanel } from "@/components/ProjectPanel";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
-import { ResourcePanel, TEMPLATES } from "@/components/ResourcePanel";
+import { AgentPreferencePanel, ResourcePanel, TEMPLATES } from "@/components/ResourcePanel";
 import { UserCenter } from "@/components/UserCenter";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -26,6 +26,7 @@ import {
   AtSign,
   Bell,
   Bot,
+  Brain,
   ChevronDown,
   CheckCircle2,
   CircleDashed,
@@ -1146,6 +1147,8 @@ const copy = {
     noMatchedTasksBody: "换个关键词试试，或清空搜索查看全部任务。",
     signedInRole: "已登录 · 项目成员",
     userCenter: "用户中心",
+    myResources: "我的资源",
+    agentPreferences: "Agent 偏好",
     networkDiagnostic: "网络检测工具",
     switchLanguage: "切换语言",
     switchLanguageHint: "切换到 English",
@@ -1311,6 +1314,8 @@ const copy = {
     noMatchedTasksBody: "Try another keyword or clear search to view all tasks.",
     signedInRole: "Signed in · Project member",
     userCenter: "User center",
+    myResources: "My resources",
+    agentPreferences: "Agent preferences",
     networkDiagnostic: "Network diagnostics",
     switchLanguage: "Switch language",
     switchLanguageHint: "Switch to 中文",
@@ -1628,7 +1633,7 @@ function dataAssetFromReport(report: RunReport): Omit<ProjectDataAsset, "id" | "
   };
 }
 
-type UserMenuAction = "profile" | "notifications" | "network" | "language" | "logout";
+type UserMenuAction = "profile" | "resources" | "preferences" | "notifications" | "network" | "language" | "logout";
 
 function UserMenu({ lang, onAction }: { lang: Lang; onAction: (action: UserMenuAction) => void }) {
   const text = copy[lang];
@@ -1641,6 +1646,22 @@ function UserMenu({ lang, onAction }: { lang: Lang; onAction: (action: UserMenuA
       >
         <UserCircle2 className="h-4 w-4" />
         {text.userCenter}
+      </button>
+
+      <button
+        onClick={() => onAction("resources")}
+        className="flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[13px] font-medium text-slate-700 transition hover:bg-slate-50 hover:text-[#161FAD]"
+      >
+        <Database className="h-4 w-4" />
+        {text.myResources}
+      </button>
+
+      <button
+        onClick={() => onAction("preferences")}
+        className="flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[13px] font-medium text-slate-700 transition hover:bg-slate-50 hover:text-[#161FAD]"
+      >
+        <Brain className="h-4 w-4" />
+        {text.agentPreferences}
       </button>
 
       <button
@@ -4281,6 +4302,7 @@ function SidePanel({
   onSaveFileToProject,
   onSaveFilesToProject,
   onSaveReportToProject,
+  onSavePlanAsSkill,
 }: {
   lang: Lang;
   view: ViewMode;
@@ -4302,6 +4324,7 @@ function SidePanel({
   onSaveFileToProject: (file: ResultFile) => void;
   onSaveFilesToProject: (files: ResultFile[]) => void;
   onSaveReportToProject: (report: RunReport) => void;
+  onSavePlanAsSkill: (name: string, description: string, steps: number) => void;
 }) {
   const text = copy[lang];
   const showEmpty = view === "new";
@@ -4309,6 +4332,13 @@ function SidePanel({
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [expandedPreviousRunIds, setExpandedPreviousRunIds] = useState<string[]>([]);
   const [selectedStepLog, setSelectedStepLog] = useState<PlanStep | null>(null);
+  const [saveSkillOpen, setSaveSkillOpen] = useState(false);
+  const [skillName, setSkillName] = useState(lang === "zh" ? "DLL3 双抗预测 Skill" : "DLL3 bispecific prediction Skill");
+  const [skillDescription, setSkillDescription] = useState(
+    lang === "zh"
+      ? "保存当前 Plan 的节点流程，后续可作为标准 Skill 复用。"
+      : "Save the current Plan nodes as a reusable Skill.",
+  );
   const progressPercent = useMemo(() => {
     const doneCount = steps.filter((step) => step.status === "done").length;
     const hasRunning = steps.some((step) => step.status === "running");
@@ -4366,6 +4396,18 @@ function SidePanel({
     onToggleFiles(ids, !allSelected);
   };
 
+  const handleConfirmSaveSkill = (event: React.FormEvent) => {
+    event.preventDefault();
+    const nextName = skillName.trim();
+    if (!nextName) {
+      toast.error(lang === "zh" ? "Skill 名称不能为空" : "Skill name is required");
+      return;
+    }
+
+    onSavePlanAsSkill(nextName, skillDescription.trim(), steps.length);
+    setSaveSkillOpen(false);
+  };
+
   return (
     <aside className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className="border-b border-slate-200/80 px-4 py-4">
@@ -4413,6 +4455,13 @@ function SidePanel({
                       <GitBranch className="h-3 w-3" />
                       {text.flowGraph}
                     </button>
+                    <button
+                      onClick={() => setSaveSkillOpen(true)}
+                      className="inline-flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 transition hover:bg-emerald-100 active:scale-[0.97]"
+                    >
+                      <Save className="h-3 w-3" />
+                      {lang === "zh" ? "保存为 Skill" : "Save as Skill"}
+                    </button>
                   </div>
                 </div>
                 <div className="h-2 rounded-full bg-slate-100">
@@ -4423,6 +4472,58 @@ function SidePanel({
                 </div>
               </div>
               <WorkflowFlowDrawer lang={lang} open={flowOpen} steps={steps} onOpenChange={setFlowOpen} />
+              <Dialog open={saveSkillOpen} onOpenChange={setSaveSkillOpen}>
+                <DialogContent className="rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[500px]">
+                  <DialogHeader className="border-b border-slate-100 px-5 py-4">
+                    <DialogTitle className="text-[15px] font-semibold text-[#070261]">
+                      {lang === "zh" ? "保存为 Skill" : "Save as Skill"}
+                    </DialogTitle>
+                    <p className="mt-1 text-[12px] leading-5 text-slate-500">
+                      {lang === "zh"
+                        ? "将当前 Plan 节点流程保存为可复用 Skill，后续可在“我的资源”中管理权限和分享对象。"
+                        : "Save the current Plan as a reusable Skill. Manage permissions and sharing in My Resources later."}
+                    </p>
+                  </DialogHeader>
+                  <form onSubmit={handleConfirmSaveSkill} className="grid gap-4 px-5 py-5">
+                    <label className="grid gap-1.5">
+                      <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "Skill 名称" : "Skill name"}</span>
+                      <input
+                        value={skillName}
+                        onChange={(event) => setSkillName(event.target.value)}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 outline-none transition focus:border-[rgba(23,36,216,0.3)]"
+                      />
+                    </label>
+                    <label className="grid gap-1.5">
+                      <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "描述" : "Description"}</span>
+                      <textarea
+                        value={skillDescription}
+                        onChange={(event) => setSkillDescription(event.target.value)}
+                        rows={4}
+                        className="resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] leading-6 text-slate-700 outline-none transition placeholder:text-slate-300 focus:border-[rgba(23,36,216,0.3)]"
+                        placeholder={lang === "zh" ? "说明这个 Skill 适合复用的场景" : "Describe when this Skill should be reused"}
+                      />
+                    </label>
+                    <div className="rounded-[14px] bg-blue-50/70 px-3 py-2 text-[11px] leading-5 text-[#161FAD]">
+                      {lang === "zh" ? `来源：当前 Plan · ${steps.length} 个节点` : `Source: current Plan · ${steps.length} nodes`}
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSaveSkillOpen(false)}
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-medium text-slate-500 transition hover:text-slate-700"
+                      >
+                        {lang === "zh" ? "取消" : "Cancel"}
+                      </button>
+                      <button
+                        type="submit"
+                        className="rounded-xl bg-[#161FAD] px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-[#111996] active:scale-[0.97]"
+                      >
+                        {lang === "zh" ? "保存" : "Save"}
+                      </button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
               <div className="space-y-3">
                 {steps.map((step) => {
                   const style = statusStyles[step.status];
@@ -4734,7 +4835,7 @@ function SidePanel({
 }
 
 export default function Home() {
-  const { activeProject, addProjectDataAsset, mainView, setMainView } = useProject();
+  const { activeProject, addProjectDataAsset, addUserResource, mainView, setMainView, setResourceTab } = useProject();
   const [lang, setLang] = useState<Lang>("zh");
   const [activeView, setActiveView] = useState<ViewMode>("new");
   const [activeScenarioId, setActiveScenarioId] = useState<ScenarioId>("dll3");
@@ -5010,6 +5111,21 @@ export default function Home() {
     toast.success(`${text.savedFilesToProject} ${createdCount} ${text.exportedSuffix}`);
   };
 
+  const handleSavePlanAsSkill = (name: string, description: string, steps: number) => {
+    const resource = addUserResource({
+      kind: "skill",
+      name,
+      description: description || (lang === "zh" ? "由当前 Plan 保存的可复用 Skill。" : "Reusable Skill saved from the current Plan."),
+      category: lang === "zh" ? "抗体设计" : "Antibody design",
+      owner: "mine",
+      permission: "private",
+      sharedWith: [],
+      steps,
+    });
+
+    toast.success(lang === "zh" ? `已保存到我的资源：${resource.name}` : `Saved to My Resources: ${resource.name}`);
+  };
+
   const handleUserMenuAction = (action: UserMenuAction) => {
     if (action === "language") {
       const nextLang: Lang = lang === "zh" ? "en" : "zh";
@@ -5029,6 +5145,19 @@ export default function Home() {
     if (action === "notifications") {
       setUserCenterTab("notifications");
       setMainView("user-center");
+      setUserMenuOpen(false);
+      return;
+    }
+
+    if (action === "resources") {
+      setResourceTab("skill");
+      setMainView("my-resources");
+      setUserMenuOpen(false);
+      return;
+    }
+
+    if (action === "preferences") {
+      setMainView("agent-preferences");
       setUserMenuOpen(false);
       return;
     }
@@ -5065,6 +5194,10 @@ export default function Home() {
             <ProjectPanel lang={lang} />
           ) : mainView === "resource" ? (
             <ResourcePanel lang={lang} />
+          ) : mainView === "my-resources" ? (
+            <ResourcePanel lang={lang} mode="mine" />
+          ) : mainView === "agent-preferences" ? (
+            <AgentPreferencePanel lang={lang} />
           ) : mainView === "create-project" ? (
             <CreateProjectView lang={lang} />
           ) : mainView === "user-center" ? (
@@ -5125,6 +5258,7 @@ export default function Home() {
               onSaveFileToProject={handleSaveFileToProject}
               onSaveFilesToProject={openBatchSaveDialog}
               onSaveReportToProject={handleSaveReportToProject}
+              onSavePlanAsSkill={handleSavePlanAsSkill}
             />
           ) : null}
         </div>

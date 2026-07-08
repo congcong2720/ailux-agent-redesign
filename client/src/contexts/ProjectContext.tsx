@@ -22,6 +22,31 @@ export type ProjectDataAsset = {
   tags?: string[];
 };
 
+export type UserResource = {
+  id: string;
+  kind: "tool" | "skill";
+  name: string;
+  description: string;
+  category: string;
+  owner: "mine" | "shared";
+  permission: "private" | "shared";
+  sharedWith: string[];
+  updatedAt: string;
+  steps?: number;
+};
+
+export type AgentPreference = {
+  id: string;
+  scope: "global" | "project";
+  audience: "personal" | "project-members";
+  userId: string;
+  projectId?: string;
+  content: string;
+  status: "active" | "paused" | "deleted";
+  updatedAt: string;
+  deletedAt?: string;
+};
+
 export type ProjectDetailView = "data" | "members";
 
 export type Project = {
@@ -61,6 +86,85 @@ const defaultData: ProjectDataAsset[] = [
   { id: "d4", name: "internalization_experiment_raw.csv", type: "csv", size: "48 KB", updatedAt: "2026-04-20", source: "uploaded", description: "项目初始化时上传的实验原始数据。", tags: ["raw-data"] },
 ];
 
+const defaultUserResources: UserResource[] = [
+  {
+    id: "ur-tool-1",
+    kind: "tool",
+    name: "Rosetta 能量特征计算",
+    description: "个人常用的 Rosetta 结构能量计算配置，适用于候选抗体结构初筛。",
+    category: "抗体设计",
+    owner: "mine",
+    permission: "private",
+    sharedWith: [],
+    updatedAt: "2026-07-02",
+  },
+  {
+    id: "ur-skill-1",
+    kind: "skill",
+    name: "DLL3 双抗预测 Skill",
+    description: "从结构文件到特征计算、模型预测和报告生成的复用流程。",
+    category: "抗体设计",
+    owner: "mine",
+    permission: "shared",
+    sharedWith: ["liwei@xtalpi.com", "zhangmin@xtalpi.com"],
+    updatedAt: "2026-07-03",
+    steps: 6,
+  },
+  {
+    id: "ur-skill-2",
+    kind: "skill",
+    name: "EGFR CDR 优化 Skill",
+    description: "同事分享的 CDR 区域突变设计与结构复核流程。",
+    category: "蛋白设计",
+    owner: "shared",
+    permission: "shared",
+    sharedWith: ["chenlab@xtalpi.com"],
+    updatedAt: "2026-07-01",
+    steps: 5,
+  },
+];
+
+const defaultAgentPreferences: AgentPreference[] = [
+  {
+    id: "pref-global-1",
+    scope: "global",
+    audience: "personal",
+    userId: "user-chen-lab",
+    content: "默认用中文回答，关键结论优先给出，必要时补充英文术语。",
+    status: "active",
+    updatedAt: "2026-07-05",
+  },
+  {
+    id: "pref-global-2",
+    scope: "global",
+    audience: "personal",
+    userId: "user-chen-lab",
+    content: "涉及抗体结构分析时，优先说明输入文件、模型假设和结果可解释性限制。",
+    status: "active",
+    updatedAt: "2026-07-04",
+  },
+  {
+    id: "pref-project-1",
+    scope: "project",
+    audience: "project-members",
+    userId: "user-chen-lab",
+    projectId: "proj-default",
+    content: "DLL3 项目中优先关注内化活性、KD、共定位评分和 linker 柔性。",
+    status: "active",
+    updatedAt: "2026-07-03",
+  },
+  {
+    id: "pref-project-2",
+    scope: "project",
+    audience: "personal",
+    userId: "user-chen-lab",
+    projectId: "proj-default",
+    content: "临时下载路径和一次性中间分析结论不写入长期记忆。",
+    status: "paused",
+    updatedAt: "2026-07-02",
+  },
+];
+
 export const SAMPLE_PROJECTS: Project[] = [
   {
     id: "proj-default",
@@ -95,7 +199,7 @@ export const SAMPLE_PROJECTS: Project[] = [
   },
 ];
 
-export type MainView = "workspace" | "project-detail" | "resource" | "create-project" | "user-center";
+export type MainView = "workspace" | "project-detail" | "resource" | "my-resources" | "agent-preferences" | "create-project" | "user-center";
 
 type ProjectContextType = {
   projects: Project[];
@@ -105,8 +209,16 @@ type ProjectContextType = {
   updateProject: (projectId: string, updates: Pick<Project, "name" | "description" | "projectCode">) => void;
   deleteProject: (projectId: string) => void;
   addProjectDataAsset: (projectId: string, asset: Omit<ProjectDataAsset, "id" | "source" | "updatedAt"> & { source?: ProjectDataAsset["source"] }) => "created" | "existing";
-  updateProjectDataAsset: (projectId: string, assetId: string, name: string) => void;
+  updateProjectDataAsset: (projectId: string, assetId: string, updates: Pick<ProjectDataAsset, "name" | "description">) => void;
   deleteProjectDataAsset: (projectId: string, assetId: string) => void;
+  userResources: UserResource[];
+  addUserResource: (resource: Omit<UserResource, "id" | "updatedAt">) => UserResource;
+  updateUserResource: (resourceId: string, updates: Pick<UserResource, "name" | "description" | "permission" | "sharedWith">) => void;
+  agentPreferences: AgentPreference[];
+  addAgentPreference: (preference: Omit<AgentPreference, "id" | "userId" | "updatedAt" | "status">) => AgentPreference;
+  updateAgentPreference: (preferenceId: string, updates: Pick<AgentPreference, "content" | "scope" | "audience" | "projectId">) => void;
+  toggleAgentPreference: (preferenceId: string) => void;
+  deleteAgentPreference: (preferenceId: string) => void;
   addProjectMember: (projectId: string, email: string, role: ProjectMember["role"]) => ProjectMember | null;
   updateProjectMemberRole: (projectId: string, memberId: string, role: ProjectMember["role"]) => void;
   removeProjectMember: (projectId: string, memberId: string) => void;
@@ -118,8 +230,8 @@ type ProjectContextType = {
   setMainView: (view: MainView) => void;
   projectDetailView: ProjectDetailView;
   setProjectDetailView: (view: ProjectDetailView) => void;
-  resourceTab: "data" | "skill" | "template";
-  setResourceTab: (tab: "data" | "skill" | "template") => void;
+  resourceTab: "data" | "skill" | "template" | "preference";
+  setResourceTab: (tab: "data" | "skill" | "template" | "preference") => void;
 };
 
 const ProjectContext = createContext<ProjectContextType | null>(null);
@@ -127,10 +239,12 @@ const ProjectContext = createContext<ProjectContextType | null>(null);
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const [projects, setProjects] = useState<Project[]>(SAMPLE_PROJECTS);
   const [activeProject, setActiveProject] = useState<Project>(SAMPLE_PROJECTS[0]);
+  const [userResources, setUserResources] = useState<UserResource[]>(defaultUserResources);
+  const [agentPreferences, setAgentPreferences] = useState<AgentPreference[]>(defaultAgentPreferences);
   const [projectPanelOpen, setProjectPanelOpen] = useState(false);
   const [mainView, setMainView] = useState<MainView>("workspace");
   const [projectDetailView, setProjectDetailView] = useState<ProjectDetailView>("data");
-  const [resourceTab, setResourceTab] = useState<"data" | "skill" | "template">("data");
+  const [resourceTab, setResourceTab] = useState<"data" | "skill" | "template" | "preference">("data");
 
   const createProject = (name: string, description: string, projectCode?: string): Project => {
     const colors = ["#161FAD", "#0891b2", "#7c3aed", "#059669", "#dc2626", "#d97706"];
@@ -195,10 +309,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return result;
   };
 
-  const updateProjectDataAsset = (projectId: string, assetId: string, name: string) => {
+  const updateProjectDataAsset = (projectId: string, assetId: string, updates: Pick<ProjectDataAsset, "name" | "description">) => {
     syncProject(projectId, (project) => ({
       ...project,
-      data: project.data.map((asset) => (asset.id === assetId ? { ...asset, name } : asset)),
+      data: project.data.map((asset) => (asset.id === assetId ? { ...asset, ...updates } : asset)),
     }));
   };
 
@@ -207,6 +321,77 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       ...project,
       data: project.data.filter((asset) => asset.id !== assetId),
     }));
+  };
+
+  const addUserResource = (resource: Omit<UserResource, "id" | "updatedAt">) => {
+    const nextResource: UserResource = {
+      ...resource,
+      id: `ur-${Date.now()}`,
+      updatedAt: new Date().toISOString().slice(0, 10),
+    };
+    setUserResources((current) => [nextResource, ...current]);
+    return nextResource;
+  };
+
+  const updateUserResource = (resourceId: string, updates: Pick<UserResource, "name" | "description" | "permission" | "sharedWith">) => {
+    setUserResources((current) =>
+      current.map((resource) =>
+        resource.id === resourceId
+          ? { ...resource, ...updates, updatedAt: new Date().toISOString().slice(0, 10) }
+          : resource,
+      ),
+    );
+  };
+
+  const addAgentPreference = (preference: Omit<AgentPreference, "id" | "userId" | "updatedAt" | "status">) => {
+    const nextPreference: AgentPreference = {
+      ...preference,
+      id: `pref-${Date.now()}`,
+      userId: "user-chen-lab",
+      status: "active",
+      updatedAt: new Date().toISOString().slice(0, 10),
+    };
+    setAgentPreferences((current) => [nextPreference, ...current]);
+    return nextPreference;
+  };
+
+  const updateAgentPreference = (preferenceId: string, updates: Pick<AgentPreference, "content" | "scope" | "audience" | "projectId">) => {
+    setAgentPreferences((current) =>
+      current.map((preference) =>
+        preference.id === preferenceId
+          ? { ...preference, ...updates, updatedAt: new Date().toISOString().slice(0, 10) }
+          : preference,
+      ),
+    );
+  };
+
+  const toggleAgentPreference = (preferenceId: string) => {
+    setAgentPreferences((current) =>
+      current.map((preference) =>
+        preference.id === preferenceId
+          ? {
+              ...preference,
+              status: preference.status === "active" ? "paused" : "active",
+              updatedAt: new Date().toISOString().slice(0, 10),
+            }
+          : preference,
+      ),
+    );
+  };
+
+  const deleteAgentPreference = (preferenceId: string) => {
+    setAgentPreferences((current) =>
+      current.map((preference) =>
+        preference.id === preferenceId
+          ? {
+              ...preference,
+              status: "deleted",
+              deletedAt: new Date().toISOString().slice(0, 10),
+              updatedAt: new Date().toISOString().slice(0, 10),
+            }
+          : preference,
+      ),
+    );
   };
 
   const addProjectMember = (projectId: string, email: string, role: ProjectMember["role"]) => {
@@ -276,6 +461,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         addProjectDataAsset,
         updateProjectDataAsset,
         deleteProjectDataAsset,
+        userResources,
+        addUserResource,
+        updateUserResource,
+        agentPreferences,
+        addAgentPreference,
+        updateAgentPreference,
+        toggleAgentPreference,
+        deleteAgentPreference,
         addProjectMember,
         updateProjectMemberRole,
         removeProjectMember,
