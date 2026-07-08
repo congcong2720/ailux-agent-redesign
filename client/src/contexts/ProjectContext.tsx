@@ -20,6 +20,17 @@ export type ProjectDataAsset = {
   sourceTaskId?: string;
   savedAt?: string;
   tags?: string[];
+  children?: ProjectDataChild[];
+};
+
+export type ProjectDataChild = {
+  id: string;
+  name: string;
+  type: ProjectDataAsset["type"];
+  size: string;
+  stepName?: string;
+  description?: string;
+  children?: ProjectDataChild[];
 };
 
 export type UserResource = {
@@ -47,6 +58,8 @@ export type AgentPreference = {
   deletedAt?: string;
 };
 
+export type ProjectDataFileType = Exclude<ProjectDataAsset["type"], "folder">;
+
 export type ProjectDetailView = "data" | "members";
 
 export type Project = {
@@ -68,6 +81,49 @@ const defaultMembers: ProjectMember[] = [
 ];
 
 const defaultData: ProjectDataAsset[] = [
+  {
+    id: "d-run-folder-1",
+    name: "run-20260626-dll3-003_result",
+    type: "folder",
+    size: "4.6 MB",
+    updatedAt: "2026-04-29",
+    source: "run-saved",
+    description: "由任务「DLL3 双抗预测流程」保存的完整 Run 结果包，按步骤保留结果文件。",
+    sourceTaskName: "DLL3 双抗预测流程",
+    sourceTaskId: "run-20260626-dll3-003",
+    savedAt: "2026-04-29 14:36",
+    tags: ["run-output", "folder"],
+    children: [
+      {
+        id: "d-run-folder-1-step-2",
+        name: "步骤 2 · 结构预测",
+        type: "folder",
+        size: "2.5 MB",
+        children: [
+          { id: "d-run-folder-1-c1", name: "DLL3_Mcb008_model_1.pdb", type: "pdb", size: "2.4 MB", description: "结构源文件" },
+          { id: "d-run-folder-1-c2", name: "interface.csv", type: "csv", size: "128 KB", description: "接口定义文件" },
+        ],
+      },
+      {
+        id: "d-run-folder-1-step-3",
+        name: "步骤 3 · 特征计算",
+        type: "folder",
+        size: "128 KB",
+        children: [
+          { id: "d-run-folder-1-c3", name: "physical_energy_combined_features.csv", type: "csv", size: "128 KB", description: "特征重要性表" },
+        ],
+      },
+      {
+        id: "d-run-folder-1-step-4",
+        name: "步骤 4 · 相关性分析与特征选择",
+        type: "folder",
+        size: "320 KB",
+        children: [
+          { id: "d-run-folder-1-c4", name: "feature1_vs_experiment.png", type: "png", size: "320 KB", description: "单特征相关性图" },
+        ],
+      },
+    ],
+  },
   {
     id: "d1",
     name: "DLL3_Mcb008_model_1.pdb",

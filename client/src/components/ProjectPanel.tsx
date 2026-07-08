@@ -10,6 +10,7 @@ import {
   FileText,
   Upload,
   FolderUp,
+  FolderOpen,
   Search,
   FileSpreadsheet,
   FileJson,
@@ -25,9 +26,10 @@ import {
   Mail,
   Pencil,
   Trash2,
+  ArrowDownToLine,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useProject, Project, ProjectMember } from "@/contexts/ProjectContext";
+import { useProject, Project, ProjectDataAsset, ProjectDataChild, ProjectDataFileType, ProjectMember } from "@/contexts/ProjectContext";
 import { toast } from "sonner";
 
 type Lang = "zh" | "en";
@@ -64,7 +66,7 @@ function formatFileSize(size: number) {
   return `${size} B`;
 }
 
-function dataTypeFromName(name: string): Project["data"][number]["type"] {
+function dataTypeFromName(name: string): ProjectDataFileType {
   const extension = name.split(".").pop()?.toLowerCase();
   if (extension === "csv") return "csv";
   if (extension === "json") return "json";
@@ -79,6 +81,87 @@ function dataTypeFromName(name: string): Project["data"][number]["type"] {
   return "csv";
 }
 
+function upsertNestedChild(children: ProjectDataChild[], parts: string[], file: File, lang: Lang) {
+  const [currentPart, ...restParts] = parts;
+  if (!currentPart) return;
+
+  if (restParts.length === 0) {
+    children.push({
+      id: `${parts.join("/")}-${children.length}`,
+      name: currentPart,
+      type: dataTypeFromName(file.name),
+      size: formatFileSize(file.size),
+      description: lang === "zh" ? "本地文件夹导入" : "Imported from local folder",
+    });
+    return;
+  }
+
+  let folder = children.find((child) => child.type === "folder" && child.name === currentPart);
+  if (!folder) {
+    folder = {
+      id: `folder-${currentPart}-${children.length}`,
+      name: currentPart,
+      type: "folder",
+      size: "-",
+      children: [],
+    };
+    children.push(folder);
+  }
+
+  folder.children ??= [];
+  upsertNestedChild(folder.children, restParts, file, lang);
+}
+
+function FolderChildRows({ items, lang, depth = 0 }: { items: ProjectDataChild[]; lang: Lang; depth?: number }) {
+  return (
+    <div className="space-y-2.5">
+      {items.map((child) => {
+        const isFolder = child.type === "folder";
+        return (
+          <div key={child.id}>
+            <div
+              className="flex items-center gap-3 rounded-[14px] border border-slate-100 bg-slate-50/80 px-3 py-2.5"
+              style={{ marginLeft: depth ? depth * 18 : 0 }}
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-[#161FAD]">
+                {isFolder ? <FolderOpen className="h-4 w-4 text-[#161FAD]" /> : FILE_TYPE_ICONS[child.type] ?? <File className="h-4 w-4 text-slate-400" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[12px] font-medium text-slate-800">{child.name}</p>
+                <p className="mt-0.5 truncate text-[10px] text-slate-400">
+                  {[child.stepName, child.description].filter(Boolean).join(" · ") || (isFolder ? (lang === "zh" ? "文件夹" : "Folder") : child.type)}
+                </p>
+              </div>
+              <span className="shrink-0 text-[11px] text-slate-400">{child.size}</span>
+              <button
+                onClick={() => toast.success(lang === "zh" ? `已开始下载 ${child.name}` : `Downloading ${child.name}`)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
+                title={isFolder ? (lang === "zh" ? "下载文件夹" : "Download folder") : (lang === "zh" ? "下载" : "Download")}
+              >
+                <ArrowDownToLine className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            {isFolder && child.children?.length ? <FolderChildRows items={child.children} lang={lang} depth={depth + 1} /> : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function flattenChildSearchText(children: ProjectDataChild[] = []): string[] {
+  return children.flatMap((child) =>
+    [
+      child.name,
+      child.type,
+      child.size,
+      child.stepName,
+      child.description,
+      ...flattenChildSearchText(child.children),
+    ].filter((item): item is string => Boolean(item)),
+  );
+}
+
 function DataTab({ project, lang }: { project: Project; lang: Lang }) {
   const { addProjectDataAsset, updateProjectDataAsset, deleteProjectDataAsset } = useProject();
   const assets = project.data;
@@ -90,6 +173,7 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
   const [editingAssetName, setEditingAssetName] = useState("");
   const [editingAssetDescription, setEditingAssetDescription] = useState("");
   const [deleteAssetId, setDeleteAssetId] = useState<string | null>(null);
+  const [previewFolderId, setPreviewFolderId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
   const normalizedDataQuery = dataSearchQuery.trim().toLowerCase();
@@ -107,6 +191,7 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
           asset.sourceTaskId,
           asset.savedAt,
           ...(asset.tags ?? []),
+          ...flattenChildSearchText(asset.children),
         ]
           .filter(Boolean)
           .join(" ")
@@ -116,6 +201,7 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
     : filteredBySource;
   const editingAsset = assets.find((asset) => asset.id === editingAssetId);
   const deleteAsset = assets.find((asset) => asset.id === deleteAssetId);
+  const previewFolder = assets.find((asset) => asset.id === previewFolderId && asset.type === "folder");
 
   const handleUploadFiles = (files: FileList | null) => {
     const selectedFiles = Array.from(files ?? []);
@@ -146,12 +232,18 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
     const selectedFiles = Array.from(files ?? []);
     if (selectedFiles.length === 0) return;
 
-    const folderStats = new Map<string, { count: number; size: number }>();
+    const folderStats = new Map<string, { count: number; size: number; children: ProjectDataChild[] }>();
     selectedFiles.forEach((file) => {
       const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
       const folderName = relativePath?.split("/")[0] || (lang === "zh" ? "本地文件夹" : "Local folder");
-      const current = folderStats.get(folderName) ?? { count: 0, size: 0 };
-      folderStats.set(folderName, { count: current.count + 1, size: current.size + file.size });
+      const current = folderStats.get(folderName) ?? { count: 0, size: 0, children: [] };
+      const childParts = relativePath ? relativePath.split("/").slice(1) : [file.name];
+      upsertNestedChild(current.children, childParts, file, lang);
+      folderStats.set(folderName, {
+        count: current.count + 1,
+        size: current.size + file.size,
+        children: current.children,
+      });
     });
 
     let createdCount = 0;
@@ -162,10 +254,11 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
       const result = addProjectDataAsset(project.id, {
         name: folderName,
         type: "folder",
-        size: `${stat.count} ${lang === "zh" ? "个文件" : "files"} · ${formatFileSize(stat.size)}`,
+        size: formatFileSize(stat.size),
         source: "uploaded",
         description,
         tags: ["folder", "uploaded"],
+        children: stat.children,
       });
       if (result === "created") createdCount += 1;
     });
@@ -304,13 +397,21 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
               }`}
             >
               <button
-                onClick={() => toast.message(lang === "zh" ? `查看 ${asset.name}` : `View ${asset.name}`)}
+                onClick={() => {
+                  if (asset.type === "folder") {
+                    setPreviewFolderId(asset.id);
+                    return;
+                  }
+                  toast.message(lang === "zh" ? `查看 ${asset.name}` : `View ${asset.name}`);
+                }}
                 className="flex min-w-0 items-center gap-3 text-left"
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-slate-50">
                   {FILE_TYPE_ICONS[asset.type] ?? <File className="h-4 w-4 text-slate-400" />}
                 </div>
-                <p className="min-w-0 truncate text-[13px] font-medium text-slate-800">{asset.name}</p>
+                <div className="min-w-0">
+                  <p className="min-w-0 truncate text-[13px] font-medium text-slate-800">{asset.name}</p>
+                </div>
               </button>
               <span className="text-[12px] text-slate-400">{asset.size}</span>
               <span
@@ -415,6 +516,26 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
                 {lang === "zh" ? "确定" : "Confirm"}
               </button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(previewFolder)} onOpenChange={(open) => !open && setPreviewFolderId(null)}>
+        <DialogContent className="overflow-hidden rounded-[24px] border-white/70 bg-white p-0 shadow-[0_28px_90px_rgba(15,23,42,0.22)] sm:max-w-[720px]">
+          <DialogHeader className="border-b border-slate-100 px-5 py-4">
+            <DialogTitle className="flex items-center gap-2 text-[15px] font-semibold text-[#070261]">
+              <FolderOpen className="h-4 w-4 text-[#161FAD]" />
+              {previewFolder?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[520px] overflow-y-auto px-5 py-4">
+            {previewFolder?.children?.length ? (
+              <FolderChildRows items={previewFolder.children} lang={lang} />
+            ) : (
+              <div className="rounded-[16px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-10 text-center text-[12px] text-slate-400">
+                {lang === "zh" ? "该文件夹暂无可预览子文件" : "No files to preview in this folder"}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

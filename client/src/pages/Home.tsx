@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useProject, type ProjectDataAsset } from "@/contexts/ProjectContext";
+import { useProject, type ProjectDataAsset, type ProjectDataFileType } from "@/contexts/ProjectContext";
 import { demoPdbContent } from "@/lib/demoPdb";
 import {
   ArrowDownToLine,
@@ -1272,7 +1272,7 @@ const copy = {
     batchDownload: "批量下载",
     batchSave: "批量保存",
     saveBatchTitle: "保存至项目数据集",
-    saveBatchBody: "将所选结果文件保存到当前项目的数据集中，并记录来源任务信息。",
+    saveBatchBody: "将所选结果保存为一个文件夹，保存到当前项目数据集中，并记录来源任务信息。",
     saveBatchDescription: "描述",
     saveBatchDescriptionPlaceholder: "说明这批文件的用途或来源，例如：用于后续结构复核和特征建模。",
     confirmSaveBatch: "确认保存",
@@ -1441,7 +1441,7 @@ const copy = {
     batchDownload: "Download",
     batchSave: "Save",
     saveBatchTitle: "Save to project data",
-    saveBatchBody: "Save selected result files to the current project data and record task provenance.",
+    saveBatchBody: "Save selected results as a folder in project data and record task provenance.",
     saveBatchDescription: "Description",
     saveBatchDescriptionPlaceholder: "Describe the purpose or source, e.g. for downstream structure review and feature modeling.",
     confirmSaveBatch: "Save",
@@ -1598,9 +1598,24 @@ function resultFileFromHistoryFile(run: HistoryRunItem, file: HistoryRunItem["fi
   };
 }
 
-function dataAssetTypeFromResult(type: ResultType): ProjectDataAsset["type"] {
+function dataAssetTypeFromResult(type: ResultType): ProjectDataFileType {
   if (type === "docx") return "docx";
   return type;
+}
+
+function resultFileSize(file: ResultFile) {
+  return file.type === "pdb" ? "2.4 MB" : file.type === "png" ? "320 KB" : file.type === "docx" ? "1.2 MB" : "128 KB";
+}
+
+function resultFolderSize(files: ResultFile[]) {
+  const totalMb = files.reduce((sum, file) => {
+    const size = resultFileSize(file);
+    if (size.endsWith("MB")) return sum + Number.parseFloat(size);
+    if (size.endsWith("KB")) return sum + Number.parseFloat(size) / 1024;
+    return sum;
+  }, 0);
+
+  return totalMb >= 1 ? `${totalMb.toFixed(1)} MB` : `${Math.round(totalMb * 1024)} KB`;
 }
 
 function dataAssetFromResultFile(
@@ -1615,12 +1630,55 @@ function dataAssetFromResultFile(
   return {
     name: file.name,
     type: dataAssetTypeFromResult(file.type),
-    size: file.type === "pdb" ? "2.4 MB" : file.type === "png" ? "320 KB" : file.type === "docx" ? "1.2 MB" : "128 KB",
+    size: resultFileSize(file),
     description: source?.description,
     sourceTaskName: source?.sourceTaskName,
     sourceTaskId: source?.sourceTaskId,
     savedAt: source?.savedAt,
     tags: ["run-output"],
+  };
+}
+
+function dataAssetFolderFromResultFiles(
+  files: ResultFile[],
+  lang: Lang,
+  source: {
+    folderName: string;
+    description?: string;
+    sourceTaskName?: string;
+    sourceTaskId?: string;
+    savedAt?: string;
+  },
+): Omit<ProjectDataAsset, "id" | "source" | "updatedAt"> {
+  const filesByStep = files.reduce<Record<string, ResultFile[]>>((acc, file) => {
+    const stepName = pick(lang, file.step);
+    if (!acc[stepName]) acc[stepName] = [];
+    acc[stepName].push(file);
+    return acc;
+  }, {});
+
+  return {
+    name: source.folderName,
+    type: "folder",
+    size: resultFolderSize(files),
+    description: source.description,
+    sourceTaskName: source.sourceTaskName,
+    sourceTaskId: source.sourceTaskId,
+    savedAt: source.savedAt,
+    tags: ["run-output", "folder"],
+    children: Object.entries(filesByStep).map(([stepName, stepFiles], stepIndex) => ({
+      id: `${source.folderName}-step-${stepIndex}`,
+      name: stepName,
+      type: "folder",
+      size: resultFolderSize(stepFiles),
+      children: stepFiles.map((file, fileIndex) => ({
+        id: `${file.id}-${fileIndex}`,
+        name: file.name,
+        type: dataAssetTypeFromResult(file.type),
+        size: resultFileSize(file),
+        description: pick(lang, file.meta),
+      })),
+    })),
   };
 }
 
@@ -4383,6 +4441,7 @@ function SidePanel({
     () => selectableFiles.filter((file) => selectedFileIds.includes(file.id)),
     [selectableFiles, selectedFileIds],
   );
+  const currentRunSelected = resultFiles.length > 0 && resultFiles.every((file) => selectedFileIds.includes(file.id));
 
   const hasResultMatches = Object.entries(groupedFiles).length > 0 || filteredPreviousRunItems.length > 0;
 
@@ -4460,7 +4519,7 @@ function SidePanel({
                       className="inline-flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 transition hover:bg-emerald-100 active:scale-[0.97]"
                     >
                       <Save className="h-3 w-3" />
-                      {lang === "zh" ? "保存为 Skill" : "Save as Skill"}
+                      {lang === "zh" ? "保存 Skill" : "Save Skill"}
                     </button>
                   </div>
                 </div>
@@ -4653,8 +4712,20 @@ function SidePanel({
                   {Object.entries(groupedFiles).length > 0 ? (
                     <div className="rounded-[20px] border border-slate-100 bg-white p-3.5 shadow-[0_10px_28px_rgba(15,23,42,0.035)]">
                       <div className="mb-3 flex items-center justify-between gap-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <FolderOpen className="h-4 w-4 shrink-0 text-[#161FAD]" />
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <button
+                            onClick={() => handleToggleFileGroup(resultFiles)}
+                            className={`group relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border transition ${
+                              currentRunSelected
+                                ? "border-[#161FAD]/20 bg-[#161FAD] text-white"
+                                : "border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.06)] text-[#161FAD] hover:bg-[#161FAD] hover:text-white"
+                            }`}
+                            title={currentRunSelected ? (lang === "zh" ? "取消全选当前 Run" : "Deselect current Run") : (lang === "zh" ? "全选当前 Run" : "Select current Run")}
+                            aria-label={currentRunSelected ? (lang === "zh" ? "取消全选当前 Run" : "Deselect current Run") : (lang === "zh" ? "全选当前 Run" : "Select current Run")}
+                          >
+                            {currentRunSelected ? <CheckCircle2 className="h-4 w-4" /> : <FolderOpen className="h-4 w-4 group-hover:hidden" />}
+                            {!currentRunSelected ? <CheckCircle2 className="hidden h-4 w-4 group-hover:block" /> : null}
+                          </button>
                           <div className="min-w-0">
                             <p className="text-[12px] font-semibold text-[#070261]">{text.currentRun}</p>
                             <p className="text-[10px] text-slate-400">{resultFiles.length} {text.filesCount}</p>
@@ -4666,11 +4737,12 @@ function SidePanel({
                         {Object.entries(groupedFiles).map(([group, files]) => {
                           const groupSelected = files.length > 0 && files.every((file) => selectedFileIds.includes(file.id));
                           return (
-                          <div key={group}>
+                          <div key={group} className="group/step">
                             <div className="mb-2 flex items-center gap-2">
                               <Checkbox
                                 checked={groupSelected}
                                 onCheckedChange={() => handleToggleFileGroup(files)}
+                                className={`transition ${groupSelected ? "opacity-100" : "opacity-0 group-hover/step:opacity-100"}`}
                                 aria-label={`${text.selectFile} ${group}`}
                               />
                               <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">{group}</p>
@@ -4691,7 +4763,7 @@ function SidePanel({
                                     <Checkbox
                                       checked={checked}
                                       onCheckedChange={() => onToggleFile(file.id)}
-                                      className="mt-2"
+                                      className={`mt-2 transition ${checked ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                                       aria-label={`${text.selectFile} ${file.name}`}
                                     />
                                     <button onClick={() => onSelectFile(file.id)} className="flex min-w-0 flex-1 items-start gap-3 text-left">
@@ -4739,14 +4811,19 @@ function SidePanel({
                       <div key={run.id} className="rounded-[20px] border border-slate-100 bg-white p-3.5 shadow-[0_10px_28px_rgba(15,23,42,0.035)]">
                         <div className="flex w-full items-center justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-2.5">
-                            <Checkbox
-                              checked={runSelected}
-                              onCheckedChange={() => handleToggleFileGroup(runFiles)}
-                              aria-label={`${text.selectFile} ${runLabel}`}
-                            />
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-[#161FAD]">
-                              {runExpanded ? <FolderOpen className="h-4 w-4" /> : <Folder className="h-4 w-4" />}
-                            </div>
+                            <button
+                              onClick={() => handleToggleFileGroup(runFiles)}
+                              className={`group relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border transition ${
+                                runSelected
+                                  ? "border-[#161FAD]/20 bg-[#161FAD] text-white"
+                                  : "border-[rgba(23,36,216,0.12)] bg-[rgba(23,36,216,0.06)] text-[#161FAD] hover:bg-[#161FAD] hover:text-white"
+                              }`}
+                              title={runSelected ? (lang === "zh" ? `取消全选 ${runLabel}` : `Deselect ${runLabel}`) : (lang === "zh" ? `全选 ${runLabel}` : `Select ${runLabel}`)}
+                              aria-label={runSelected ? (lang === "zh" ? `取消全选 ${runLabel}` : `Deselect ${runLabel}`) : (lang === "zh" ? `全选 ${runLabel}` : `Select ${runLabel}`)}
+                            >
+                              {runSelected ? <CheckCircle2 className="h-4 w-4" /> : runExpanded ? <FolderOpen className="h-4 w-4 group-hover:hidden" /> : <Folder className="h-4 w-4 group-hover:hidden" />}
+                              {!runSelected ? <CheckCircle2 className="hidden h-4 w-4 group-hover:block" /> : null}
+                            </button>
                             <button onClick={() => togglePreviousRun(run.id)} className="truncate text-left text-[13px] font-semibold text-[#070261]">
                               {runLabel}
                             </button>
@@ -4764,6 +4841,7 @@ function SidePanel({
                                   <Checkbox
                                     checked={selectedFileIds.includes(historyFile.id)}
                                     onCheckedChange={() => onToggleFile(historyFile.id)}
+                                    className={`transition ${selectedFileIds.includes(historyFile.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                                     aria-label={`${text.selectFile} ${historyFile.name}`}
                                   />
                                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[rgba(23,36,216,0.08)] text-[#161FAD]">
@@ -4850,6 +4928,7 @@ export default function Home() {
   const [attachedInputs, setAttachedInputs] = useState<AttachedInput[]>([]);
   const [pendingSaveFiles, setPendingSaveFiles] = useState<ResultFile[]>([]);
   const [saveDescription, setSaveDescription] = useState("");
+  const [saveFolderName, setSaveFolderName] = useState("");
   const activeScenario = demoScenarios[activeScenarioId];
   const currentTaskId = "run-20260626-dll3-003";
   const [runtimeSteps, setRuntimeSteps] = useState<PlanStep[]>(() =>
@@ -5078,37 +5157,48 @@ export default function Home() {
     showSaveResultToast(result, report.fileName);
   };
 
-  const openBatchSaveDialog = (files: ResultFile[]) => {
+  const buildRunFolderName = (suffix?: string) => {
+    const taskName = pick(lang, activeScenario.title).replace(/[\\/:*?"<>|]/g, " ").trim();
+    return suffix ? `${currentTaskId}_${suffix}` : `${currentTaskId}_result_${taskName}`;
+  };
+
+  const openBatchSaveDialog = (files: ResultFile[], folderName?: string) => {
     if (files.length === 0) {
       toast.message(text.selectBeforeExport);
       return;
     }
 
     setPendingSaveFiles(files);
+    setSaveFolderName(folderName ?? buildRunFolderName(lang === "zh" ? "selected_results" : "selected_results"));
     setSaveDescription(
       lang === "zh"
-        ? `由任务「${pick(lang, activeScenario.title)}」生成，保存到项目数据用于后续复用。`
-        : `Generated by "${pick(lang, activeScenario.title)}" and saved for downstream reuse.`,
+        ? `由任务「${pick(lang, activeScenario.title)}」生成，按结果文件夹保存到项目数据用于后续复用。`
+        : `Generated by "${pick(lang, activeScenario.title)}" and saved as a result folder for downstream reuse.`,
     );
   };
 
   const handleConfirmSaveFilesToProject = () => {
     if (pendingSaveFiles.length === 0) return;
+    const folderName = saveFolderName.trim() || buildRunFolderName();
 
-    const createdCount = pendingSaveFiles.reduce((count, file) => {
-      const result = addProjectDataAsset(activeProject.id, dataAssetFromResultFile(file, buildResultSourceInfo(saveDescription.trim())));
-      return result === "created" ? count + 1 : count;
-    }, 0);
+    const result = addProjectDataAsset(
+      activeProject.id,
+      dataAssetFolderFromResultFiles(pendingSaveFiles, lang, {
+        ...buildResultSourceInfo(saveDescription.trim()),
+        folderName,
+      }),
+    );
 
     setPendingSaveFiles([]);
     setSaveDescription("");
+    setSaveFolderName("");
 
-    if (createdCount === 0) {
-      toast.message(text.alreadyInProjectData);
+    if (result === "existing") {
+      toast.message(`${text.alreadyInProjectData}: ${folderName}`);
       return;
     }
 
-    toast.success(`${text.savedFilesToProject} ${createdCount} ${text.exportedSuffix}`);
+    toast.success(`${text.savedToProjectData}: ${folderName}`);
   };
 
   const handleSavePlanAsSkill = (name: string, description: string, steps: number) => {
@@ -5285,6 +5375,7 @@ export default function Home() {
           if (!open) {
             setPendingSaveFiles([]);
             setSaveDescription("");
+            setSaveFolderName("");
           }
         }}>
           <DialogContent className="rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[520px]">
@@ -5307,6 +5398,15 @@ export default function Home() {
                 </div>
               </div>
               <label className="grid gap-1.5">
+                <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "文件夹名称" : "Folder name"}</span>
+                <input
+                  value={saveFolderName}
+                  onChange={(event) => setSaveFolderName(event.target.value)}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-[rgba(23,36,216,0.3)]"
+                  placeholder={buildRunFolderName()}
+                />
+              </label>
+              <label className="grid gap-1.5">
                 <span className="text-[11px] font-medium text-slate-500">{text.saveBatchDescription}</span>
                 <textarea
                   value={saveDescription}
@@ -5324,6 +5424,7 @@ export default function Home() {
                   onClick={() => {
                     setPendingSaveFiles([]);
                     setSaveDescription("");
+                    setSaveFolderName("");
                   }}
                   className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-medium text-slate-500 transition hover:text-slate-700"
                 >
