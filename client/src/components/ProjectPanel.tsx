@@ -28,6 +28,7 @@ import {
   Trash2,
   ArrowDownToLine,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useProject, Project, ProjectDataAsset, ProjectDataChild, ProjectDataFileType, ProjectMember } from "@/contexts/ProjectContext";
 import { toast } from "sonner";
@@ -173,6 +174,8 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
   const [editingAssetName, setEditingAssetName] = useState("");
   const [editingAssetDescription, setEditingAssetDescription] = useState("");
   const [deleteAssetId, setDeleteAssetId] = useState<string | null>(null);
+  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
   const [previewFolderId, setPreviewFolderId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
@@ -202,6 +205,9 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
   const editingAsset = assets.find((asset) => asset.id === editingAssetId);
   const deleteAsset = assets.find((asset) => asset.id === deleteAssetId);
   const previewFolder = assets.find((asset) => asset.id === previewFolderId && asset.type === "folder");
+  const selectedAssets = assets.filter((asset) => selectedAssetIds.includes(asset.id));
+  const filteredIds = filtered.map((asset) => asset.id);
+  const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedAssetIds.includes(id));
 
   const handleUploadFiles = (files: FileList | null) => {
     const selectedFiles = Array.from(files ?? []);
@@ -296,8 +302,35 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
   const handleDeleteAsset = () => {
     if (!deleteAssetId) return;
     deleteProjectDataAsset(project.id, deleteAssetId);
+    setSelectedAssetIds((current) => current.filter((id) => id !== deleteAssetId));
     setDeleteAssetId(null);
     toast.success(lang === "zh" ? "数据已删除" : "Data deleted");
+  };
+
+  const toggleAssetSelection = (assetId: string) => {
+    setSelectedAssetIds((current) => (current.includes(assetId) ? current.filter((id) => id !== assetId) : [...current, assetId]));
+  };
+
+  const toggleFilteredSelection = () => {
+    setSelectedAssetIds((current) => {
+      if (allFilteredSelected) {
+        return current.filter((id) => !filteredIds.includes(id));
+      }
+      return Array.from(new Set([...current, ...filteredIds]));
+    });
+  };
+
+  const handleBatchDownload = () => {
+    if (selectedAssets.length === 0) return;
+    toast.success(lang === "zh" ? `已开始下载 ${selectedAssets.length} 项数据` : `Downloading ${selectedAssets.length} data items`);
+  };
+
+  const handleBatchDelete = () => {
+    selectedAssetIds.forEach((assetId) => deleteProjectDataAsset(project.id, assetId));
+    const deletedCount = selectedAssetIds.length;
+    setSelectedAssetIds([]);
+    setBatchDeleteOpen(false);
+    toast.success(lang === "zh" ? `已删除 ${deletedCount} 项数据` : `Deleted ${deletedCount} data items`);
   };
 
   return (
@@ -365,6 +398,30 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
         </div>
       </div>
 
+      {selectedAssetIds.length > 0 ? (
+        <div className="flex items-center justify-between gap-3 rounded-[16px] border border-[rgba(23,36,216,0.12)] bg-blue-50/60 px-4 py-2.5">
+          <p className="text-[12px] font-medium text-[#161FAD]">
+            {lang === "zh" ? `已选择 ${selectedAssetIds.length} 项数据` : `${selectedAssetIds.length} selected`}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleBatchDownload}
+              className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-[#161FAD] px-3 text-[12px] font-medium text-white transition hover:bg-[#111996]"
+            >
+              <ArrowDownToLine className="h-3.5 w-3.5" />
+              {lang === "zh" ? "批量下载" : "Download"}
+            </button>
+            <button
+              onClick={() => setBatchDeleteOpen(true)}
+              className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-red-100 bg-white px-3 text-[12px] font-medium text-red-500 transition hover:bg-red-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {lang === "zh" ? "批量删除" : "Delete"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 py-14 text-center">
           <Database className="mb-3 h-9 w-9 text-slate-300" />
@@ -381,7 +438,12 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
         </div>
       ) : (
         <div className="overflow-hidden rounded-[18px] border border-slate-100 bg-white">
-          <div className="grid grid-cols-[minmax(200px,1.2fr)_82px_92px_96px_minmax(180px,1fr)_88px] items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-2.5 text-[11px] font-medium text-slate-400">
+          <div className="grid grid-cols-[24px_minmax(200px,1.2fr)_82px_92px_96px_minmax(180px,1fr)_88px] items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-2.5 text-[11px] font-medium text-slate-400">
+            <Checkbox
+              checked={allFilteredSelected}
+              onCheckedChange={toggleFilteredSelection}
+              aria-label={lang === "zh" ? "全选当前列表" : "Select all visible data"}
+            />
             <span>{lang === "zh" ? "名称" : "Name"}</span>
             <span>{lang === "zh" ? "大小" : "Size"}</span>
             <span>{lang === "zh" ? "来源" : "Source"}</span>
@@ -392,10 +454,15 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
           {filtered.map((asset, idx) => (
             <div
               key={asset.id}
-              className={`grid grid-cols-[minmax(200px,1.2fr)_82px_92px_96px_minmax(180px,1fr)_88px] items-center gap-3 px-5 py-4 transition hover:bg-slate-50/80 ${
+              className={`grid grid-cols-[24px_minmax(200px,1.2fr)_82px_92px_96px_minmax(180px,1fr)_88px] items-center gap-3 px-5 py-4 transition hover:bg-slate-50/80 ${
                 idx !== 0 ? "border-t border-slate-100" : ""
               }`}
             >
+              <Checkbox
+                checked={selectedAssetIds.includes(asset.id)}
+                onCheckedChange={() => toggleAssetSelection(asset.id)}
+                aria-label={`${lang === "zh" ? "选择" : "Select"} ${asset.name}`}
+              />
               <button
                 onClick={() => {
                   if (asset.type === "folder") {
@@ -617,6 +684,37 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
               </button>
               <button
                 onClick={handleDeleteAsset}
+                className="rounded-xl bg-red-500 px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-red-600 active:scale-[0.97]"
+              >
+                {lang === "zh" ? "确认删除" : "Delete"}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={batchDeleteOpen} onOpenChange={setBatchDeleteOpen}>
+        <DialogContent className="rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[420px]">
+          <DialogHeader className="border-b border-slate-100 px-5 py-4">
+            <DialogTitle className="text-[15px] font-semibold text-[#070261]">
+              {lang === "zh" ? "确认批量删除" : "Delete selected data?"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="px-5 py-5">
+            <p className="text-[13px] leading-relaxed text-slate-600">
+              {lang === "zh"
+                ? `确定删除已选择的 ${selectedAssetIds.length} 项数据吗？删除后将从当前项目数据列表移除。`
+                : `Delete ${selectedAssetIds.length} selected data items from this project?`}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setBatchDeleteOpen(false)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-medium text-slate-500 transition hover:text-slate-700"
+              >
+                {lang === "zh" ? "取消" : "Cancel"}
+              </button>
+              <button
+                onClick={handleBatchDelete}
                 className="rounded-xl bg-red-500 px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-red-600 active:scale-[0.97]"
               >
                 {lang === "zh" ? "确认删除" : "Delete"}
