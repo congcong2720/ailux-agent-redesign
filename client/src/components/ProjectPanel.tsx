@@ -27,6 +27,7 @@ import {
   Pencil,
   Trash2,
   ArrowDownToLine,
+  Eye,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -129,11 +130,17 @@ function FolderChildRows({ items, lang, depth = 0 }: { items: ProjectDataChild[]
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[12px] font-medium text-slate-800">{child.name}</p>
-                <p className="mt-0.5 truncate text-[10px] text-slate-400">
-                  {[child.stepName, child.description].filter(Boolean).join(" · ") || (isFolder ? (lang === "zh" ? "文件夹" : "Folder") : child.type)}
-                </p>
               </div>
               <span className="shrink-0 text-[11px] text-slate-400">{child.size}</span>
+              {!isFolder ? (
+                <button
+                  onClick={() => toast.message(lang === "zh" ? `预览 ${child.name}` : `Preview ${child.name}`)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
+                  title={lang === "zh" ? "预览" : "Preview"}
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </button>
+              ) : null}
               <button
                 onClick={() => toast.success(lang === "zh" ? `已开始下载 ${child.name}` : `Downloading ${child.name}`)}
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
@@ -438,7 +445,7 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
         </div>
       ) : (
         <div className="overflow-hidden rounded-[18px] border border-slate-100 bg-white">
-          <div className="grid grid-cols-[24px_minmax(200px,1.2fr)_82px_92px_96px_minmax(180px,1fr)_88px] items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-2.5 text-[11px] font-medium text-slate-400">
+          <div className="grid grid-cols-[24px_minmax(200px,1.2fr)_82px_92px_96px_minmax(180px,1fr)_112px] items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-2.5 text-[11px] font-medium text-slate-400">
             <Checkbox
               checked={allFilteredSelected}
               onCheckedChange={toggleFilteredSelection}
@@ -454,7 +461,7 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
           {filtered.map((asset, idx) => (
             <div
               key={asset.id}
-              className={`grid grid-cols-[24px_minmax(200px,1.2fr)_82px_92px_96px_minmax(180px,1fr)_88px] items-center gap-3 px-5 py-4 transition hover:bg-slate-50/80 ${
+              className={`grid grid-cols-[24px_minmax(200px,1.2fr)_82px_92px_96px_minmax(180px,1fr)_112px] items-center gap-3 px-5 py-4 transition hover:bg-slate-50/80 ${
                 idx !== 0 ? "border-t border-slate-100" : ""
               }`}
             >
@@ -494,12 +501,18 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
               </span>
               <span className="text-[12px] text-slate-400">{asset.updatedAt}</span>
               <div className="min-w-0">
-                <p className="truncate text-[11px] text-slate-500">{asset.description || (asset.sourceTaskName ? `${lang === "zh" ? "来自" : "From"} ${asset.sourceTaskName}` : "-")}</p>
-                {asset.sourceTaskId ? (
-                  <p className="mt-0.5 truncate font-mono text-[10px] text-slate-400">{asset.sourceTaskId}{asset.savedAt ? ` · ${asset.savedAt}` : ""}</p>
-                ) : null}
+                <p className="truncate text-[11px] text-slate-500">{asset.sourceTaskName || "-"}</p>
               </div>
               <div className="flex justify-end gap-1.5">
+                {asset.type !== "folder" ? (
+                  <button
+                    onClick={() => toast.message(lang === "zh" ? `预览 ${asset.name}` : `Preview ${asset.name}`)}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
+                    title={lang === "zh" ? "预览" : "Preview"}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
                 <button
                   onClick={() => openAssetEditor(asset)}
                   className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
