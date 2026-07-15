@@ -1,6 +1,6 @@
 /*
  * ResourcePanel — 全局资源视图（内嵌在主区域）
- * Tabs: 公共数据 / 工具 / Skill
+ * Tabs: 公共数据 / Skill / 模版
  * 设计语言：3列卡片网格 + 分类标题 + 搜索栏 + 说明提示条，参考 Biomni 风格
  * 字体：HarmonyOS Sans SC，主色 #161FAD
  */
@@ -20,6 +20,8 @@ import {
   PlayCircle,
   Plus,
   Trash2,
+  Save,
+  Sparkles,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useProject, type AgentPreference, type UserResource } from "@/contexts/ProjectContext";
@@ -199,7 +201,7 @@ export const TEMPLATES = [
   {
     id: "tp-bispecific-prediction",
     name: "双抗预测流程",
-    desc: "面向双表位双抗候选物的标准预测模板，覆盖数据读取、结构特征计算、特征筛选与机器学习预测。",
+    desc: "面向双表位双抗候选物的标准预测模版，覆盖数据读取、结构特征计算、特征筛选与机器学习预测。",
     type: "pipeline",
     category: "抗体设计",
     steps: 9,
@@ -249,10 +251,16 @@ function groupBy<T extends { category: string }>(items: T[]): Record<string, T[]
   }, {} as Record<string, T[]>);
 }
 
-function sourceBadge(resource: Pick<UserResource, "owner" | "permission">, lang: Lang) {
-  if (resource.owner === "shared") return lang === "zh" ? "他人分享" : "Shared with me";
-  if (resource.permission === "shared") return lang === "zh" ? "已共享" : "Shared";
-  return lang === "zh" ? "仅自己可见" : "Private";
+function canManageResource(resource: UserResource) {
+  return resource.owner === "mine" || resource.accessRole === "admin";
+}
+
+function sharedRoleSummary(resource: UserResource, lang: Lang) {
+  if (resource.permission !== "shared" || resource.sharedWith.length === 0) return null;
+  const adminCount = resource.sharedWith.filter((item) => item.role === "admin").length;
+  const memberCount = resource.sharedWith.filter((item) => item.role === "member").length;
+  if (lang === "zh") return `${adminCount} 管理员 · ${memberCount} 成员`;
+  return `${adminCount} admins · ${memberCount} members`;
 }
 
 function UserResourceCard({
@@ -280,7 +288,7 @@ function UserResourceCard({
         <div className="min-w-0 flex-1">
           <p className="truncate text-[13px] font-semibold leading-tight text-slate-800">{resource.name}</p>
           <p className="mt-1 text-[10px] text-slate-400">
-            {resource.kind === "tool" ? (lang === "zh" ? "Tool" : "Tool") : "Skill"} · {resource.updatedAt}
+            {resource.kind === "tool" ? "Skill" : lang === "zh" ? "模版" : "Template"} · {resource.updatedAt}
           </p>
         </div>
         {onEdit ? (
@@ -301,9 +309,11 @@ function UserResourceCard({
             {lang === "zh" ? `${resource.steps} 步` : `${resource.steps} steps`}
           </span>
         ) : null}
-        <span className="ml-auto rounded-full bg-blue-50 px-2 py-0.5 text-[10px] text-[#161FAD]">
-          {sourceBadge(resource, lang)}
-        </span>
+        {sharedRoleSummary(resource, lang) ? (
+          <span className="rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] text-[#161FAD]">
+            {sharedRoleSummary(resource, lang)}
+          </span>
+        ) : null}
       </div>
     </div>
   );
@@ -423,7 +433,7 @@ function SkillTab({ lang, userResources = [] }: { lang: Lang; userResources?: Us
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
-            placeholder={lang === "zh" ? "搜索工具…" : "Search tools…"}
+            placeholder={lang === "zh" ? "搜索 Skill…" : "Search Skills…"}
           />
         </div>
         <div className="min-h-8 flex-1" />
@@ -432,21 +442,21 @@ function SkillTab({ lang, userResources = [] }: { lang: Lang; userResources?: Us
       {/* Hint bar */}
       <div className="rounded-[12px] border border-blue-100 bg-blue-50/50 px-4 py-3 text-[12px] text-blue-800">
         {lang === "zh"
-          ? "平台公共工具由平台统一维护；下方也会展示你自己的或他人分享给你的工具。"
-          : "Platform tools are maintained centrally; your own and shared tools are also shown below."}
+          ? "平台公共 Skill 由平台统一维护；下方也会展示你自己的或他人分享给你的 Skill。"
+          : "Platform Skills are maintained centrally; your own and shared Skills are also shown below."}
       </div>
 
       {/* Count */}
       <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
         <Zap className="h-3.5 w-3.5 text-[#161FAD]" />
-        <span>{lang === "zh" ? `${filtered.length + filteredUserTools.length} 个工具可用` : `${filtered.length + filteredUserTools.length} tools available`}</span>
+        <span>{lang === "zh" ? `${filtered.length + filteredUserTools.length} 个 Skill 可用` : `${filtered.length + filteredUserTools.length} Skills available`}</span>
       </div>
 
       {filteredUserTools.length > 0 ? (
         <div>
           <div className="mb-3 flex items-center gap-2">
             <h3 className="text-[15px] font-semibold text-slate-800" style={{ fontFamily: "Georgia, serif" }}>
-              {lang === "zh" ? "我的 / 共享工具" : "My / Shared Tools"}
+              {lang === "zh" ? "我的 / 共享 Skill" : "My / Shared Skills"}
             </h3>
             <span className="text-[12px] text-slate-400">{filteredUserTools.length}</span>
           </div>
@@ -463,7 +473,7 @@ function SkillTab({ lang, userResources = [] }: { lang: Lang; userResources?: Us
         <div key={category}>
           <div className="mb-3 flex items-center gap-2">
             <h3 className="text-[15px] font-semibold text-slate-800" style={{ fontFamily: "Georgia, serif" }}>
-              {lang === "zh" ? `平台公共工具 · ${category}` : `Platform Tools · ${category}`}
+              {lang === "zh" ? `平台公共 Skill · ${category}` : `Platform Skills · ${category}`}
             </h3>
             <span className="text-[12px] text-slate-400">{items.length}</span>
           </div>
@@ -497,7 +507,7 @@ function SkillTab({ lang, userResources = [] }: { lang: Lang; userResources?: Us
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Zap className="mb-3 h-9 w-9 text-slate-200" />
-          <p className="text-[13px] text-slate-400">{lang === "zh" ? "没有匹配的工具" : "No matching tools"}</p>
+          <p className="text-[13px] text-slate-400">{lang === "zh" ? "没有匹配的 Skill" : "No matching Skills"}</p>
         </div>
       )}
     </div>
@@ -537,7 +547,7 @@ function TemplateTab({ lang, userResources = [] }: { lang: Lang; userResources?:
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
-            placeholder={lang === "zh" ? "搜索 Skill…" : "Search skills…"}
+            placeholder={lang === "zh" ? "搜索模版…" : "Search templates…"}
           />
         </div>
         <div className="min-h-8 flex-1" />
@@ -546,21 +556,21 @@ function TemplateTab({ lang, userResources = [] }: { lang: Lang; userResources?:
       {/* Hint bar */}
       <div className="rounded-[12px] border border-emerald-100 bg-emerald-50/50 px-4 py-3 text-[12px] text-emerald-800">
         {lang === "zh"
-          ? "平台公共 Skill 由平台维护；你保存的流程模板和他人分享的 Skill 会显示在“我的 / 共享 Skill”。"
-          : "Platform Skills are maintained centrally; saved and shared Skills appear under My / Shared Skills."}
+          ? "平台公共模版由平台维护；你保存的流程模版和他人分享的模版会显示在“我的 / 共享模版”。"
+          : "Platform Templates are maintained centrally; saved and shared Templates appear under My / Shared Templates."}
       </div>
 
       {/* Count */}
       <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
         <PanelRightOpen className="h-3.5 w-3.5 text-[#161FAD]" />
-        <span>{lang === "zh" ? `${filtered.length + filteredUserSkills.length} 个 Skill 可用` : `${filtered.length + filteredUserSkills.length} skills available`}</span>
+        <span>{lang === "zh" ? `${filtered.length + filteredUserSkills.length} 个模版可用` : `${filtered.length + filteredUserSkills.length} templates available`}</span>
       </div>
 
       {filteredUserSkills.length > 0 ? (
         <div>
           <div className="mb-3 flex items-center gap-2">
             <h3 className="text-[15px] font-semibold text-slate-800" style={{ fontFamily: "Georgia, serif" }}>
-              {lang === "zh" ? "我的 / 共享 Skill" : "My / Shared Skills"}
+              {lang === "zh" ? "我的 / 共享模版" : "My / Shared Templates"}
             </h3>
             <span className="text-[12px] text-slate-400">{filteredUserSkills.length}</span>
           </div>
@@ -577,7 +587,7 @@ function TemplateTab({ lang, userResources = [] }: { lang: Lang; userResources?:
         <div key={category}>
           <div className="mb-3 flex items-center gap-2">
             <h3 className="text-[15px] font-semibold text-slate-800" style={{ fontFamily: "Georgia, serif" }}>
-              {lang === "zh" ? `平台公共 Skill · ${category}` : `Platform Skills · ${category}`}
+              {lang === "zh" ? `平台公共模版 · ${category}` : `Platform Templates · ${category}`}
             </h3>
             <span className="text-[12px] text-slate-400">{items.length}</span>
           </div>
@@ -612,7 +622,7 @@ function TemplateTab({ lang, userResources = [] }: { lang: Lang; userResources?:
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <PanelRightOpen className="mb-3 h-9 w-9 text-slate-200" />
-          <p className="text-[13px] text-slate-400">{lang === "zh" ? "没有匹配的 Skill" : "No matching skills"}</p>
+          <p className="text-[13px] text-slate-400">{lang === "zh" ? "没有匹配的模版" : "No matching templates"}</p>
         </div>
       )}
 
@@ -693,25 +703,71 @@ function TemplateTab({ lang, userResources = [] }: { lang: Lang; userResources?:
 function MyResourcesTab({ lang, kind }: { lang: Lang; kind: "tool" | "skill" }) {
   const { userResources, updateUserResource } = useProject();
   const [query, setQuery] = useState("");
+  const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | "shared">("all");
   const [editingResource, setEditingResource] = useState<UserResource | null>(null);
   const [resourceName, setResourceName] = useState("");
   const [resourceDescription, setResourceDescription] = useState("");
   const [permission, setPermission] = useState<UserResource["permission"]>("private");
-  const [sharedWith, setSharedWith] = useState("");
+  const [sharedMembers, setSharedMembers] = useState<UserResource["sharedWith"]>([]);
+  const [shareEmail, setShareEmail] = useState("");
+  const [shareRole, setShareRole] = useState<"admin" | "member">("member");
 
   const filtered = userResources.filter((resource) => {
     if (resource.kind !== kind) return false;
+    if (ownerFilter !== "all" && resource.owner !== ownerFilter) return false;
     const keyword = query.trim().toLowerCase();
     if (!keyword) return true;
-    return `${resource.name} ${resource.description} ${resource.category} ${resource.sharedWith.join(" ")}`.toLowerCase().includes(keyword);
+    return `${resource.name} ${resource.description} ${resource.category} ${resource.sharedWith.map((item) => `${item.email} ${item.role}`).join(" ")}`.toLowerCase().includes(keyword);
   });
+  const emptyResourceText =
+    ownerFilter === "shared"
+      ? lang === "zh"
+        ? "暂无他人创建并分享给你的资源"
+        : "No resources created by others and shared with you"
+      : ownerFilter === "mine"
+        ? lang === "zh"
+          ? "暂无你创建的资源"
+          : "No resources created by you"
+        : lang === "zh"
+          ? "暂无匹配资源"
+          : "No matching resources";
 
   const openEditor = (resource: UserResource) => {
     setEditingResource(resource);
     setResourceName(resource.name);
     setResourceDescription(resource.description);
     setPermission(resource.permission);
-    setSharedWith(resource.sharedWith.join(", "));
+    setSharedMembers(resource.sharedWith);
+    setShareEmail("");
+    setShareRole("member");
+  };
+
+  const handleAddSharedMember = () => {
+    const email = shareEmail.trim().toLowerCase();
+    if (!email) {
+      toast.error(lang === "zh" ? "请输入成员邮箱" : "Enter a member email");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error(lang === "zh" ? "请输入有效的邮箱地址" : "Enter a valid email address");
+      return;
+    }
+    setSharedMembers((current) => {
+      const exists = current.some((item) => item.email.toLowerCase() === email);
+      if (exists) {
+        return current.map((item) => (item.email.toLowerCase() === email ? { ...item, role: shareRole } : item));
+      }
+      return [...current, { email, role: shareRole }];
+    });
+    setShareEmail("");
+  };
+
+  const updateSharedMemberRole = (email: string, role: "admin" | "member") => {
+    setSharedMembers((current) => current.map((item) => (item.email === email ? { ...item, role } : item)));
+  };
+
+  const removeSharedMember = (email: string) => {
+    setSharedMembers((current) => current.filter((item) => item.email !== email));
   };
 
   const handleSave = (event: React.FormEvent) => {
@@ -723,16 +779,11 @@ function MyResourcesTab({ lang, kind }: { lang: Lang; kind: "tool" | "skill" }) 
       return;
     }
 
-    const nextSharedWith = sharedWith
-      .split(/[,，\s]+/)
-      .map((item) => item.trim())
-      .filter(Boolean);
-
     updateUserResource(editingResource.id, {
       name: nextName,
       description: resourceDescription.trim() || (lang === "zh" ? "暂无描述" : "No description"),
       permission,
-      sharedWith: permission === "shared" ? nextSharedWith : [],
+      sharedWith: canManageResource(editingResource) ? (permission === "shared" ? sharedMembers : []) : editingResource.sharedWith,
     });
     setEditingResource(null);
     toast.success(lang === "zh" ? "资源信息已更新" : "Resource updated");
@@ -740,44 +791,61 @@ function MyResourcesTab({ lang, kind }: { lang: Lang; kind: "tool" | "skill" }) 
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex w-full max-w-[360px] items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
           <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
-            placeholder={kind === "tool" ? (lang === "zh" ? "搜索我的工具…" : "Search my tools…") : (lang === "zh" ? "搜索我的 Skill…" : "Search my Skills…")}
+            placeholder={kind === "tool" ? (lang === "zh" ? "搜索我的 Skill…" : "Search my Skills…") : (lang === "zh" ? "搜索我的模版…" : "Search my templates…")}
           />
+        </div>
+        <div className="inline-flex rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+          {[
+            { id: "all" as const, label: lang === "zh" ? "全部" : "All" },
+            { id: "mine" as const, label: lang === "zh" ? "我的" : "Mine" },
+            { id: "shared" as const, label: lang === "zh" ? "他人" : "Others" },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setOwnerFilter(item.id)}
+              className={`rounded-full px-3 py-1.5 text-[11px] font-medium transition ${
+                ownerFilter === item.id ? "bg-[#161FAD] text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
       </div>
 
       <div className="rounded-[12px] border border-blue-100 bg-blue-50/50 px-4 py-3 text-[12px] leading-5 text-blue-800">
         {lang === "zh"
-          ? "在这里管理自己创建、保存或他人分享给你的 Tool / Skill。可编辑名称和描述，并将资源分享给指定用户。"
-          : "Manage Tools / Skills you own, saved, or received here. Edit details and share resources with selected users."}
+          ? "在这里管理自己创建、保存或他人分享给你的 Skill / 模版。只有 Owner 或管理员可以维护分享对象，成员仅可使用。"
+          : "Manage Skills / Templates you own, saved, or received here. Only owners or admins can manage sharing. Members can use only."}
       </div>
 
       <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
         <Users className="h-3.5 w-3.5 text-[#161FAD]" />
         <span>
           {kind === "tool"
-            ? lang === "zh" ? `${filtered.length} 个 Tool` : `${filtered.length} Tools`
-            : lang === "zh" ? `${filtered.length} 个 Skill` : `${filtered.length} Skills`}
+            ? lang === "zh" ? `${filtered.length} 个 Skill` : `${filtered.length} Skills`
+            : lang === "zh" ? `${filtered.length} 个模版` : `${filtered.length} Templates`}
         </span>
       </div>
 
       {filtered.length > 0 ? (
         <div className="grid grid-cols-3 gap-3">
           {filtered.map((resource) => (
-            <UserResourceCard key={resource.id} resource={resource} lang={lang} onEdit={openEditor} />
+            <UserResourceCard key={resource.id} resource={resource} lang={lang} onEdit={canManageResource(resource) ? openEditor : undefined} />
           ))}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           {kind === "tool" ? <Zap className="mb-3 h-9 w-9 text-slate-200" /> : <PanelRightOpen className="mb-3 h-9 w-9 text-slate-200" />}
           <p className="text-[13px] text-slate-400">
-            {lang === "zh" ? "暂无匹配资源" : "No matching resources"}
+            {emptyResourceText}
           </p>
         </div>
       )}
@@ -786,7 +854,9 @@ function MyResourcesTab({ lang, kind }: { lang: Lang; kind: "tool" | "skill" }) 
         <DialogContent className="rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[520px]">
           <DialogHeader className="border-b border-slate-100 px-5 py-4">
             <DialogTitle className="text-[15px] font-semibold text-[#070261]">
-              {lang === "zh" ? "编辑资源与分享权限" : "Edit resource and sharing"}
+              {kind === "tool"
+                ? lang === "zh" ? "管理 Skill 权限" : "Manage Skill permissions"
+                : lang === "zh" ? "管理模版权限" : "Manage Template permissions"}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSave} className="grid gap-4 px-5 py-5">
@@ -819,15 +889,74 @@ function MyResourcesTab({ lang, kind }: { lang: Lang; kind: "tool" | "skill" }) 
               </select>
             </label>
             {permission === "shared" ? (
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "分享对象" : "Shared with"}</span>
-                <input
-                  value={sharedWith}
-                  onChange={(event) => setSharedWith(event.target.value)}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-[rgba(23,36,216,0.3)]"
-                  placeholder={lang === "zh" ? "输入邮箱，多个用户用逗号分隔" : "Enter emails, separated by commas"}
-                />
-              </label>
+              <div className="rounded-[16px] border border-slate-100 bg-slate-50/70 p-3">
+                <p className="mb-3 text-[11px] leading-5 text-slate-500">
+                  {lang === "zh"
+                    ? "通过成员列表管理共享权限。管理员可管理资源信息与分享对象；成员仅可使用被分享资源，不能继续分享。"
+                    : "Manage sharing through the member list. Admins can manage details and sharing; members can use only."}
+                </p>
+                <div className="grid grid-cols-[minmax(0,1fr)_108px_72px] gap-2">
+                  <input
+                    value={shareEmail}
+                    onChange={(event) => setShareEmail(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        handleAddSharedMember();
+                      }
+                    }}
+                    className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-[rgba(23,36,216,0.3)]"
+                    placeholder={lang === "zh" ? "输入成员邮箱" : "Member email"}
+                  />
+                  <select
+                    value={shareRole}
+                    onChange={(event) => setShareRole(event.target.value as "admin" | "member")}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] text-slate-600 outline-none transition focus:border-[rgba(23,36,216,0.3)]"
+                  >
+                    <option value="member">{lang === "zh" ? "成员" : "member"}</option>
+                    <option value="admin">{lang === "zh" ? "管理员" : "admin"}</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleAddSharedMember}
+                    className="rounded-xl bg-[#161FAD] px-3 py-2 text-[12px] font-semibold text-white transition hover:bg-[#111996] active:scale-[0.97]"
+                  >
+                    {lang === "zh" ? "添加" : "Add"}
+                  </button>
+                </div>
+
+                <div className="mt-3 max-h-[148px] overflow-y-auto rounded-[14px] border border-slate-100 bg-white [scrollbar-color:#cbd5e1_transparent] [scrollbar-width:thin]">
+                  {sharedMembers.length > 0 ? (
+                    sharedMembers.map((member) => (
+                      <div key={member.email} className="flex items-center gap-2 border-b border-slate-100 px-3 py-2.5 last:border-b-0">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[13px] font-medium text-slate-700">{member.email}</p>
+                        </div>
+                        <select
+                          value={member.role}
+                          onChange={(event) => updateSharedMemberRole(member.email, event.target.value as "admin" | "member")}
+                          className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-600 outline-none"
+                        >
+                          <option value="member">{lang === "zh" ? "成员" : "member"}</option>
+                          <option value="admin">{lang === "zh" ? "管理员" : "admin"}</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => removeSharedMember(member.email)}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-300 transition hover:bg-red-50 hover:text-red-500"
+                          title={lang === "zh" ? "移除成员" : "Remove member"}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-3 py-8 text-center text-[12px] text-slate-400">
+                      {lang === "zh" ? "暂无共享成员" : "No shared members"}
+                    </div>
+                  )}
+                </div>
+              </div>
             ) : null}
             <div className="flex justify-end gap-2">
               <button
@@ -852,83 +981,104 @@ function MyResourcesTab({ lang, kind }: { lang: Lang; kind: "tool" | "skill" }) 
   );
 }
 
-function AgentPreferenceCard({
-  preference,
-  lang,
-  scopeLabel,
-  projectName,
-  onEdit,
-  onToggle,
-  onDelete,
-}: {
-  preference: AgentPreference;
-  lang: Lang;
-  scopeLabel: string;
-  projectName?: string;
-  onEdit: (preference: AgentPreference) => void;
-  onToggle: (preference: AgentPreference) => void;
-  onDelete: (preference: AgentPreference) => void;
-}) {
-  const active = preference.status === "active";
+function statusLabel(status: AgentPreference["status"], lang: Lang) {
+  if (status === "active") return lang === "zh" ? "启用" : "Active";
+  if (status === "paused") return lang === "zh" ? "停用" : "Paused";
+  return lang === "zh" ? "已删除" : "Deleted";
+}
 
+function preferencePreview(content: string) {
+  return content
+    .replace(/^#+\s+/gm, "")
+    .replace(/[`*_>-]/g, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(" ");
+}
+
+function markdownBlocks(content: string) {
+  const blocks: Array<{ type: "p" | "h1" | "h2" | "h3" | "ul" | "code" | "table"; lines: string[] }> = [];
+  const lines = content.split("\n");
+  let index = 0;
+  while (index < lines.length) {
+    const line = lines[index];
+    if (!line.trim()) {
+      index += 1;
+      continue;
+    }
+    if (line.startsWith("```")) {
+      const codeLines: string[] = [];
+      index += 1;
+      while (index < lines.length && !lines[index].startsWith("```")) {
+        codeLines.push(lines[index]);
+        index += 1;
+      }
+      blocks.push({ type: "code", lines: codeLines });
+      index += 1;
+      continue;
+    }
+    if (line.startsWith("|")) {
+      const tableLines: string[] = [];
+      while (index < lines.length && lines[index].startsWith("|")) {
+        tableLines.push(lines[index]);
+        index += 1;
+      }
+      blocks.push({ type: "table", lines: tableLines });
+      continue;
+    }
+    if (line.startsWith("- ")) {
+      const listLines: string[] = [];
+      while (index < lines.length && lines[index].startsWith("- ")) {
+        listLines.push(lines[index].slice(2));
+        index += 1;
+      }
+      blocks.push({ type: "ul", lines: listLines });
+      continue;
+    }
+    if (line.startsWith("# ")) blocks.push({ type: "h1", lines: [line.slice(2)] });
+    else if (line.startsWith("## ")) blocks.push({ type: "h2", lines: [line.slice(3)] });
+    else if (line.startsWith("### ")) blocks.push({ type: "h3", lines: [line.slice(4)] });
+    else blocks.push({ type: "p", lines: [line] });
+    index += 1;
+  }
+  return blocks;
+}
+
+function MarkdownPreview({ content }: { content: string }) {
+  const blocks = markdownBlocks(content);
   return (
-    <div className={`group rounded-[16px] border p-4 transition ${
-      active ? "border-slate-200 bg-white hover:border-[#161FAD]/25" : "border-slate-100 bg-slate-50/80 opacity-70"
-    }`}>
-      <div className="flex items-start gap-3">
-        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
-          active ? "bg-blue-50 text-[#161FAD]" : "bg-slate-100 text-slate-400"
-        }`}>
-          <Brain className="h-4 w-4" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-[#161FAD]">{scopeLabel}</span>
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-              active ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-400"
-            }`}>
-              {active ? (lang === "zh" ? "生效中" : "Active") : (lang === "zh" ? "已停用" : "Paused")}
-            </span>
-            {projectName ? (
-              <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] text-slate-500">{projectName}</span>
-            ) : null}
-            {preference.scope === "project" ? (
-              <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-600">
-                {preference.audience === "project-members"
-                  ? lang === "zh" ? "项目成员共享" : "Project shared"
-                  : lang === "zh" ? "仅本人" : "Personal"}
-              </span>
-            ) : null}
-          </div>
-          <p className="mt-2 text-[13px] leading-6 text-slate-700">{preference.content}</p>
-          <p className="mt-2 text-[10px] text-slate-400">
-            {lang === "zh" ? "更新时间" : "Updated"} · {preference.updatedAt}
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-1 opacity-0 transition group-hover:opacity-100">
-          <button
-            onClick={() => onEdit(preference)}
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-50 hover:text-[#161FAD]"
-            title={lang === "zh" ? "编辑" : "Edit"}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={() => onToggle(preference)}
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-50 hover:text-[#161FAD]"
-            title={active ? (lang === "zh" ? "停用" : "Pause") : (lang === "zh" ? "启用" : "Activate")}
-          >
-            {active ? <PauseCircle className="h-3.5 w-3.5" /> : <PlayCircle className="h-3.5 w-3.5" />}
-          </button>
-          <button
-            onClick={() => onDelete(preference)}
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-red-50 hover:text-red-500"
-            title={lang === "zh" ? "删除" : "Delete"}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </div>
+    <div className="space-y-3 text-[13px] leading-6 text-slate-650">
+      {blocks.map((block, index) => {
+        if (block.type === "h1") return <h1 key={index} className="text-[20px] font-semibold text-[#070261]">{block.lines[0]}</h1>;
+        if (block.type === "h2") return <h2 key={index} className="pt-2 text-[16px] font-semibold text-slate-800">{block.lines[0]}</h2>;
+        if (block.type === "h3") return <h3 key={index} className="pt-1 text-[14px] font-semibold text-slate-700">{block.lines[0]}</h3>;
+        if (block.type === "ul") {
+          return (
+            <ul key={index} className="list-disc space-y-1 pl-5">
+              {block.lines.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          );
+        }
+        if (block.type === "code") {
+          return <pre key={index} className="overflow-x-auto rounded-xl bg-slate-950 px-3 py-2 text-[12px] leading-5 text-slate-100">{block.lines.join("\n")}</pre>;
+        }
+        if (block.type === "table") {
+          return (
+            <div key={index} className="overflow-hidden rounded-xl border border-slate-200">
+              {block.lines.filter((line) => !/^\|\s*-/.test(line)).map((line, rowIndex) => (
+                <div key={line} className={`grid grid-cols-3 divide-x divide-slate-100 ${rowIndex === 0 ? "bg-slate-50 font-semibold text-slate-700" : "bg-white"}`}>
+                  {line.split("|").filter(Boolean).slice(0, 3).map((cell) => (
+                    <span key={cell} className="px-3 py-2 text-[12px]">{cell.trim()}</span>
+                  ))}
+                </div>
+              ))}
+            </div>
+          );
+        }
+        return <p key={index}>{block.lines[0]}</p>;
+      })}
     </div>
   );
 }
@@ -945,81 +1095,118 @@ function AgentPreferenceTab({ lang }: { lang: Lang }) {
   } = useProject();
   const [query, setQuery] = useState("");
   const [projectFilter, setProjectFilter] = useState("current");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused">("all");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | AgentPreference["status"]>("all");
+  const [editorOpen, setEditorOpen] = useState(false);
   const [editingPreference, setEditingPreference] = useState<AgentPreference | null>(null);
+  const [title, setTitle] = useState("");
   const [scope, setScope] = useState<AgentPreference["scope"]>("global");
   const [audience, setAudience] = useState<AgentPreference["audience"]>("personal");
+  const [projectId, setProjectId] = useState(activeProject.id);
+  const [priority, setPriority] = useState<AgentPreference["priority"]>("medium");
+  const [permission, setPermission] = useState<AgentPreference["permission"]>("private");
+  const [tags, setTags] = useState("");
   const [content, setContent] = useState("");
+  const [editorTab, setEditorTab] = useState<"edit" | "preview">("edit");
+  const [sideTab, setSideTab] = useState<"references" | "versions">("references");
   const [deleteTarget, setDeleteTarget] = useState<AgentPreference | null>(null);
 
   const normalizedQuery = query.trim().toLowerCase();
   const projectNameById = new Map(projects.map((project) => [project.id, project.name]));
   const selectedProjectId = projectFilter === "current" ? activeProject.id : projectFilter === "all" ? null : projectFilter;
   const visiblePreferences = agentPreferences.filter((preference) => {
-    if (preference.status === "deleted") return false;
     if (statusFilter !== "all" && preference.status !== statusFilter) return false;
     if (preference.scope === "project" && selectedProjectId && preference.projectId !== selectedProjectId) return false;
     if (!normalizedQuery) return true;
 
     const projectName = preference.projectId ? projectNameById.get(preference.projectId) ?? "" : "";
-    return `${preference.content} ${preference.scope} ${preference.status} ${projectName}`.toLowerCase().includes(normalizedQuery);
+    return `${preference.title} ${preference.content} ${preference.scope} ${preference.status} ${projectName} ${preference.tags.join(" ")}`.toLowerCase().includes(normalizedQuery);
   });
   const globalPreferences = visiblePreferences.filter((preference) => preference.scope === "global");
   const projectPreferences = visiblePreferences.filter((preference) => preference.scope === "project");
 
-  const openCreateDialog = (nextScope: AgentPreference["scope"] = "global") => {
+  const resetEditor = () => {
+    setEditorOpen(false);
     setEditingPreference(null);
-    setScope(nextScope);
-    setAudience("personal");
-    setContent("");
-    setDialogOpen(true);
-  };
-
-  const openEditDialog = (preference: AgentPreference) => {
-    setEditingPreference(preference);
-    setScope(preference.scope);
-    setAudience(preference.audience);
-    setContent(preference.content);
-    setDialogOpen(true);
-  };
-
-  const resetDialog = () => {
-    setDialogOpen(false);
-    setEditingPreference(null);
+    setTitle("");
     setScope("global");
     setAudience("personal");
+    setProjectId(activeProject.id);
+    setPriority("medium");
+    setPermission("private");
+    setTags("");
     setContent("");
+    setEditorTab("edit");
+    setSideTab("references");
   };
 
-  const handleSave = (event: React.FormEvent) => {
-    event.preventDefault();
+  const openCreateEditor = (nextScope: AgentPreference["scope"] = "global") => {
+    setEditingPreference(null);
+    setTitle(nextScope === "global" ? "新的通用偏好" : `${activeProject.name} 项目偏好`);
+    setScope(nextScope);
+    setAudience(nextScope === "project" ? "project-members" : "personal");
+    setProjectId(activeProject.id);
+    setPriority(nextScope === "project" ? "high" : "medium");
+    setPermission(nextScope === "project" ? "project-members" : "private");
+    setTags(nextScope === "project" ? activeProject.name : "general");
+    setContent(nextScope === "global" ? "# 通用偏好\n\n## 使用规则\n" : `# ${activeProject.name} 项目偏好\n\n## 默认数据集\nProject Dataset / ${activeProject.name} / \n\n## 报告要求\n- `);
+    setEditorOpen(true);
+  };
+
+  const openEditor = (preference: AgentPreference) => {
+    setEditingPreference(preference);
+    setTitle(preference.title);
+    setScope(preference.scope);
+    setAudience(preference.audience);
+    setProjectId(preference.projectId ?? activeProject.id);
+    setPriority(preference.priority);
+    setPermission(preference.permission);
+    setTags(preference.tags.join(", "));
+    setContent(preference.content);
+    setEditorOpen(true);
+  };
+
+  const savePreference = (activate = false) => {
+    const nextTitle = title.trim();
     const nextContent = content.trim();
-    if (!nextContent) {
-      toast.error(lang === "zh" ? "偏好内容不能为空" : "Preference content is required");
+    if (!nextTitle || !nextContent) {
+      toast.error(lang === "zh" ? "偏好标题和正文不能为空" : "Title and markdown are required");
       return;
     }
 
-    const projectId = scope === "project" ? activeProject.id : undefined;
+    const nextProjectId = scope === "project" ? projectId : undefined;
     const nextAudience = scope === "project" ? audience : "personal";
+    const nextPermission = scope === "project" ? permission : "private";
+    const nextTags = tags.split(/[,，\s]+/).map((item) => item.trim()).filter(Boolean);
     if (editingPreference) {
       updateAgentPreference(editingPreference.id, {
+        title: nextTitle,
         content: nextContent,
         scope,
         audience: nextAudience,
-        projectId,
+        projectId: nextProjectId,
+        priority,
+        permission: nextPermission,
+        tags: nextTags,
+        source: editingPreference.source,
       });
+      if (activate && editingPreference.status !== "active") toggleAgentPreference(editingPreference.id);
       toast.success(lang === "zh" ? "偏好已更新" : "Preference updated");
     } else {
-      addAgentPreference({
+      const created = addAgentPreference({
+        title: nextTitle,
         content: nextContent,
         scope,
         audience: nextAudience,
-        projectId,
+        projectId: nextProjectId,
+        priority,
+        permission: nextPermission,
+        tags: nextTags,
+        source: "manual",
       });
+      if (!activate) toggleAgentPreference(created.id);
       toast.success(lang === "zh" ? "偏好已新增" : "Preference added");
     }
-    resetDialog();
+    resetEditor();
   };
 
   const handleConfirmDelete = () => {
@@ -1029,12 +1216,12 @@ function AgentPreferenceTab({ lang }: { lang: Lang }) {
     toast.success(lang === "zh" ? "偏好已软删除，不会进入后续召回" : "Preference soft-deleted and excluded from future recall");
   };
 
-  const renderPreferenceList = (items: AgentPreference[], title: string, body: string, emptyText: string) => (
-    <section className="rounded-[18px] border border-slate-100 bg-white p-4">
+  const renderPreferenceTable = (items: AgentPreference[], sectionTitle: string, body: string, emptyText: string) => (
+    <section className="overflow-hidden rounded-[18px] border border-slate-100 bg-white">
       <div className="mb-3 flex items-start justify-between gap-3">
-        <div>
+        <div className="px-4 pt-4">
           <div className="flex items-center gap-2">
-            <p className="text-[14px] font-semibold text-[#070261]">{title}</p>
+            <p className="text-[14px] font-semibold text-[#070261]">{sectionTitle}</p>
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
               {items.length}
             </span>
@@ -1042,23 +1229,62 @@ function AgentPreferenceTab({ lang }: { lang: Lang }) {
           <p className="mt-1 text-[11px] leading-5 text-slate-400">{body}</p>
         </div>
       </div>
-      <div className="max-h-[420px] space-y-2.5 overflow-y-auto pr-1 [scrollbar-color:#cbd5e1_transparent] [scrollbar-width:thin]">
+      <div className="max-h-[430px] overflow-y-auto [scrollbar-color:#cbd5e1_transparent] [scrollbar-width:thin]">
         {items.length > 0 ? (
-          items.map((preference) => (
-            <AgentPreferenceCard
-              key={preference.id}
-              preference={preference}
-              lang={lang}
-              scopeLabel={preference.scope === "global" ? (lang === "zh" ? "通用偏好" : "General") : (lang === "zh" ? "项目偏好" : "Project")}
-              projectName={preference.scope === "project" ? projectNameById.get(preference.projectId ?? "") ?? activeProject.name : undefined}
-              onEdit={openEditDialog}
-              onToggle={(item) => {
-                toggleAgentPreference(item.id);
-                toast.success(item.status === "active" ? (lang === "zh" ? "偏好已停用" : "Preference paused") : (lang === "zh" ? "偏好已启用" : "Preference activated"));
-              }}
-              onDelete={setDeleteTarget}
-            />
-          ))
+          <div className="min-w-[920px]">
+            <div className="grid grid-cols-[2.1fr_0.65fr_1fr_0.7fr_0.85fr_0.65fr_1.2fr] border-y border-slate-100 bg-slate-50/80 px-4 py-2 text-[11px] font-medium text-slate-500">
+              <span>{lang === "zh" ? "偏好标题" : "Title"}</span>
+              <span>{lang === "zh" ? "类型" : "Type"}</span>
+              <span>{lang === "zh" ? "所属项目" : "Project"}</span>
+              <span>{lang === "zh" ? "状态" : "Status"}</span>
+              <span>{lang === "zh" ? "更新时间" : "Updated"}</span>
+              <span>{lang === "zh" ? "引用" : "Refs"}</span>
+              <span className="text-right">{lang === "zh" ? "操作" : "Actions"}</span>
+            </div>
+            {items.map((preference) => {
+              const active = preference.status === "active";
+              const deleted = preference.status === "deleted";
+              const projectName = preference.scope === "project" ? projectNameById.get(preference.projectId ?? "") ?? activeProject.name : "-";
+              return (
+                <div key={preference.id} className={`grid grid-cols-[2.1fr_0.65fr_1fr_0.7fr_0.85fr_0.65fr_1.2fr] items-center gap-2 border-b border-slate-100 px-4 py-3 text-[12px] ${deleted ? "bg-slate-50/70 opacity-70" : "bg-white hover:bg-slate-50/50"}`}>
+                  <div className="min-w-0">
+                    <button onClick={() => openEditor(preference)} className="truncate text-left font-semibold text-slate-800 hover:text-[#161FAD]">
+                      {preference.title}
+                    </button>
+                    <p className="mt-1 line-clamp-1 text-[11px] text-slate-400">{preferencePreview(preference.content)}</p>
+                  </div>
+                  <span className="w-fit rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-[#161FAD]">
+                    {preference.scope === "global" ? (lang === "zh" ? "通用" : "General") : (lang === "zh" ? "项目" : "Project")}
+                  </span>
+                  <span className="truncate text-slate-500">{projectName}</span>
+                  <span className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-medium ${active ? "bg-emerald-50 text-emerald-600" : deleted ? "bg-red-50 text-red-500" : "bg-slate-100 text-slate-500"}`}>
+                    {statusLabel(preference.status, lang)}
+                  </span>
+                  <span className="text-slate-500">{preference.updatedAt}</span>
+                  <span className="text-slate-500">{preference.referenceCount}</span>
+                  <div className="flex justify-end gap-1">
+                    <button onClick={() => openEditor(preference)} className="rounded-lg px-2 py-1 text-[11px] text-slate-500 transition hover:bg-blue-50 hover:text-[#161FAD]">
+                      {lang === "zh" ? "编辑" : "Edit"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        toggleAgentPreference(preference.id);
+                        toast.success(preference.status === "active" ? (lang === "zh" ? "偏好已停用" : "Preference paused") : (lang === "zh" ? "偏好已启用" : "Preference activated"));
+                      }}
+                      className="rounded-lg px-2 py-1 text-[11px] text-slate-500 transition hover:bg-slate-100"
+                    >
+                      {active ? (lang === "zh" ? "停用" : "Pause") : (lang === "zh" ? "启用" : "Enable")}
+                    </button>
+                    {!deleted ? (
+                      <button onClick={() => setDeleteTarget(preference)} className="rounded-lg px-2 py-1 text-[11px] text-slate-500 transition hover:bg-red-50 hover:text-red-500">
+                        {lang === "zh" ? "删除" : "Delete"}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div className="rounded-[14px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-center">
             <p className="text-[12px] text-slate-400">{emptyText}</p>
@@ -1067,6 +1293,158 @@ function AgentPreferenceTab({ lang }: { lang: Lang }) {
       </div>
     </section>
   );
+
+  if (editorOpen) {
+    const selectedProjectName = scope === "project" ? projectNameById.get(projectId) ?? activeProject.name : "-";
+    const originalContent = editingPreference?.content ?? "";
+    const hasDraftDiff = Boolean(editingPreference && originalContent !== content);
+    const effectiveSources = agentPreferences.filter((item) => item.status === "active" && (item.scope === "global" || item.projectId === activeProject.id));
+
+    return (
+      <div className="flex min-h-[720px] flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-slate-100 bg-white px-4 py-3">
+          <div className="flex items-center gap-3">
+            <button onClick={resetEditor} className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div>
+              <p className="text-[14px] font-semibold text-[#070261]">{editingPreference ? title || editingPreference.title : (lang === "zh" ? "新建偏好文档" : "New preference document")}</p>
+              <p className="mt-0.5 text-[11px] text-slate-400">
+                {lang === "zh" ? "文档式编辑 Agent 长期行为说明书" : "Document-style editor for long-term Agent behavior"}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {hasDraftDiff ? <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] text-amber-600">{lang === "zh" ? "有未保存差异" : "Unsaved changes"}</span> : null}
+            <button onClick={() => toast.success(lang === "zh" ? "已生成表述优化建议，等待你确认" : "Wording suggestion generated")} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 transition hover:border-[#161FAD]/25 hover:text-[#161FAD]">
+              <Sparkles className="h-3.5 w-3.5" />
+              {lang === "zh" ? "优化表述" : "Improve wording"}
+            </button>
+            <button onClick={() => savePreference(true)} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#161FAD] px-4 text-[12px] font-semibold text-white transition hover:bg-[#111996]">
+              <PlayCircle className="h-3.5 w-3.5" />
+              {lang === "zh" ? "保存并启用" : "Save and enable"}
+            </button>
+            {editingPreference ? (
+              <button onClick={() => toggleAgentPreference(editingPreference.id)} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 transition hover:bg-slate-50">
+                <PauseCircle className="h-3.5 w-3.5" />
+                {editingPreference.status === "active" ? (lang === "zh" ? "停用" : "Pause") : (lang === "zh" ? "启用" : "Enable")}
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="grid flex-1 grid-cols-[260px_minmax(0,1fr)_280px] gap-4">
+          <aside className="rounded-[18px] border border-slate-100 bg-white p-4">
+            <p className="mb-3 text-[13px] font-semibold text-[#070261]">{lang === "zh" ? "元数据" : "Metadata"}</p>
+            <div className="grid gap-3">
+              <label className="grid gap-1.5">
+                <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "名称" : "Name"}</span>
+                <input value={title} onChange={(event) => setTitle(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-[12px] outline-none focus:border-[#161FAD]/30" />
+              </label>
+              <label className="grid gap-1.5">
+                <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "类型" : "Type"}</span>
+                <select value={scope} onChange={(event) => setScope(event.target.value as AgentPreference["scope"])} className="rounded-xl border border-slate-200 px-3 py-2 text-[12px] outline-none">
+                  <option value="global">{lang === "zh" ? "通用偏好" : "General"}</option>
+                  <option value="project">{lang === "zh" ? "项目偏好" : "Project"}</option>
+                </select>
+              </label>
+              {scope === "project" ? (
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "项目" : "Project"}</span>
+                  <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-[12px] outline-none">
+                    {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+                  </select>
+                </label>
+              ) : null}
+              <label className="grid gap-1.5">
+                <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "权限" : "Permission"}</span>
+                <select value={permission} onChange={(event) => setPermission(event.target.value as AgentPreference["permission"])} className="rounded-xl border border-slate-200 px-3 py-2 text-[12px] outline-none" disabled={scope === "global"}>
+                  <option value="private">{lang === "zh" ? "仅本人" : "Private"}</option>
+                  <option value="project-members">{lang === "zh" ? "项目成员共享" : "Project members"}</option>
+                </select>
+              </label>
+              <label className="grid gap-1.5">
+                <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "标签" : "Tags"}</span>
+                <input value={tags} onChange={(event) => setTags(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-[12px] outline-none focus:border-[#161FAD]/30" placeholder={lang === "zh" ? "多个标签用逗号分隔" : "Comma separated"} />
+              </label>
+              <div className="rounded-xl bg-blue-50 px-3 py-2 text-[11px] leading-5 text-blue-800">
+                {lang === "zh" ? `生效规则：项目偏好覆盖通用偏好。当前任务会使用「${selectedProjectName}」下的项目偏好。` : "Rule: project preferences override general preferences."}
+              </div>
+            </div>
+          </aside>
+
+          <main className="flex min-w-0 flex-col overflow-hidden rounded-[18px] border border-slate-100 bg-white">
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+              <div className="flex rounded-full bg-slate-100 p-1">
+                {(["edit", "preview"] as const).map((tab) => (
+                  <button key={tab} onClick={() => setEditorTab(tab)} className={`rounded-full px-3 py-1 text-[12px] font-medium transition ${editorTab === tab ? "bg-white text-[#161FAD] shadow-sm" : "text-slate-500"}`}>
+                    {tab === "edit" ? (lang === "zh" ? "Markdown 编辑" : "Markdown") : (lang === "zh" ? "预览" : "Preview")}
+                  </button>
+                ))}
+              </div>
+              <span className="text-[11px] text-slate-400">
+                {lang === "zh" ? "支持标题、列表、表格、代码块、路径/Skill/模版/项目变量引用" : "Supports headings, lists, tables, code blocks, paths, Skill/Template and project variables"}
+              </span>
+            </div>
+            {editorTab === "edit" ? (
+              <textarea value={content} onChange={(event) => setContent(event.target.value)} className="min-h-[600px] flex-1 resize-none bg-white px-5 py-4 font-mono text-[13px] leading-6 text-slate-700 outline-none" />
+            ) : (
+              <div className="min-h-[600px] flex-1 overflow-y-auto px-6 py-5">
+                <MarkdownPreview content={content} />
+              </div>
+            )}
+            {hasDraftDiff ? (
+              <div className="border-t border-slate-100 bg-amber-50/60 px-4 py-2 text-[11px] text-amber-700">
+                {lang === "zh" ? "保存前差异预览：当前正文相对已保存版本有修改。" : "Diff preview: the current body differs from the saved version."}
+              </div>
+            ) : null}
+          </main>
+
+          <aside className="flex min-h-0 flex-col rounded-[18px] border border-slate-100 bg-white">
+            <div className="flex border-b border-slate-100 p-2">
+              <button onClick={() => setSideTab("references")} className={`flex-1 rounded-xl px-2 py-1.5 text-[12px] font-medium ${sideTab === "references" ? "bg-blue-50 text-[#161FAD]" : "text-slate-500"}`}>
+                {lang === "zh" ? "引用信息" : "References"}
+              </button>
+              <button onClick={() => setSideTab("versions")} className={`flex-1 rounded-xl px-2 py-1.5 text-[12px] font-medium ${sideTab === "versions" ? "bg-blue-50 text-[#161FAD]" : "text-slate-500"}`}>
+                {lang === "zh" ? "版本记录" : "Versions"}
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              {sideTab === "references" ? (
+                <div className="space-y-3">
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="text-[11px] text-slate-400">{lang === "zh" ? "最近被引用次数" : "Recent references"}</p>
+                    <p className="mt-1 text-[22px] font-semibold text-[#070261]">{editingPreference?.referenceCount ?? 0}</p>
+                  </div>
+                  {(editingPreference?.recentReferences ?? []).map((item) => (
+                    <div key={item.id} className="rounded-xl border border-slate-100 p-3">
+                      <p className="text-[12px] font-medium text-slate-700">{item.title}</p>
+                      <p className="mt-1 text-[10px] text-slate-400">{item.usedAt}</p>
+                      <p className="mt-2 text-[11px] leading-5 text-slate-500">{item.context}</p>
+                    </div>
+                  ))}
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3 text-[11px] leading-5 text-blue-800">
+                    {lang === "zh" ? `本次任务会使用 ${effectiveSources.length} 条启用偏好：项目偏好覆盖通用偏好。` : `${effectiveSources.length} active preferences will be used. Project preferences override general preferences.`}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {(editingPreference?.versionHistory ?? []).map((item) => (
+                    <div key={`${item.version}-${item.updatedAt}`} className="rounded-xl border border-slate-100 p-3">
+                      <p className="text-[12px] font-semibold text-slate-700">v{item.version}</p>
+                      <p className="mt-1 text-[10px] text-slate-400">{item.updatedAt}</p>
+                      <p className="mt-2 text-[11px] leading-5 text-slate-500">{item.summary}</p>
+                    </div>
+                  ))}
+                  {!editingPreference ? <p className="text-[12px] text-slate-400">{lang === "zh" ? "保存后会生成版本记录" : "Version history starts after saving"}</p> : null}
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -1100,16 +1478,17 @@ function AgentPreferenceTab({ lang }: { lang: Lang }) {
           <div className="flex items-center gap-1.5 rounded-full bg-slate-50 px-2 py-1">
             <select
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as "all" | "active" | "paused")}
+              onChange={(event) => setStatusFilter(event.target.value as "all" | AgentPreference["status"])}
               className="h-8 rounded-full border-0 bg-transparent px-2 text-[12px] font-medium text-slate-600 outline-none"
             >
               <option value="all">{lang === "zh" ? "全部状态" : "All status"}</option>
-              <option value="active">{lang === "zh" ? "生效中" : "Active"}</option>
-              <option value="paused">{lang === "zh" ? "已停用" : "Paused"}</option>
+              <option value="active">{lang === "zh" ? "启用" : "Active"}</option>
+              <option value="paused">{lang === "zh" ? "停用" : "Paused"}</option>
+              <option value="deleted">{lang === "zh" ? "已删除" : "Deleted"}</option>
             </select>
           </div>
           <button
-            onClick={() => openCreateDialog("global")}
+            onClick={() => openCreateEditor("global")}
             className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#161FAD] px-4 text-[12px] font-semibold text-white shadow-[0_8px_18px_rgba(22,31,173,0.18)] transition hover:bg-[#111996] active:scale-[0.98]"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -1120,18 +1499,18 @@ function AgentPreferenceTab({ lang }: { lang: Lang }) {
 
       <div className="rounded-[14px] border border-blue-100 bg-blue-50/60 px-4 py-3 text-[12px] leading-6 text-blue-800">
         {lang === "zh"
-          ? `Agent 偏好会影响后续回答和任务执行。通用偏好对所有项目生效；当前项目偏好只影响「${activeProject.name}」，且与通用偏好冲突时优先生效。`
+          ? `Agent 偏好是长期行为说明书。通用偏好对所有项目生效；项目偏好只影响对应项目，并在冲突时覆盖通用偏好。任务创建和 Plan 生成会展示本次引用来源。`
           : `Agent preferences affect future answers and task execution. General preferences apply to all projects; project preferences apply to "${activeProject.name}" and override general preferences.`}
       </div>
 
-      {renderPreferenceList(
+      {renderPreferenceTable(
         globalPreferences,
         lang === "zh" ? "我的通用偏好" : "My general preferences",
         lang === "zh" ? "对你的所有项目生效。" : "Applied across all your projects.",
         lang === "zh" ? "暂无通用偏好" : "No general preferences",
       )}
 
-      {renderPreferenceList(
+      {renderPreferenceTable(
         projectPreferences,
         lang === "zh" ? "项目偏好" : "Project preferences",
         projectFilter === "all"
@@ -1139,78 +1518,6 @@ function AgentPreferenceTab({ lang }: { lang: Lang }) {
           : lang === "zh" ? "对所选项目生效，可选择仅本人使用或共享给项目成员。" : "Applied to the selected project. Can be personal or shared with project members.",
         lang === "zh" ? "暂无匹配的项目偏好" : "No matching project preferences",
       )}
-
-      <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : resetDialog())}>
-        <DialogContent className="rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[540px]">
-          <DialogHeader className="border-b border-slate-100 px-5 py-4">
-            <DialogTitle className="text-[15px] font-semibold text-[#070261]">
-              {editingPreference ? (lang === "zh" ? "编辑 Agent 偏好" : "Edit Agent preference") : (lang === "zh" ? "新增 Agent 偏好" : "Add Agent preference")}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSave} className="grid gap-4 px-5 py-5">
-            <label className="grid gap-1.5">
-              <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "生效范围" : "Scope"}</span>
-              <select
-                value={scope}
-                onChange={(event) => {
-                  const nextScope = event.target.value as AgentPreference["scope"];
-                  setScope(nextScope);
-                  if (nextScope === "global") setAudience("personal");
-                }}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] text-slate-600 outline-none transition focus:border-[rgba(23,36,216,0.3)]"
-              >
-                <option value="global">{lang === "zh" ? "我的通用偏好 · 所有项目生效" : "General · all projects"}</option>
-                <option value="project">{lang === "zh" ? `项目偏好 · ${activeProject.name}` : `Project · ${activeProject.name}`}</option>
-              </select>
-            </label>
-            {scope === "project" ? (
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "共享范围" : "Audience"}</span>
-                <select
-                  value={audience}
-                  onChange={(event) => setAudience(event.target.value as AgentPreference["audience"])}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] text-slate-600 outline-none transition focus:border-[rgba(23,36,216,0.3)]"
-                >
-                  <option value="personal">{lang === "zh" ? "仅本人在当前项目内生效" : "Only me in this project"}</option>
-                  <option value="project-members">{lang === "zh" ? "共享给当前项目成员" : "Share with project members"}</option>
-                </select>
-              </label>
-            ) : null}
-            <label className="grid gap-1.5">
-              <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "偏好内容" : "Preference"}</span>
-              <textarea
-                value={content}
-                onChange={(event) => setContent(event.target.value)}
-                rows={5}
-                className="resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] leading-6 text-slate-700 outline-none transition placeholder:text-slate-300 focus:border-[rgba(23,36,216,0.3)]"
-                placeholder={lang === "zh" ? "例如：本项目优先关注内化活性和 KD，不需要每次解释基础背景。" : "Example: Prioritize internalization and KD in this project; do not repeat basic context every time."}
-              />
-            </label>
-            <div className="rounded-[14px] bg-slate-50 px-3 py-2 text-[11px] leading-5 text-slate-500">
-              {scope === "global"
-                ? lang === "zh" ? "该偏好将对你的所有项目生效。" : "This preference applies to all your projects."
-                : audience === "project-members"
-                  ? lang === "zh" ? "该偏好将共享给当前项目成员。" : "This preference will be shared with current project members."
-                  : lang === "zh" ? "该偏好仅你本人在当前项目内使用。" : "This preference is personal within the current project."}
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={resetDialog}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-medium text-slate-500 transition hover:text-slate-700"
-              >
-                {lang === "zh" ? "取消" : "Cancel"}
-              </button>
-              <button
-                type="submit"
-                className="rounded-xl bg-[#161FAD] px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-[#111996] active:scale-[0.97]"
-              >
-                {lang === "zh" ? "保存" : "Save"}
-              </button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[440px]">
@@ -1295,12 +1602,12 @@ export function ResourcePanel({ lang, mode = "global" }: { lang: Lang; mode?: "g
 
   const globalTabs: { key: "data" | "skill" | "template"; label: string; labelEn: string; icon: React.ReactNode }[] = [
     { key: "data", label: "公共数据", labelEn: "Public Data", icon: <Globe2 className="h-3.5 w-3.5" /> },
-    { key: "skill", label: "工具", labelEn: "Tools", icon: <Zap className="h-3.5 w-3.5" /> },
-    { key: "template", label: "Skill", labelEn: "Skills", icon: <PanelRightOpen className="h-3.5 w-3.5" /> },
+    { key: "skill", label: "Skill", labelEn: "Skills", icon: <Zap className="h-3.5 w-3.5" /> },
+    { key: "template", label: "模版", labelEn: "Templates", icon: <PanelRightOpen className="h-3.5 w-3.5" /> },
   ];
   const myTabs: { key: "data" | "skill" | "template"; label: string; labelEn: string; icon: React.ReactNode }[] = [
-    { key: "skill", label: "Tool", labelEn: "Tools", icon: <Zap className="h-3.5 w-3.5" /> },
-    { key: "template", label: "Skill", labelEn: "Skills", icon: <PanelRightOpen className="h-3.5 w-3.5" /> },
+    { key: "skill", label: "Skill", labelEn: "Skills", icon: <Zap className="h-3.5 w-3.5" /> },
+    { key: "template", label: "模版", labelEn: "Templates", icon: <PanelRightOpen className="h-3.5 w-3.5" /> },
   ];
   const tabs = mode === "mine" ? myTabs : globalTabs;
 
@@ -1324,7 +1631,7 @@ export function ResourcePanel({ lang, mode = "global" }: { lang: Lang; mode?: "g
           </p>
           <p className="text-[11px] text-slate-400">
               {mode === "mine"
-              ? lang === "zh" ? "管理我的 Tool / Skill 与分享权限" : "Manage my Tools / Skills and sharing"
+              ? lang === "zh" ? "管理我的 Skill / 模版与分享权限" : "Manage my Skills / Templates and sharing"
               : lang === "zh" ? "区分平台公共资源、我的资源和他人分享资源" : "Platform resources, my resources, and shared resources"}
           </p>
         </div>

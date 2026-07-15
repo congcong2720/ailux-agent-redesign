@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useProject, type ProjectDataAsset, type ProjectDataFileType } from "@/contexts/ProjectContext";
+import { useProject, type AgentPreference, type ProjectDataAsset, type ProjectDataFileType } from "@/contexts/ProjectContext";
 import { demoPdbContent } from "@/lib/demoPdb";
 import {
   ArrowDownToLine,
@@ -279,7 +279,7 @@ const historyTasks: HistoryTask[] = [
     submittedAt: "2026-06-26T14:36:00",
     submittedAtLabel: l("06-26 14:36", "Jun 26 14:36"),
   },
-  { id: "t2", title: l("DLL3 双抗预测 Skill", "DLL3 bispecific prediction Skill"), runId: "run-20260626-dll3-002", status: "success", submittedAt: "2026-06-26T11:08:00", submittedAtLabel: l("06-26 11:08", "Jun 26 11:08") },
+  { id: "t2", title: l("DLL3 双抗预测模版", "DLL3 bispecific prediction Template"), runId: "run-20260626-dll3-002", status: "success", submittedAt: "2026-06-26T11:08:00", submittedAtLabel: l("06-26 11:08", "Jun 26 11:08") },
   { id: "t3", title: l("内吞特征关联分析", "Endocytosis feature analysis"), runId: "run-20260625-endo-009", status: "success", submittedAt: "2026-06-25T18:20:00", submittedAtLabel: l("昨天 18:20", "Yesterday 18:20") },
   { id: "t4", title: l("EGFR 抗体优化", "EGFR antibody optimization"), runId: "run-20260625-egfr-006", status: "failed", submittedAt: "2026-06-25T14:32:00", submittedAtLabel: l("昨天 14:32", "Yesterday 14:32") },
   { id: "t5", title: l("CDR 区域内吞影响评估", "CDR region impact assessment"), runId: "run-20260624-cdr-004", status: "success", submittedAt: "2026-06-24T09:18:00", submittedAtLabel: l("06-24 09:18", "Jun 24 09:18") },
@@ -572,7 +572,7 @@ const a2uiPlanSections = [
   {
     title: l("生成可确认执行 Plan", "Generate Confirmable Execution Plan"),
     body: l(
-      "把任务拆成结构特征、模型排序、人工检查点、结果解释和模板沉淀。",
+      "把任务拆成结构特征、模型排序、人工检查点、结果解释和模版沉淀。",
       "Split the task into structural features, model ranking, human checkpoints, result explanation, and template capture.",
     ),
     output: l("含步骤、参数、文件要求和风险提示的确认式 Plan", "Confirmable plan with steps, parameters, file requirements, and risk notes"),
@@ -602,9 +602,9 @@ const a2uiPlanSections = [
     output: l("ranked_candidates.csv + 字段缺失自动恢复", "ranked_candidates.csv + automatic field recovery"),
   },
   {
-    title: l("生成结果解释与模板", "Generate Result Explanation & Template"),
+    title: l("生成结果解释与模版", "Generate Result Explanation & Template"),
     body: l(
-      "输出报告、文件预览、Data 保存入口和可复用流程模板。",
+      "输出报告、文件预览、Data 保存入口和可复用流程模版。",
       "Generate report, file preview, Data save entry, and reusable workflow template.",
     ),
     output: l("analysis_report.docx + workflow_template.json", "analysis_report.docx + workflow_template.json"),
@@ -658,7 +658,7 @@ const a2uiRunningMessages: RunningMessage[] = [
   {
     role: "agent",
     content: l(
-      "任务已完成。我把结果按步骤分组展示在右侧 Files，并生成了可解释报告、热图、排序表和可保存的流程模板。",
+      "任务已完成。我把结果按步骤分组展示在右侧 Files，并生成了可解释报告、热图、排序表和可保存的流程模版。",
       "The task is complete. I grouped results by step in Files and generated an explainable report, heatmap, ranking table, and reusable workflow template.",
     ),
     time: "10:36",
@@ -680,7 +680,7 @@ const a2uiRunningSteps: PlanStep[] = [
     id: "a2ui-step-2",
     title: l("生成可确认执行 Plan", "Generate Confirmable Execution Plan"),
     waiting: l("等待输入校验完成后启动。", "Waiting for input validation to finish."),
-    detail: l("正在把任务拆成结构特征、模型排序、人工检查点、结果解释和模板沉淀。", "Splitting the task into structural features, model ranking, human checkpoints, result explanation, and template capture."),
+    detail: l("正在把任务拆成结构特征、模型排序、人工检查点、结果解释和模版沉淀。", "Splitting the task into structural features, model ranking, human checkpoints, result explanation, and template capture."),
     duration: "18s",
     status: "waiting",
     summary: l("确认式 Plan 已生成，包含步骤、参数、文件要求和风险提示。", "A confirmable plan is ready with steps, parameters, file requirements, and risk notes."),
@@ -714,12 +714,12 @@ const a2uiRunningSteps: PlanStep[] = [
   },
   {
     id: "a2ui-step-6",
-    title: l("生成结果解释与模板", "Generate Result Explanation And Template"),
+    title: l("生成结果解释与模版", "Generate Result Explanation And Template"),
     waiting: l("等待排序完成后启动。", "Waiting for ranking to finish."),
-    detail: l("正在输出报告、文件预览、Data 保存入口和可复用流程模板。", "Generating report, file preview, Data save entry, and reusable workflow template."),
+    detail: l("正在输出报告、文件预览、Data 保存入口和可复用流程模版。", "Generating report, file preview, Data save entry, and reusable workflow template."),
     duration: "12s",
     status: "waiting",
-    summary: l("结果摘要、图表、报告和模板均已生成。", "Result summary, charts, report, and template have been generated."),
+    summary: l("结果摘要、图表、报告和模版均已生成。", "Result summary, charts, report, and template have been generated."),
   },
 ];
 
@@ -749,14 +749,14 @@ const a2uiResultFiles: ResultFile[] = [
     id: "a2ui-analysis-report",
     name: "analysis_report.docx",
     meta: l("可解释报告", "Explainable report"),
-    step: l("步骤 6 · 生成结果解释与模板", "Step 6 · Generate result explanation and template"),
+    step: l("步骤 6 · 生成结果解释与模版", "Step 6 · Generate result explanation and template"),
     type: "docx",
   },
   {
     id: "a2ui-template-json",
     name: "workflow_template.json",
-    meta: l("可复用流程模板", "Reusable workflow template"),
-    step: l("步骤 6 · 生成结果解释与模板", "Step 6 · Generate result explanation and template"),
+    meta: l("可复用流程模版", "Reusable workflow template"),
+    step: l("步骤 6 · 生成结果解释与模版", "Step 6 · Generate result explanation and template"),
     type: "json",
   },
 ];
@@ -950,7 +950,7 @@ const historyRunItems: HistoryRunItem[] = [
       {
         id: "step-05",
         title: l("结果解释", "Result interpretation"),
-        description: l("生成结构化指标卡、完整报告和可复用流程模板。", "Generate a structured metric card, full report, and reusable workflow template."),
+        description: l("生成结构化指标卡、完整报告和可复用流程模版。", "Generate a structured metric card, full report, and reusable workflow template."),
         status: "done",
         duration: "42s",
         toolName: "report_skill",
@@ -1157,7 +1157,7 @@ const copy = {
     switchedToEnglish: "已切换为 English 模式",
     switchedToChinese: "已切换为中文模式",
     naturalLanguageTask: "自然语言发起任务",
-    newTaskTitle: "从目标描述开始，让 Agent 帮你完成模型、工具和执行流程的组织。",
+    newTaskTitle: "从目标描述开始，让 Agent 帮你完成模型、Skill 和执行流程的组织。",
     newTaskBody:
       "当前界面处于新任务工作态。中间区不展示旧任务内容，右侧也不会带入历史计划与结果。你可以直接输入研究目标，或先上传 CSV、PDB 等文件，再由 Agent 自动生成可追踪的执行路径。",
     recommendedTasks: "推荐任务",
@@ -1167,14 +1167,14 @@ const copy = {
     attachUploadTitle: "上传本地数据",
     attachUploadBody: "选择本地文件或文件夹，作为本轮 Agent 任务的新输入。",
     attachResourceTitle: "引用已有资源",
-    attachResourceBody: "从项目数据或 Skill 中选择已有资源，作为本轮 Agent 任务的上下文。",
+    attachResourceBody: "从项目数据、Skill 或模版中选择已有资源，作为本轮 Agent 任务的上下文。",
     localFiles: "本地文件",
     localFolder: "本地文件夹",
     projectData: "项目数据",
     globalData: "全局资源",
     publicData: "公共数据",
-    skills: "工具",
-    templates: "Skill",
+    skills: "Skill",
+    templates: "模版",
     searchResources: "搜索资源",
     chooseFiles: "选择文件",
     chooseFolder: "选择文件夹",
@@ -1334,14 +1334,14 @@ const copy = {
     attachUploadTitle: "Upload local data",
     attachUploadBody: "Choose local files or folders as new input for this agent task.",
     attachResourceTitle: "Reference existing resources",
-    attachResourceBody: "Select existing project data or Skills as context for this agent task.",
+    attachResourceBody: "Select existing project data, Skills, or Templates as context for this agent task.",
     localFiles: "Local files",
     localFolder: "Local folder",
     projectData: "Project data",
     globalData: "Global resources",
     publicData: "Public data",
-    skills: "Tools",
-    templates: "Skills",
+    skills: "Skills",
+    templates: "Templates",
     searchResources: "Search resources",
     chooseFiles: "Choose files",
     chooseFolder: "Choose folder",
@@ -1774,16 +1774,16 @@ function attachedSourceLabel(source: AttachedInput["source"], lang: Lang) {
     "local-folder": "文件夹",
     "project-data": "项目数据",
     "public-data": "公共数据",
-    skill: "工具",
-    template: "Skill",
+    skill: "Skill",
+    template: "模版",
   };
   const en: Record<AttachedInput["source"], string> = {
     "local-file": "File",
     "local-folder": "Folder",
     "project-data": "Project",
     "public-data": "Public",
-    skill: "Tool",
-    template: "Skill",
+    skill: "Skill",
+    template: "Template",
   };
   return lang === "zh" ? zh[source] : en[source];
 }
@@ -2069,7 +2069,7 @@ function AttachDataDialog({
                 <div className="grid grid-cols-2 gap-2.5">
                   {filteredTemplates.length === 0 ? (
                     <div className="col-span-2 rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-10 text-center text-[13px] text-slate-400">
-                      {lang === "zh" ? "没有匹配的 Skill" : "No matching Skills"}
+                      {lang === "zh" ? "没有匹配的模版" : "No matching Templates"}
                     </div>
                   ) : (
                     filteredTemplates.map((item) => (
@@ -2336,7 +2336,7 @@ function Sidebar({
           <Database className="h-4 w-4" />
           <div>
             <p className="text-[13px] font-semibold">{lang === "zh" ? "全局资源" : "Global resources"}</p>
-            <p className="mt-0.5 text-[11px] opacity-70">{lang === "zh" ? "数据 · Tool · Skill" : "Data · Tools · Skills"}</p>
+            <p className="mt-0.5 text-[11px] opacity-70">{lang === "zh" ? "数据 · Skill · 模版" : "Data · Skills · Templates"}</p>
           </div>
         </button>
 
@@ -2533,6 +2533,7 @@ function Sidebar({
 
 function NewTaskWorkspace({
   attachedInputs,
+  effectivePreferences,
   lang,
   prompt,
   onOpenResourceDialog,
@@ -2543,6 +2544,7 @@ function NewTaskWorkspace({
   onStart,
 }: {
   attachedInputs: AttachedInput[];
+  effectivePreferences: AgentPreference[];
   lang: Lang;
   prompt: string;
   onOpenResourceDialog: () => void;
@@ -2553,6 +2555,7 @@ function NewTaskWorkspace({
   onStart: () => void;
 }) {
   const text = copy[lang];
+  const projectPreferenceCount = effectivePreferences.filter((preference) => preference.scope === "project").length;
 
   return (
     <section className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
@@ -2565,6 +2568,31 @@ function NewTaskWorkspace({
             </div>
             <h3 className="text-[22px] font-semibold tracking-tight text-[#070261]">{text.newTaskTitle}</h3>
             <p className="mt-3 max-w-[720px] text-[13px] leading-6 text-slate-600">{text.newTaskBody}</p>
+          </div>
+
+          <div className="mt-4 rounded-[18px] border border-blue-100 bg-blue-50/50 px-4 py-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Brain className="h-4 w-4 text-[#161FAD]" />
+                  <p className="text-[13px] font-semibold text-[#070261]">
+                    {lang === "zh" ? "本次将使用的 Agent 偏好" : "Agent preferences for this task"}
+                  </p>
+                </div>
+                <p className="mt-1 text-[11px] leading-5 text-blue-800">
+                  {lang === "zh"
+                    ? `共 ${effectivePreferences.length} 条启用偏好，其中 ${projectPreferenceCount} 条项目偏好会覆盖冲突的通用偏好。`
+                    : `${effectivePreferences.length} active preferences will be used. Project preferences override conflicting general preferences.`}
+                </p>
+              </div>
+              <div className="flex max-w-[520px] flex-wrap justify-end gap-1.5">
+                {effectivePreferences.slice(0, 4).map((preference) => (
+                  <span key={preference.id} className="rounded-full border border-blue-100 bg-white/80 px-2.5 py-1 text-[10px] font-medium text-[#161FAD]">
+                    {preference.scope === "project" ? (lang === "zh" ? "项目" : "Project") : (lang === "zh" ? "通用" : "General")} · {preference.title}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="mt-6">
@@ -4343,6 +4371,7 @@ function SidePanel({
   lang,
   view,
   sideTab,
+  effectivePreferences,
   steps,
   resultFiles,
   reports,
@@ -4365,6 +4394,7 @@ function SidePanel({
   lang: Lang;
   view: ViewMode;
   sideTab: SideTab;
+  effectivePreferences: AgentPreference[];
   steps: PlanStep[];
   resultFiles: ResultFile[];
   reports: RunReport[];
@@ -4386,16 +4416,17 @@ function SidePanel({
 }) {
   const text = copy[lang];
   const showEmpty = view === "new";
+  const projectPreferenceCount = effectivePreferences.filter((preference) => preference.scope === "project").length;
   const [flowOpen, setFlowOpen] = useState(false);
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [expandedPreviousRunIds, setExpandedPreviousRunIds] = useState<string[]>([]);
   const [selectedStepLog, setSelectedStepLog] = useState<PlanStep | null>(null);
   const [saveSkillOpen, setSaveSkillOpen] = useState(false);
-  const [skillName, setSkillName] = useState(lang === "zh" ? "DLL3 双抗预测 Skill" : "DLL3 bispecific prediction Skill");
+  const [skillName, setSkillName] = useState(lang === "zh" ? "DLL3 双抗预测模版" : "DLL3 bispecific prediction Template");
   const [skillDescription, setSkillDescription] = useState(
     lang === "zh"
-      ? "保存当前 Plan 的节点流程，后续可作为标准 Skill 复用。"
-      : "Save the current Plan nodes as a reusable Skill.",
+      ? "保存当前 Plan 的节点流程，后续可作为标准模版复用。"
+      : "Save the current Plan nodes as a reusable Template.",
   );
   const progressPercent = useMemo(() => {
     const doneCount = steps.filter((step) => step.status === "done").length;
@@ -4459,7 +4490,7 @@ function SidePanel({
     event.preventDefault();
     const nextName = skillName.trim();
     if (!nextName) {
-      toast.error(lang === "zh" ? "Skill 名称不能为空" : "Skill name is required");
+      toast.error(lang === "zh" ? "模版名称不能为空" : "Template name is required");
       return;
     }
 
@@ -4519,7 +4550,7 @@ function SidePanel({
                       className="inline-flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 transition hover:bg-emerald-100 active:scale-[0.97]"
                     >
                       <Save className="h-3 w-3" />
-                      {lang === "zh" ? "保存 Skill" : "Save Skill"}
+                      {lang === "zh" ? "保存模版" : "Save Template"}
                     </button>
                   </div>
                 </div>
@@ -4530,22 +4561,50 @@ function SidePanel({
                   />
                 </div>
               </div>
+              <div className="mb-4 rounded-[16px] border border-blue-100 bg-blue-50/60 px-3 py-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Brain className="h-3.5 w-3.5 text-[#161FAD]" />
+                    <p className="text-[12px] font-semibold text-[#070261]">
+                      {lang === "zh" ? "Plan 偏好引用来源" : "Preference sources"}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-medium text-[#161FAD]">
+                    {effectivePreferences.length}
+                  </span>
+                </div>
+                <p className="mb-2 text-[11px] leading-5 text-blue-800">
+                  {lang === "zh"
+                    ? `已应用通用偏好与 ${projectPreferenceCount} 条项目偏好；冲突时项目偏好优先。`
+                    : `General preferences and ${projectPreferenceCount} project preferences applied. Project preferences take priority.`}
+                </p>
+                <div className="space-y-1.5">
+                  {effectivePreferences.slice(0, 3).map((preference) => (
+                    <div key={preference.id} className="flex items-center justify-between gap-2 rounded-xl bg-white/80 px-2.5 py-1.5 text-[11px]">
+                      <span className="min-w-0 truncate text-slate-700">{preference.title}</span>
+                      <span className="shrink-0 rounded-full bg-slate-50 px-2 py-0.5 text-[10px] text-slate-500">
+                        {preference.scope === "project" ? (lang === "zh" ? "项目" : "Project") : (lang === "zh" ? "通用" : "General")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <WorkflowFlowDrawer lang={lang} open={flowOpen} steps={steps} onOpenChange={setFlowOpen} />
               <Dialog open={saveSkillOpen} onOpenChange={setSaveSkillOpen}>
                 <DialogContent className="rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[500px]">
                   <DialogHeader className="border-b border-slate-100 px-5 py-4">
                     <DialogTitle className="text-[15px] font-semibold text-[#070261]">
-                      {lang === "zh" ? "保存为 Skill" : "Save as Skill"}
+                      {lang === "zh" ? "保存为模版" : "Save as Template"}
                     </DialogTitle>
                     <p className="mt-1 text-[12px] leading-5 text-slate-500">
                       {lang === "zh"
-                        ? "将当前 Plan 节点流程保存为可复用 Skill，后续可在“我的资源”中管理权限和分享对象。"
-                        : "Save the current Plan as a reusable Skill. Manage permissions and sharing in My Resources later."}
+                        ? "将当前 Plan 节点流程保存为可复用模版，后续可在“我的资源”中管理权限和分享对象。"
+                        : "Save the current Plan as a reusable Template. Manage permissions and sharing in My Resources later."}
                     </p>
                   </DialogHeader>
                   <form onSubmit={handleConfirmSaveSkill} className="grid gap-4 px-5 py-5">
                     <label className="grid gap-1.5">
-                      <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "Skill 名称" : "Skill name"}</span>
+                      <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "模版名称" : "Template name"}</span>
                       <input
                         value={skillName}
                         onChange={(event) => setSkillName(event.target.value)}
@@ -4559,12 +4618,9 @@ function SidePanel({
                         onChange={(event) => setSkillDescription(event.target.value)}
                         rows={4}
                         className="resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] leading-6 text-slate-700 outline-none transition placeholder:text-slate-300 focus:border-[rgba(23,36,216,0.3)]"
-                        placeholder={lang === "zh" ? "说明这个 Skill 适合复用的场景" : "Describe when this Skill should be reused"}
+                        placeholder={lang === "zh" ? "说明这个模版适合复用的场景" : "Describe when this Template should be reused"}
                       />
                     </label>
-                    <div className="rounded-[14px] bg-blue-50/70 px-3 py-2 text-[11px] leading-5 text-[#161FAD]">
-                      {lang === "zh" ? `来源：当前 Plan · ${steps.length} 个节点` : `Source: current Plan · ${steps.length} nodes`}
-                    </div>
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
@@ -4913,7 +4969,7 @@ function SidePanel({
 }
 
 export default function Home() {
-  const { activeProject, addProjectDataAsset, addUserResource, mainView, setMainView, setResourceTab } = useProject();
+  const { activeProject, addProjectDataAsset, addUserResource, agentPreferences, mainView, setMainView, setResourceTab } = useProject();
   const [lang, setLang] = useState<Lang>("zh");
   const [activeView, setActiveView] = useState<ViewMode>("new");
   const [activeScenarioId, setActiveScenarioId] = useState<ScenarioId>("dll3");
@@ -4938,6 +4994,10 @@ export default function Home() {
   const menuBoundaryRef = useRef<HTMLDivElement | null>(null);
   const workflowTimerRef = useRef<number | null>(null);
   const text = copy[lang];
+  const effectiveAgentPreferences = useMemo(
+    () => agentPreferences.filter((preference) => preference.status === "active" && (preference.scope === "global" || preference.projectId === activeProject.id)),
+    [activeProject.id, agentPreferences],
+  );
 
   useEffect(() => {
     const stored = window.localStorage.getItem("ailux-agent-lang");
@@ -5205,7 +5265,7 @@ export default function Home() {
     const resource = addUserResource({
       kind: "skill",
       name,
-      description: description || (lang === "zh" ? "由当前 Plan 保存的可复用 Skill。" : "Reusable Skill saved from the current Plan."),
+      description: description || (lang === "zh" ? "由当前 Plan 保存的可复用模版。" : "Reusable Template saved from the current Plan."),
       category: lang === "zh" ? "抗体设计" : "Antibody design",
       owner: "mine",
       permission: "private",
@@ -5295,6 +5355,7 @@ export default function Home() {
           ) : activeView === "new" ? (
             <NewTaskWorkspace
               attachedInputs={attachedInputs}
+              effectivePreferences={effectiveAgentPreferences}
               lang={lang}
               prompt={composerValue}
               onOpenResourceDialog={() => setAttachDialogVariant("resource")}
@@ -5331,6 +5392,7 @@ export default function Home() {
               lang={lang}
               view={activeView}
               sideTab={sideTab}
+              effectivePreferences={effectiveAgentPreferences}
               steps={runtimeSteps}
               resultFiles={activeScenario.resultFiles}
               reports={activeScenario.reports}

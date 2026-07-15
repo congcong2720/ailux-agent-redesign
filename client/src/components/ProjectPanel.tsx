@@ -129,18 +129,20 @@ function FolderChildRows({ items, lang, depth = 0 }: { items: ProjectDataChild[]
                 {isFolder ? <FolderOpen className="h-4 w-4 text-[#161FAD]" /> : FILE_TYPE_ICONS[child.type] ?? <File className="h-4 w-4 text-slate-400" />}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[12px] font-medium text-slate-800">{child.name}</p>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <p className="truncate text-[12px] font-medium text-slate-800">{child.name}</p>
+                  {!isFolder ? (
+                    <button
+                      onClick={() => toast.message(lang === "zh" ? `预览 ${child.name}` : `Preview ${child.name}`)}
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
+                      title={lang === "zh" ? "预览" : "Preview"}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </button>
+                  ) : null}
+                </div>
               </div>
               <span className="shrink-0 text-[11px] text-slate-400">{child.size}</span>
-              {!isFolder ? (
-                <button
-                  onClick={() => toast.message(lang === "zh" ? `预览 ${child.name}` : `Preview ${child.name}`)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
-                  title={lang === "zh" ? "预览" : "Preview"}
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                </button>
-              ) : null}
               <button
                 onClick={() => toast.success(lang === "zh" ? `已开始下载 ${child.name}` : `Downloading ${child.name}`)}
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
@@ -370,7 +372,7 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
               value={dataSearchQuery}
               onChange={(event) => setDataSearchQuery(event.target.value)}
               className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
-              placeholder={lang === "zh" ? "搜索名称 / 类型 / 描述 / 来源" : "Search name / type / description / source"}
+              placeholder={lang === "zh" ? "搜索名称 / 描述" : "Search name / description"}
             />
           </div>
           <input
@@ -455,7 +457,7 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
             <span>{lang === "zh" ? "大小" : "Size"}</span>
             <span>{lang === "zh" ? "来源" : "Source"}</span>
             <span>{lang === "zh" ? "更新时间" : "Updated"}</span>
-            <span>{lang === "zh" ? "描述 / 来源任务" : "Description / source task"}</span>
+            <span>{lang === "zh" ? "描述" : "Description"}</span>
             <span className="text-right">{lang === "zh" ? "操作" : "Actions"}</span>
           </div>
           {filtered.map((asset, idx) => (
@@ -484,7 +486,21 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
                   {FILE_TYPE_ICONS[asset.type] ?? <File className="h-4 w-4 text-slate-400" />}
                 </div>
                 <div className="min-w-0">
-                  <p className="min-w-0 truncate text-[13px] font-medium text-slate-800">{asset.name}</p>
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <p className="min-w-0 truncate text-[13px] font-medium text-slate-800">{asset.name}</p>
+                    {asset.type !== "folder" ? (
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toast.message(lang === "zh" ? `预览 ${asset.name}` : `Preview ${asset.name}`);
+                        }}
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
+                        title={lang === "zh" ? "预览" : "Preview"}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               </button>
               <span className="text-[12px] text-slate-400">{asset.size}</span>
@@ -504,15 +520,6 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
                 <p className="truncate text-[11px] text-slate-500">{asset.sourceTaskName || "-"}</p>
               </div>
               <div className="flex justify-end gap-1.5">
-                {asset.type !== "folder" ? (
-                  <button
-                    onClick={() => toast.message(lang === "zh" ? `预览 ${asset.name}` : `Preview ${asset.name}`)}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-[#161FAD]"
-                    title={lang === "zh" ? "预览" : "Preview"}
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                  </button>
-                ) : null}
                 <button
                   onClick={() => openAssetEditor(asset)}
                   className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-[#161FAD]"

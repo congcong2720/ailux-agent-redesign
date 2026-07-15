@@ -41,19 +41,29 @@ export type UserResource = {
   category: string;
   owner: "mine" | "shared";
   permission: "private" | "shared";
-  sharedWith: string[];
+  sharedWith: Array<{ email: string; role: "admin" | "member" }>;
+  accessRole?: "admin" | "member";
   updatedAt: string;
   steps?: number;
 };
 
 export type AgentPreference = {
   id: string;
+  title: string;
   scope: "global" | "project";
   audience: "personal" | "project-members";
   userId: string;
   projectId?: string;
   content: string;
   status: "active" | "paused" | "deleted";
+  priority: "high" | "medium" | "low";
+  permission: "private" | "project-members";
+  tags: string[];
+  source: "manual" | "run" | "report" | "agent-suggested";
+  version: number;
+  referenceCount: number;
+  recentReferences: Array<{ id: string; title: string; usedAt: string; context: string }>;
+  versionHistory: Array<{ version: number; updatedAt: string; summary: string }>;
   updatedAt: string;
   deletedAt?: string;
 };
@@ -157,24 +167,28 @@ const defaultUserResources: UserResource[] = [
   {
     id: "ur-skill-1",
     kind: "skill",
-    name: "DLL3 双抗预测 Skill",
+    name: "DLL3 双抗预测模版",
     description: "从结构文件到特征计算、模型预测和报告生成的复用流程。",
     category: "抗体设计",
     owner: "mine",
     permission: "shared",
-    sharedWith: ["liwei@xtalpi.com", "zhangmin@xtalpi.com"],
+    sharedWith: [
+      { email: "liwei@xtalpi.com", role: "admin" },
+      { email: "zhangmin@xtalpi.com", role: "member" },
+    ],
     updatedAt: "2026-07-03",
     steps: 6,
   },
   {
     id: "ur-skill-2",
     kind: "skill",
-    name: "EGFR CDR 优化 Skill",
+    name: "EGFR CDR 优化模版",
     description: "同事分享的 CDR 区域突变设计与结构复核流程。",
     category: "蛋白设计",
     owner: "shared",
     permission: "shared",
-    sharedWith: ["chenlab@xtalpi.com"],
+    sharedWith: [{ email: "chenlab@xtalpi.com", role: "member" }],
+    accessRole: "member",
     updatedAt: "2026-07-01",
     steps: 5,
   },
@@ -183,40 +197,153 @@ const defaultUserResources: UserResource[] = [
 const defaultAgentPreferences: AgentPreference[] = [
   {
     id: "pref-global-1",
+    title: "通用偏好 · 报告与结果保存",
     scope: "global",
     audience: "personal",
     userId: "user-chen-lab",
-    content: "默认用中文回答，关键结论优先给出，必要时补充英文术语。",
+    content: `# 通用偏好
+
+## 报告语言
+默认使用中文，关键术语保留英文。
+
+## 结果展示
+所有任务报告需要包含：
+- 输入数据摘要
+- 参数表
+- 每一步产物
+- 错误日志摘要
+- 下一步建议
+
+## 结果保存
+任务完成后，优先建议将关键结果保存到项目数据集。
+保存时必须记录 Run ID、Step ID、保存时间和描述。`,
     status: "active",
+    priority: "medium",
+    permission: "private",
+    tags: ["report", "result-saving", "language"],
+    source: "manual",
+    version: 3,
+    referenceCount: 18,
+    recentReferences: [
+      { id: "ref-g-1", title: "DLL3 双抗预测流程", usedAt: "2026-07-10 09:42", context: "Plan 生成时注入报告结构要求" },
+      { id: "ref-g-2", title: "内化预测建模工作流程", usedAt: "2026-07-09 16:10", context: "结果保存建议" },
+    ],
+    versionHistory: [
+      { version: 3, updatedAt: "2026-07-05", summary: "补充结果保存字段要求" },
+      { version: 2, updatedAt: "2026-07-03", summary: "增加报告结构要求" },
+      { version: 1, updatedAt: "2026-07-01", summary: "创建通用偏好" },
+    ],
     updatedAt: "2026-07-05",
   },
   {
     id: "pref-global-2",
+    title: "通用偏好 · 结构分析解释",
     scope: "global",
     audience: "personal",
     userId: "user-chen-lab",
-    content: "涉及抗体结构分析时，优先说明输入文件、模型假设和结果可解释性限制。",
+    content: `# 结构分析通用说明
+
+涉及抗体结构分析时，优先说明输入文件、模型假设和结果可解释性限制。
+
+## 必须说明
+- 输入结构文件路径
+- 使用的 Skill / 模版
+- 关键参数与默认假设
+- 结果适用范围与风险
+
+## 引用格式
+文件路径使用 \`Project Dataset / ...\`，Skill 引用使用 \`@Skill: Rosetta 能量特征计算\`。`,
     status: "active",
+    priority: "medium",
+    permission: "private",
+    tags: ["structure", "explainability"],
+    source: "manual",
+    version: 2,
+    referenceCount: 11,
+    recentReferences: [
+      { id: "ref-g2-1", title: "DLL3 结构预测", usedAt: "2026-07-08 14:20", context: "Monitor 节点日志摘要" },
+    ],
+    versionHistory: [
+      { version: 2, updatedAt: "2026-07-04", summary: "增加 Skill 与路径引用格式" },
+      { version: 1, updatedAt: "2026-07-02", summary: "创建结构分析说明" },
+    ],
     updatedAt: "2026-07-04",
   },
   {
     id: "pref-project-1",
+    title: "DLL3 项目偏好 · 抗体分析规则",
     scope: "project",
     audience: "project-members",
     userId: "user-chen-lab",
     projectId: "proj-default",
-    content: "DLL3 项目中优先关注内化活性、KD、共定位评分和 linker 柔性。",
+    content: `# DLL3 项目偏好
+
+## 抗体编号规则
+所有抗体序列分析统一使用 IMGT numbering。
+
+## 默认数据集
+默认序列库：
+Project Dataset / DLL3 抗体研究 / sequences / candidate_antibodies.fasta
+
+## 报告要求
+Humanization 报告必须包含：
+- CDR 变化说明
+- liability 位点
+- developability risk
+- 推荐进入下一轮的候选列表
+
+## 项目变量
+默认使用 {project.dataset.default_library} 作为候选序列库。`,
     status: "active",
+    priority: "high",
+    permission: "project-members",
+    tags: ["DLL3", "IMGT", "humanization"],
+    source: "manual",
+    version: 4,
+    referenceCount: 24,
+    recentReferences: [
+      { id: "ref-p-1", title: "DLL3 双抗预测流程", usedAt: "2026-07-10 10:05", context: "项目偏好覆盖通用结构规则" },
+      { id: "ref-p-2", title: "Humanization 报告生成", usedAt: "2026-07-09 11:28", context: "报告章节要求" },
+    ],
+    versionHistory: [
+      { version: 4, updatedAt: "2026-07-03", summary: "补充项目变量引用" },
+      { version: 3, updatedAt: "2026-07-02", summary: "补充 Humanization 报告要求" },
+      { version: 2, updatedAt: "2026-06-30", summary: "增加默认数据集路径" },
+      { version: 1, updatedAt: "2026-06-28", summary: "创建 DLL3 项目偏好" },
+    ],
     updatedAt: "2026-07-03",
   },
   {
     id: "pref-project-2",
+    title: "DLL3 项目偏好 · 临时结论不入长期记忆",
     scope: "project",
     audience: "personal",
     userId: "user-chen-lab",
     projectId: "proj-default",
-    content: "临时下载路径和一次性中间分析结论不写入长期记忆。",
+    content: `# 临时信息处理规则
+
+临时下载路径和一次性中间分析结论不写入长期记忆。
+
+## 不保存内容
+- 临时文件下载路径
+- 一次性调参记录
+- 尚未验证的中间结论
+
+## 可保存内容
+如果用户明确确认某条结论长期有效，Agent 需要先提示再保存为项目偏好。`,
     status: "paused",
+    priority: "low",
+    permission: "private",
+    tags: ["memory", "temporary"],
+    source: "agent-suggested",
+    version: 1,
+    referenceCount: 3,
+    recentReferences: [
+      { id: "ref-p2-1", title: "Run #2 调参复盘", usedAt: "2026-07-07 17:30", context: "判断不写入长期偏好" },
+    ],
+    versionHistory: [
+      { version: 1, updatedAt: "2026-07-02", summary: "由 Agent 建议，用户确认后创建" },
+    ],
     updatedAt: "2026-07-02",
   },
 ];
@@ -271,8 +398,8 @@ type ProjectContextType = {
   addUserResource: (resource: Omit<UserResource, "id" | "updatedAt">) => UserResource;
   updateUserResource: (resourceId: string, updates: Pick<UserResource, "name" | "description" | "permission" | "sharedWith">) => void;
   agentPreferences: AgentPreference[];
-  addAgentPreference: (preference: Omit<AgentPreference, "id" | "userId" | "updatedAt" | "status">) => AgentPreference;
-  updateAgentPreference: (preferenceId: string, updates: Pick<AgentPreference, "content" | "scope" | "audience" | "projectId">) => void;
+  addAgentPreference: (preference: Omit<AgentPreference, "id" | "userId" | "updatedAt" | "status" | "version" | "referenceCount" | "recentReferences" | "versionHistory">) => AgentPreference;
+  updateAgentPreference: (preferenceId: string, updates: Pick<AgentPreference, "title" | "content" | "scope" | "audience" | "projectId" | "priority" | "permission" | "tags" | "source">) => void;
   toggleAgentPreference: (preferenceId: string) => void;
   deleteAgentPreference: (preferenceId: string) => void;
   addProjectMember: (projectId: string, email: string, role: ProjectMember["role"]) => ProjectMember | null;
@@ -399,25 +526,40 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const addAgentPreference = (preference: Omit<AgentPreference, "id" | "userId" | "updatedAt" | "status">) => {
+  const addAgentPreference = (preference: Omit<AgentPreference, "id" | "userId" | "updatedAt" | "status" | "version" | "referenceCount" | "recentReferences" | "versionHistory">) => {
+    const today = new Date().toISOString().slice(0, 10);
     const nextPreference: AgentPreference = {
       ...preference,
       id: `pref-${Date.now()}`,
       userId: "user-chen-lab",
       status: "active",
-      updatedAt: new Date().toISOString().slice(0, 10),
+      version: 1,
+      referenceCount: 0,
+      recentReferences: [],
+      versionHistory: [{ version: 1, updatedAt: today, summary: "创建偏好文档" }],
+      updatedAt: today,
     };
     setAgentPreferences((current) => [nextPreference, ...current]);
     return nextPreference;
   };
 
-  const updateAgentPreference = (preferenceId: string, updates: Pick<AgentPreference, "content" | "scope" | "audience" | "projectId">) => {
+  const updateAgentPreference = (preferenceId: string, updates: Pick<AgentPreference, "title" | "content" | "scope" | "audience" | "projectId" | "priority" | "permission" | "tags" | "source">) => {
     setAgentPreferences((current) =>
-      current.map((preference) =>
-        preference.id === preferenceId
-          ? { ...preference, ...updates, updatedAt: new Date().toISOString().slice(0, 10) }
-          : preference,
-      ),
+      current.map((preference) => {
+        if (preference.id !== preferenceId) return preference;
+        const today = new Date().toISOString().slice(0, 10);
+        const nextVersion = preference.version + 1;
+        return {
+          ...preference,
+          ...updates,
+          version: nextVersion,
+          versionHistory: [
+            { version: nextVersion, updatedAt: today, summary: "更新偏好文档与元数据" },
+            ...preference.versionHistory,
+          ],
+          updatedAt: today,
+        };
+      }),
     );
   };
 

@@ -181,14 +181,6 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
                     className="cursor-not-allowed rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-500 outline-none"
                   />
                 </label>
-                <label className="grid gap-1.5">
-                  <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "账号类型" : "Account type"}</span>
-                  <input
-                    value={lang === "zh" ? "团队成员" : "Team member"}
-                    disabled
-                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-500 outline-none"
-                  />
-                </label>
               </div>
               <div className="mt-5 flex justify-end">
                 <button
