@@ -1,6 +1,6 @@
 /*
  * ProjectPanel — 项目详情内嵌视图（替换原弹窗，直接渲染在主区域）
- * Tabs: 数据 / 成员
+ * Tabs: 数据 / 知识库 / 成员
  * 设计语言：Ailux 蓝色系，HarmonyOS Sans SC
  */
 import { useRef, useState } from "react";
@@ -747,6 +747,130 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
   );
 }
 
+function KnowledgeBaseTab({ project, lang }: { project: Project; lang: Lang }) {
+  const [expandedIds, setExpandedIds] = useState<string[]>(project.knowledge.slice(0, 1).map((item) => item.id));
+  const [disabledRecordIds, setDisabledRecordIds] = useState<string[]>([]);
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLowerCase();
+  const records = normalizedQuery
+    ? project.knowledge.filter((record) =>
+        `${record.sourceTaskName} ${record.runId} ${record.findings.join(" ")} ${record.tags?.join(" ") ?? ""}`.toLowerCase().includes(normalizedQuery),
+      )
+    : project.knowledge;
+
+  const toggleRecord = (recordId: string) => {
+    setExpandedIds((current) => (current.includes(recordId) ? current.filter((id) => id !== recordId) : [...current, recordId]));
+  };
+  const toggleRecordEnabled = (recordId: string) => {
+    setDisabledRecordIds((current) => (current.includes(recordId) ? current.filter((id) => id !== recordId) : [...current, recordId]));
+  };
+  const enabledCount = project.knowledge.length - disabledRecordIds.length;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="rounded-[16px] border border-blue-100 bg-blue-50/60 px-4 py-3 text-[12px] leading-6 text-blue-800">
+        {lang === "zh"
+          ? "知识库会沉淀每次 Run 结束后由 Agent 自动提炼的关键发现，后续任务会优先检索并引用相关记录。"
+          : "The knowledge base stores key findings automatically distilled by the Agent after each Run for reuse in future tasks."}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-[240px] max-w-[360px] flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+          <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
+            placeholder={lang === "zh" ? "搜索任务 / Run ID / 关键发现" : "Search task, Run ID, or findings"}
+          />
+        </div>
+        <p className="text-[12px] text-slate-400">
+          {lang === "zh" ? `${enabledCount} / ${project.knowledge.length} 条启用` : `${enabledCount} / ${project.knowledge.length} enabled`}
+        </p>
+      </div>
+
+      {records.length > 0 ? (
+        <div className="space-y-3">
+          {records.map((record) => {
+            const expanded = expandedIds.includes(record.id);
+            const enabled = !disabledRecordIds.includes(record.id);
+            return (
+              <article
+                key={record.id}
+                className={`rounded-[18px] border p-4 shadow-[0_8px_22px_rgba(15,23,42,0.035)] transition hover:border-[#161FAD]/20 ${
+                  enabled ? "border-slate-100 bg-white" : "border-slate-100 bg-slate-50/80 opacity-70"
+                }`}
+              >
+                <div className="flex w-full items-start gap-3">
+                  <button onClick={() => toggleRecord(record.id)} className="flex min-w-0 flex-1 items-start gap-3 text-left">
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${enabled ? "bg-blue-50 text-[#161FAD]" : "bg-slate-100 text-slate-400"}`}>
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-[13px] font-semibold text-slate-800">{record.sourceTaskName}</p>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-[10px] text-slate-500">{record.runId}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        enabled ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-400"
+                      }`}>
+                        {enabled ? (lang === "zh" ? "启用" : "Enabled") : (lang === "zh" ? "停用" : "Disabled")}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-400">{record.generatedAt}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <span className="rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] text-[#161FAD]">
+                        {lang === "zh" ? `${record.findings.length} 条关键发现` : `${record.findings.length} findings`}
+                      </span>
+                      {record.tags?.slice(0, 3).map((tag) => (
+                        <span key={tag} className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] text-slate-500">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  </button>
+                  <button
+                    onClick={() => toggleRecordEnabled(record.id)}
+                    className={`relative mt-1 h-6 w-11 shrink-0 rounded-full transition ${enabled ? "bg-[#161FAD]" : "bg-slate-200"}`}
+                    aria-pressed={enabled}
+                    title={enabled ? (lang === "zh" ? "停用该知识记录" : "Disable this record") : (lang === "zh" ? "启用该知识记录" : "Enable this record")}
+                  >
+                    <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${enabled ? "left-6" : "left-1"}`} />
+                  </button>
+                </div>
+
+                {expanded ? (
+                  <div className="mt-3 rounded-[16px] border border-slate-100 bg-slate-50/80 px-4 py-3">
+                    <ol className="space-y-2">
+                      {record.findings.map((finding, index) => (
+                        <li key={`${record.id}-${finding}`} className="flex gap-2 text-[12px] leading-6 text-slate-600">
+                          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white text-[10px] font-semibold text-[#161FAD]">
+                            {index + 1}
+                          </span>
+                          <span>{finding}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 py-16 text-center">
+          <FileText className="mb-3 h-9 w-9 text-slate-300" />
+          <p className="text-[13px] text-slate-400">
+            {project.knowledge.length === 0
+              ? lang === "zh" ? "暂无知识记录" : "No knowledge records yet"
+              : lang === "zh" ? "没有匹配的知识记录" : "No matching knowledge records"}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MembersTab({ project, lang }: { project: Project; lang: Lang }) {
   const { addProjectMember, updateProjectMemberRole, removeProjectMember } = useProject();
   const members = project.members;
@@ -1044,8 +1168,9 @@ export function ProjectPanel({ lang }: { lang: Lang }) {
     toast.success(lang === "zh" ? `已删除项目「${deletedProjectName}」` : `Deleted project "${deletedProjectName}"`);
   };
 
-  const tabs: { key: "data" | "members"; label: string; labelEn: string; icon: React.ReactNode }[] = [
+  const tabs: { key: "data" | "knowledge" | "members"; label: string; labelEn: string; icon: React.ReactNode }[] = [
     { key: "data", label: "数据", labelEn: "Data", icon: <Database className="h-3.5 w-3.5" /> },
+    { key: "knowledge", label: "知识库", labelEn: "Knowledge Base", icon: <FileText className="h-3.5 w-3.5" /> },
     { key: "members", label: "成员", labelEn: "Members", icon: <Users className="h-3.5 w-3.5" /> },
   ];
 
@@ -1223,6 +1348,7 @@ export function ProjectPanel({ lang }: { lang: Lang }) {
       {/* Content */}
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {projectDetailView === "data" && <DataTab project={activeProject} lang={lang} />}
+        {projectDetailView === "knowledge" && <KnowledgeBaseTab project={activeProject} lang={lang} />}
         {projectDetailView === "members" && <MembersTab project={activeProject} lang={lang} />}
       </div>
 

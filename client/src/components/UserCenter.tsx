@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 type Lang = "zh" | "en";
 type UserCenterTab = "profile" | "notifications" | "usage";
+type UsagePeriod = "current" | "last" | "quarter" | "custom";
 
 const usageRecords = [
   { id: "u1", time: "2026-05-29 14:36", item: "DLL3 双抗预测流程", type: "工作流运行", tokens: "128K", project: "DLL3 抗体研究" },
@@ -21,8 +22,27 @@ const usageRecords = [
 ];
 
 const notificationRules = [
-  { id: "task-failed", zh: "任务失败或需要人工处理", en: "Task failed or needs action", channel: "即时通知", enabled: true },
-  { id: "task-done", zh: "长任务完成与报告生成", en: "Long task completed or report generated", channel: "完成通知", enabled: true },
+  {
+    id: "hitl-required",
+    zh: "需要人工确认",
+    en: "Human confirmation required",
+    channel: "HITL 阻塞满 15 分钟仍未确认时提醒",
+    enabled: true,
+  },
+  {
+    id: "task-failed",
+    zh: "任务失败",
+    en: "Task failed",
+    channel: "异常终态通知",
+    enabled: true,
+  },
+  {
+    id: "task-done",
+    zh: "任务完成",
+    en: "Task completed",
+    channel: "结果就绪通知",
+    enabled: true,
+  },
 ];
 
 export function UserCenter({ initialTab = "profile", lang }: { initialTab?: UserCenterTab; lang: Lang }) {
@@ -36,6 +56,9 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
   const [notificationStates, setNotificationStates] = useState<Record<string, boolean>>(
     () => Object.fromEntries(notificationRules.map((rule) => [rule.id, rule.enabled])),
   );
+  const [usagePeriod, setUsagePeriod] = useState<UsagePeriod>("current");
+  const [customUsageStart, setCustomUsageStart] = useState("2026-07-01");
+  const [customUsageEnd, setCustomUsageEnd] = useState("2026-07-22");
 
   useEffect(() => {
     setActiveTab(initialTab);
@@ -46,6 +69,17 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
     { key: "notifications", label: "通知设置", labelEn: "Notifications", icon: <Bell className="h-3.5 w-3.5" /> },
     { key: "usage", label: "用量明细", labelEn: "Usage", icon: <ReceiptText className="h-3.5 w-3.5" /> },
   ];
+  const usagePeriods: { key: UsagePeriod; label: string; labelEn: string; summary: [string, string, string] }[] = [
+    { key: "current", label: "本月", labelEn: "This month", summary: ["42", "216", "18"] },
+    { key: "last", label: "上月", labelEn: "Last month", summary: ["38", "184", "15"] },
+    { key: "quarter", label: "近 3 个月", labelEn: "Last 3 months", summary: ["126", "612", "49"] },
+    { key: "custom", label: "自定义", labelEn: "Custom", summary: ["18", "96", "7"] },
+  ];
+  const currentUsagePeriod = usagePeriods.find((period) => period.key === usagePeriod) ?? usagePeriods[0];
+  const usagePeriodLabel =
+    usagePeriod === "custom"
+      ? `${customUsageStart} - ${customUsageEnd}`
+      : lang === "zh" ? currentUsagePeriod.label : currentUsagePeriod.labelEn;
 
   const handleSaveProfile = (event: React.FormEvent) => {
     event.preventDefault();
@@ -231,11 +265,50 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
 
         {activeTab === "usage" ? (
           <div className="grid gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[13px] font-semibold text-[#070261]">{lang === "zh" ? "用量记录" : "Usage records"}</p>
+                <p className="mt-1 text-[11px] text-slate-400">
+                  {lang === "zh" ? `当前周期：${usagePeriodLabel}` : `Period: ${usagePeriodLabel}`}
+                </p>
+              </div>
+              <div className="inline-flex rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+                {usagePeriods.map((period) => (
+                  <button
+                    key={period.key}
+                    onClick={() => setUsagePeriod(period.key)}
+                    className={`rounded-full px-3 py-1.5 text-[11px] font-medium transition ${
+                      usagePeriod === period.key ? "bg-[#161FAD] text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                    }`}
+                  >
+                    {lang === "zh" ? period.label : period.labelEn}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {usagePeriod === "custom" ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+                <span className="text-[12px] font-medium text-slate-500">{lang === "zh" ? "时间范围" : "Date range"}</span>
+                <input
+                  type="date"
+                  value={customUsageStart}
+                  onChange={(event) => setCustomUsageStart(event.target.value)}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] text-slate-700 outline-none focus:border-[rgba(23,36,216,0.3)]"
+                />
+                <span className="text-[12px] text-slate-400">-</span>
+                <input
+                  type="date"
+                  value={customUsageEnd}
+                  onChange={(event) => setCustomUsageEnd(event.target.value)}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] text-slate-700 outline-none focus:border-[rgba(23,36,216,0.3)]"
+                />
+              </div>
+            ) : null}
             <div className="grid grid-cols-3 gap-3">
               {[
-                [lang === "zh" ? "本月任务数" : "Tasks this month", "42"],
-                [lang === "zh" ? "模型调用" : "Model calls", "216"],
-                [lang === "zh" ? "生成报告" : "Reports", "18"],
+                [lang === "zh" ? `${usagePeriod === "custom" ? "所选周期" : currentUsagePeriod.label}任务数` : "Tasks", currentUsagePeriod.summary[0]],
+                [lang === "zh" ? "Skill 调用" : "Skill calls", currentUsagePeriod.summary[1]],
+                [lang === "zh" ? "生成报告" : "Reports", currentUsagePeriod.summary[2]],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-[18px] border border-slate-200 bg-white px-4 py-3">
                   <p className="text-[11px] text-slate-400">{label}</p>
@@ -244,6 +317,11 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
               ))}
             </div>
             <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-white">
+              <div className="flex items-center justify-between border-b border-slate-100 bg-white px-5 py-3">
+                <p className="text-[13px] font-semibold text-slate-700">
+                  {lang === "zh" ? `${usagePeriod === "custom" ? "所选周期" : currentUsagePeriod.label}用量明细` : `${usagePeriodLabel} usage`}
+                </p>
+              </div>
               <div className="grid grid-cols-[minmax(220px,1fr)_170px_170px_120px] gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-2.5 text-[11px] font-medium text-slate-400">
                 <span>{lang === "zh" ? "任务名称" : "Task name"}</span>
                 <span>{lang === "zh" ? "所属项目" : "Project"}</span>

@@ -33,6 +33,15 @@ export type ProjectDataChild = {
   children?: ProjectDataChild[];
 };
 
+export type ProjectKnowledgeRecord = {
+  id: string;
+  sourceTaskName: string;
+  runId: string;
+  generatedAt: string;
+  findings: string[];
+  tags?: string[];
+};
+
 export type UserResource = {
   id: string;
   kind: "tool" | "skill";
@@ -70,7 +79,7 @@ export type AgentPreference = {
 
 export type ProjectDataFileType = Exclude<ProjectDataAsset["type"], "folder">;
 
-export type ProjectDetailView = "data" | "members";
+export type ProjectDetailView = "data" | "knowledge" | "members";
 
 export type Project = {
   id: string;
@@ -81,6 +90,7 @@ export type Project = {
   isDefault?: boolean;
   members: ProjectMember[];
   data: ProjectDataAsset[];
+  knowledge: ProjectKnowledgeRecord[];
   createdAt: string;
 };
 
@@ -150,6 +160,33 @@ const defaultData: ProjectDataAsset[] = [
   { id: "d2", name: "physical_energy_combined_features.csv", type: "csv", size: "128 KB", updatedAt: "2026-04-29", source: "run-saved", sourceTaskName: "DLL3 双抗预测流程", sourceTaskId: "run-20260626-dll3-003", savedAt: "2026-04-29 14:36", tags: ["features"] },
   { id: "d3", name: "all_ml_evaluation_results_stage2.csv", type: "csv", size: "64 KB", updatedAt: "2026-04-28", source: "run-saved", sourceTaskName: "内化预测建模工作流程", sourceTaskId: "run-20260428-model-002", savedAt: "2026-04-28 18:12", tags: ["model", "evaluation"] },
   { id: "d4", name: "internalization_experiment_raw.csv", type: "csv", size: "48 KB", updatedAt: "2026-04-20", source: "uploaded", description: "项目初始化时上传的实验原始数据。", tags: ["raw-data"] },
+];
+
+const defaultKnowledge: ProjectKnowledgeRecord[] = [
+  {
+    id: "kb-run-20260626-dll3-003",
+    sourceTaskName: "DLL3 双抗预测流程",
+    runId: "run-20260626-dll3-003",
+    generatedAt: "2026-06-26 14:56",
+    findings: [
+      "CDR_hydrophobicity 在本次建模中重要性排名第一，建议后续分析优先保留。",
+      "GBM 模型在当前数据集上的 R² 达到 0.83，优于 RF 和 XGB。",
+      "特征 Y 在多轮模型中贡献稳定偏低，后续任务可优先剔除以减少噪声。",
+    ],
+    tags: ["modeling", "feature-selection", "DLL3"],
+  },
+  {
+    id: "kb-run-20260428-model-002",
+    sourceTaskName: "内化预测建模工作流程",
+    runId: "run-20260428-model-002",
+    generatedAt: "2026-04-28 18:20",
+    findings: [
+      "物理能量特征与内化活性呈稳定正相关，适合作为基础特征集。",
+      "当 affinity cutoff 放宽到 10nM 时，模型排序稳定性提升，但召回候选数量增加。",
+      "接口疏水面积与实验活性存在非线性关系，建议使用树模型优先建模。",
+    ],
+    tags: ["internalization", "GBM", "cutoff"],
+  },
 ];
 
 const defaultUserResources: UserResource[] = [
@@ -358,6 +395,7 @@ export const SAMPLE_PROJECTS: Project[] = [
     isDefault: true,
     members: defaultMembers,
     data: defaultData,
+    knowledge: defaultKnowledge,
     createdAt: "2026-03-01",
   },
   {
@@ -368,6 +406,19 @@ export const SAMPLE_PROJECTS: Project[] = [
     color: "#0891b2",
     members: [defaultMembers[0], defaultMembers[1]],
     data: [defaultData[3]],
+    knowledge: [
+      {
+        id: "kb-egfr-001",
+        sourceTaskName: "EGFR CDR 优化",
+        runId: "run-20260625-egfr-006",
+        generatedAt: "2026-06-25 14:40",
+        findings: [
+          "H3 loop 区域突变对结合稳定性影响最大，建议优先进行结构复核。",
+          "候选 ZG006-2 的 Rosetta score cache 缺失，后续 Run 需先补齐能量特征。",
+        ],
+        tags: ["EGFR", "CDR", "structure"],
+      },
+    ],
     createdAt: "2026-04-01",
   },
   {
@@ -378,6 +429,7 @@ export const SAMPLE_PROJECTS: Project[] = [
     color: "#7c3aed",
     members: [defaultMembers[0]],
     data: [],
+    knowledge: [],
     createdAt: "2026-04-15",
   },
 ];
@@ -439,6 +491,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       color: colors[projects.length % colors.length],
       members: [defaultMembers[0]],
       data: [],
+      knowledge: [],
       createdAt: new Date().toISOString().slice(0, 10),
     };
     setProjects((prev) => [...prev, newProject]);

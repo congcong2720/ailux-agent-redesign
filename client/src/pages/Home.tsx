@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useProject, type AgentPreference, type ProjectDataAsset, type ProjectDataFileType } from "@/contexts/ProjectContext";
+import { useProject, type AgentPreference, type ProjectDataAsset, type ProjectDataFileType, type ProjectKnowledgeRecord } from "@/contexts/ProjectContext";
 import { demoPdbContent } from "@/lib/demoPdb";
 import {
   ArrowDownToLine,
@@ -2536,6 +2536,7 @@ function NewTaskWorkspace({
   effectivePreferences,
   lang,
   prompt,
+  relevantKnowledgeRecords,
   onOpenResourceDialog,
   onOpenUploadDialog,
   onPromptChange,
@@ -2547,6 +2548,7 @@ function NewTaskWorkspace({
   effectivePreferences: AgentPreference[];
   lang: Lang;
   prompt: string;
+  relevantKnowledgeRecords: ProjectKnowledgeRecord[];
   onOpenResourceDialog: () => void;
   onOpenUploadDialog: () => void;
   onPromptChange: (value: string) => void;
@@ -2556,6 +2558,10 @@ function NewTaskWorkspace({
 }) {
   const text = copy[lang];
   const projectPreferenceCount = effectivePreferences.filter((preference) => preference.scope === "project").length;
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const [knowledgeOpen, setKnowledgeOpen] = useState(false);
+  const [ignoredKnowledgeIds, setIgnoredKnowledgeIds] = useState<string[]>([]);
+  const visibleKnowledgeRecords = relevantKnowledgeRecords.filter((record) => !ignoredKnowledgeIds.includes(record.id)).slice(0, 1);
 
   return (
     <section className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
@@ -2568,31 +2574,6 @@ function NewTaskWorkspace({
             </div>
             <h3 className="text-[22px] font-semibold tracking-tight text-[#070261]">{text.newTaskTitle}</h3>
             <p className="mt-3 max-w-[720px] text-[13px] leading-6 text-slate-600">{text.newTaskBody}</p>
-          </div>
-
-          <div className="mt-4 rounded-[18px] border border-blue-100 bg-blue-50/50 px-4 py-3">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Brain className="h-4 w-4 text-[#161FAD]" />
-                  <p className="text-[13px] font-semibold text-[#070261]">
-                    {lang === "zh" ? "本次将使用的 Agent 偏好" : "Agent preferences for this task"}
-                  </p>
-                </div>
-                <p className="mt-1 text-[11px] leading-5 text-blue-800">
-                  {lang === "zh"
-                    ? `共 ${effectivePreferences.length} 条启用偏好，其中 ${projectPreferenceCount} 条项目偏好会覆盖冲突的通用偏好。`
-                    : `${effectivePreferences.length} active preferences will be used. Project preferences override conflicting general preferences.`}
-                </p>
-              </div>
-              <div className="flex max-w-[520px] flex-wrap justify-end gap-1.5">
-                {effectivePreferences.slice(0, 4).map((preference) => (
-                  <span key={preference.id} className="rounded-full border border-blue-100 bg-white/80 px-2.5 py-1 text-[10px] font-medium text-[#161FAD]">
-                    {preference.scope === "project" ? (lang === "zh" ? "项目" : "Project") : (lang === "zh" ? "通用" : "General")} · {preference.title}
-                  </span>
-                ))}
-              </div>
-            </div>
           </div>
 
           <div className="mt-6">
@@ -2618,6 +2599,75 @@ function NewTaskWorkspace({
         </div>
 
         <div className="mt-6 rounded-[18px] border border-slate-200 bg-slate-50/90 p-3">
+          {(preferencesOpen || knowledgeOpen) ? (
+            <div className="mb-3 grid gap-2 rounded-[14px] border border-blue-100 bg-blue-50/60 px-3 py-2">
+              {preferencesOpen ? (
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Brain className="h-3.5 w-3.5 text-[#161FAD]" />
+                      <p className="text-[12px] font-semibold text-[#070261]">
+                        {lang === "zh" ? "Agent 偏好" : "Agent preferences"}
+                      </p>
+                      <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-medium text-[#161FAD]">{effectivePreferences.length}</span>
+                    </div>
+                    <button onClick={() => setPreferencesOpen(false)} className="text-[11px] font-medium text-[#161FAD]">
+                      {lang === "zh" ? "收起" : "Collapse"}
+                    </button>
+                  </div>
+                  <p className="mb-2 text-[11px] leading-5 text-blue-800">
+                    {lang === "zh"
+                      ? `${projectPreferenceCount} 条项目偏好会覆盖冲突的通用偏好。`
+                      : `${effectivePreferences.length} active preferences will be used. Project preferences override conflicts.`}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {effectivePreferences.slice(0, 4).map((preference) => (
+                      <span key={preference.id} className="rounded-full border border-blue-100 bg-white/80 px-2.5 py-1 text-[10px] font-medium text-[#161FAD]">
+                        {preference.scope === "project" ? (lang === "zh" ? "项目" : "Project") : (lang === "zh" ? "通用" : "General")} · {preference.title}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {knowledgeOpen && visibleKnowledgeRecords.length > 0 ? (
+                <div className={preferencesOpen ? "border-t border-blue-100/70 pt-2" : ""}>
+                  {visibleKnowledgeRecords.map((record) => {
+                    return (
+                      <div key={record.id}>
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-3.5 w-3.5 text-[#161FAD]" />
+                            <p className="text-[12px] font-semibold text-[#070261]">
+                              {lang === "zh" ? "项目知识库建议" : "Project knowledge"}
+                            </p>
+                            <span className="rounded-full bg-white/80 px-2 py-0.5 font-mono text-[10px] text-slate-500">{record.runId}</span>
+                            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600">
+                              {lang === "zh" ? "已自动引用" : "Auto-used"}
+                            </span>
+                          </div>
+                          <button onClick={() => setKnowledgeOpen(false)} className="text-[11px] font-medium text-[#161FAD]">
+                            {lang === "zh" ? "收起" : "Collapse"}
+                          </button>
+                        </div>
+                        <p className="text-[11px] leading-5 text-blue-900">
+                          {lang === "zh" ? `建议参考：${record.findings[0]}` : `Consider: ${record.findings[0]}`}
+                        </p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <button
+                            onClick={() => setIgnoredKnowledgeIds((current) => [...current, record.id])}
+                            className="rounded-xl border border-blue-100 bg-white/80 px-3 py-1.5 text-[12px] font-medium text-blue-700 transition hover:bg-white"
+                          >
+                            {lang === "zh" ? "本次不用" : "Do not use this time"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           <textarea
             value={prompt}
             onChange={(event) => onPromptChange(event.target.value)}
@@ -2626,7 +2676,7 @@ function NewTaskWorkspace({
           />
           <AttachedContextChips items={attachedInputs} lang={lang} onRemove={onRemoveAttachedInput} />
           <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-2.5">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={onOpenUploadDialog}
                 className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
@@ -2641,6 +2691,31 @@ function NewTaskWorkspace({
               >
                 <AtSign className="h-4 w-4" />
               </button>
+              <button
+                onClick={() => setPreferencesOpen((current) => !current)}
+                className={`inline-flex h-9 items-center gap-1.5 rounded-xl border px-2.5 text-[11px] font-medium transition ${
+                  preferencesOpen ? "border-blue-100 bg-blue-50 text-[#161FAD]" : "border-slate-200 bg-white text-slate-500 hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+                }`}
+                title={lang === "zh" ? "Agent 偏好" : "Agent preferences"}
+              >
+                <Brain className="h-3.5 w-3.5" />
+                {lang === "zh" ? "偏好" : "Prefs"}
+                <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] text-slate-500">{effectivePreferences.length}</span>
+              </button>
+              {visibleKnowledgeRecords.length > 0 ? (
+                <button
+                  onClick={() => setKnowledgeOpen((current) => !current)}
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-xl border px-2.5 text-[11px] font-medium transition ${
+                    knowledgeOpen ? "border-blue-100 bg-blue-50 text-[#161FAD]" : "border-slate-200 bg-white text-slate-500 hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+                  }`}
+                  title={lang === "zh" ? "项目知识库建议" : "Project knowledge"}
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  {lang === "zh" ? "知识库" : "Knowledge"}
+                  <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] text-emerald-600">{lang === "zh" ? "已启用" : "On"}</span>
+                  <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] text-slate-500">{visibleKnowledgeRecords.length}</span>
+                </button>
+              ) : null}
             </div>
             <Button
               onClick={onStart}
@@ -3068,6 +3143,8 @@ function RunningWorkspace({
   const [recoveryFixed, setRecoveryFixed] = useState(false);
   const [existingResultsViewed, setExistingResultsViewed] = useState(false);
   const [selectedReport, setSelectedReport] = useState<RunReport | null>(null);
+  const [expandedReasoningKeys, setExpandedReasoningKeys] = useState<string[]>([]);
+  const [taskNotificationsMuted, setTaskNotificationsMuted] = useState(false);
 
   useEffect(() => {
     setParametersOpen(false);
@@ -3076,7 +3153,51 @@ function RunningWorkspace({
     setRecoveryFixed(false);
     setExistingResultsViewed(false);
     setSelectedReport(null);
+    setExpandedReasoningKeys([]);
+    setTaskNotificationsMuted(false);
   }, [messages]);
+
+  const toggleReasoning = (key: string) => {
+    setExpandedReasoningKeys((current) => (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]));
+  };
+
+  const initialReasoningSteps = [
+    l("用户目标为预测双抗内化活性，任务类型归类为结构特征驱动的回归建模。", "The user goal is internalization prediction, classified as structure-feature-driven regression modeling."),
+    l("检测到输入包含 PDB 与 CSV，优先安排结构解析、特征计算和特征矩阵构建。", "PDB and CSV inputs were detected, so structure parsing, feature calculation, and matrix construction are prioritized."),
+    l("结合项目偏好与历史知识库记录，优先保留 CDR_hydrophobicity 并弱化低贡献特征。", "Project preferences and knowledge records suggest keeping CDR_hydrophobicity and downweighting low-contribution features."),
+  ];
+  const finalReasoningSteps = [
+    l("已汇总各步骤输出文件、模型评估指标和特征重要性结果。", "Outputs, model metrics, and feature importance results were consolidated across steps."),
+    l("GBM 在当前数据集上表现更稳定，因此被放在推荐配置前列。", "GBM performed more stably on this dataset, so it is ranked high in the recommended configurations."),
+    l("根据项目知识库规则，关键结论将沉淀为项目知识记录，供后续任务检索。", "Key conclusions will be saved as project knowledge records for future retrieval."),
+  ];
+
+  const renderReasoningBlock = (key: string, steps: LocalizedText[]) => {
+    const expanded = expandedReasoningKeys.includes(key);
+    return (
+      <div className="mb-3 rounded-[16px] border border-blue-100 bg-blue-50/70">
+        <button
+          onClick={() => toggleReasoning(key)}
+          className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left"
+        >
+          <span className="text-[12px] font-semibold text-[#161FAD]">{lang === "zh" ? "查看推理过程" : "View reasoning"}</span>
+          <ChevronDown className={`h-3.5 w-3.5 text-[#161FAD] transition ${expanded ? "rotate-180" : ""}`} />
+        </button>
+        {expanded ? (
+          <ol className="space-y-2 border-t border-blue-100/70 px-3 py-3">
+            {steps.map((step, index) => (
+              <li key={`${key}-${index}`} className="flex gap-2 text-[12px] leading-5 text-blue-900">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white text-[10px] font-semibold text-[#161FAD]">
+                  {index + 1}
+                </span>
+                <span>{pick(lang, step)}</span>
+              </li>
+            ))}
+          </ol>
+        ) : null}
+      </div>
+    );
+  };
 
   const handleAgentDemoAction = (action: AgentDemoAction) => {
     if (action === "confirm-run") {
@@ -3149,7 +3270,32 @@ function RunningWorkspace({
   return (
     <section className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
       <div className={`border-b border-slate-200/80 ${compact ? "px-4 py-4" : "px-6 py-5"}`}>
-        <h2 className="text-[17px] font-semibold text-[#070261]">{pick(lang, title)}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-[17px] font-semibold text-[#070261]">{pick(lang, title)}</h2>
+            {taskNotificationsMuted ? (
+              <p className="mt-1 text-[11px] text-slate-400">
+                {lang === "zh" ? "本任务的人工确认、失败、完成提醒已关闭。" : "HITL, failure, and completion notifications are muted for this task."}
+              </p>
+            ) : null}
+          </div>
+          <button
+            onClick={() => setTaskNotificationsMuted((current) => !current)}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
+              taskNotificationsMuted
+                ? "border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200"
+                : "border-blue-100 bg-blue-50 text-[#161FAD] hover:bg-blue-100"
+            }`}
+            title={
+              taskNotificationsMuted
+                ? lang === "zh" ? "开启当前任务通知" : "Enable notifications for this task"
+                : lang === "zh" ? "关闭当前任务全部通知" : "Mute all notifications for this task"
+            }
+          >
+            <Bell className="h-3.5 w-3.5" />
+            {taskNotificationsMuted ? (lang === "zh" ? "已勿扰" : "Muted") : (lang === "zh" ? "本任务勿扰" : "Mute task")}
+          </button>
+        </div>
       </div>
 
       <div className={`min-h-0 flex-1 overflow-y-auto ${compact ? "px-4 py-4" : "px-6 py-6"}`}>
@@ -3173,6 +3319,7 @@ function RunningWorkspace({
                       <span className="text-[11px] font-semibold text-[#161FAD]">Ailux Agent</span>
                     </div>
                   ) : null}
+                  {!isUser && index === 1 ? renderReasoningBlock("initial-plan", initialReasoningSteps) : null}
                   {!isUser && index === 1 && !message.card && messages[1]?.card !== "plan-confirm" ? (
                     <div className="rounded-[18px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(248,250,255,0.96),rgba(255,255,255,0.98))] px-4 py-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.035)]">
                       <p className="text-[13px] font-semibold leading-6 text-[#0B1454]">{pick(lang, firstReplyIntro)}</p>
@@ -3236,6 +3383,7 @@ function RunningWorkspace({
                   </div>
                   <span className="text-[11px] font-semibold text-[#161FAD]">Ailux Agent</span>
                 </div>
+                {renderReasoningBlock("final-summary", finalReasoningSteps)}
                 <p className="text-[14px] font-semibold text-[#070261]">{text.finalSummaryTitle}</p>
                 <p className="mt-3 text-[13px] leading-6 text-slate-700">{text.finalSummaryBody}</p>
                 <img
@@ -4418,6 +4566,7 @@ function SidePanel({
   const showEmpty = view === "new";
   const projectPreferenceCount = effectivePreferences.filter((preference) => preference.scope === "project").length;
   const [flowOpen, setFlowOpen] = useState(false);
+  const [planPreferencesOpen, setPlanPreferencesOpen] = useState(false);
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [expandedPreviousRunIds, setExpandedPreviousRunIds] = useState<string[]>([]);
   const [selectedStepLog, setSelectedStepLog] = useState<PlanStep | null>(null);
@@ -4561,33 +4710,43 @@ function SidePanel({
                   />
                 </div>
               </div>
-              <div className="mb-4 rounded-[16px] border border-blue-100 bg-blue-50/60 px-3 py-3">
-                <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="mb-4 rounded-[16px] border border-blue-100 bg-blue-50/60">
+                <button
+                  onClick={() => setPlanPreferencesOpen((current) => !current)}
+                  className="flex w-full items-center justify-between gap-2 px-3 py-3 text-left"
+                >
                   <div className="flex items-center gap-2">
                     <Brain className="h-3.5 w-3.5 text-[#161FAD]" />
-                    <p className="text-[12px] font-semibold text-[#070261]">
-                      {lang === "zh" ? "Plan 偏好引用来源" : "Preference sources"}
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-medium text-[#161FAD]">
-                    {effectivePreferences.length}
-                  </span>
-                </div>
-                <p className="mb-2 text-[11px] leading-5 text-blue-800">
-                  {lang === "zh"
-                    ? `已应用通用偏好与 ${projectPreferenceCount} 条项目偏好；冲突时项目偏好优先。`
-                    : `General preferences and ${projectPreferenceCount} project preferences applied. Project preferences take priority.`}
-                </p>
-                <div className="space-y-1.5">
-                  {effectivePreferences.slice(0, 3).map((preference) => (
-                    <div key={preference.id} className="flex items-center justify-between gap-2 rounded-xl bg-white/80 px-2.5 py-1.5 text-[11px]">
-                      <span className="min-w-0 truncate text-slate-700">{preference.title}</span>
-                      <span className="shrink-0 rounded-full bg-slate-50 px-2 py-0.5 text-[10px] text-slate-500">
-                        {preference.scope === "project" ? (lang === "zh" ? "项目" : "Project") : (lang === "zh" ? "通用" : "General")}
-                      </span>
+                    <div>
+                      <p className="text-[12px] font-semibold text-[#070261]">
+                        {lang === "zh" ? "Plan 偏好引用来源" : "Preference sources"}
+                      </p>
+                      <p className="mt-0.5 text-[10px] leading-4 text-blue-800">
+                        {lang === "zh"
+                          ? `已应用 ${effectivePreferences.length} 条偏好，项目偏好优先。`
+                          : `${effectivePreferences.length} preferences applied. Project preferences take priority.`}
+                      </p>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-medium text-[#161FAD]">
+                      {effectivePreferences.length}
+                    </span>
+                    <ChevronDown className={`h-3.5 w-3.5 text-[#161FAD] transition ${planPreferencesOpen ? "rotate-180" : ""}`} />
+                  </div>
+                </button>
+                {planPreferencesOpen ? (
+                  <div className="space-y-1.5 border-t border-blue-100/70 px-3 pb-3 pt-2">
+                    {effectivePreferences.slice(0, 3).map((preference) => (
+                      <div key={preference.id} className="flex items-center justify-between gap-2 rounded-xl bg-white/80 px-2.5 py-1.5 text-[11px]">
+                        <span className="min-w-0 truncate text-slate-700">{preference.title}</span>
+                        <span className="shrink-0 rounded-full bg-slate-50 px-2 py-0.5 text-[10px] text-slate-500">
+                          {preference.scope === "project" ? (lang === "zh" ? "项目" : "Project") : (lang === "zh" ? "通用" : "General")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
               <WorkflowFlowDrawer lang={lang} open={flowOpen} steps={steps} onOpenChange={setFlowOpen} />
               <Dialog open={saveSkillOpen} onOpenChange={setSaveSkillOpen}>
@@ -5358,6 +5517,7 @@ export default function Home() {
               effectivePreferences={effectiveAgentPreferences}
               lang={lang}
               prompt={composerValue}
+              relevantKnowledgeRecords={activeProject.knowledge}
               onOpenResourceDialog={() => setAttachDialogVariant("resource")}
               onOpenUploadDialog={() => setAttachDialogVariant("upload")}
               onPromptChange={setComposerValue}
