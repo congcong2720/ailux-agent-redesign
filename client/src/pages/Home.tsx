@@ -4342,26 +4342,50 @@ function getStepTiming(step: PlanStep, index: number, lang: Lang) {
   };
 }
 
+const stepExecutionModels: LocalizedText[] = [
+  l("Ailux BioFM-7B Internalization", "Ailux BioFM-7B Internalization"),
+  l("StructureFold-Multimer v3.2", "StructureFold-Multimer v3.2"),
+  l("Rosetta-X FeatureMiner", "Rosetta-X FeatureMiner"),
+  l("Ailux FeatureRank GBM", "Ailux FeatureRank GBM"),
+  l("LightGBM-Antibody Regressor", "LightGBM-Antibody Regressor"),
+  l("Ailux ReportSynth v1.8", "Ailux ReportSynth v1.8"),
+];
+
+function getStepExecutionMeta(step: PlanStep, index: number, lang: Lang) {
+  const timing = getStepTiming(step, index, lang);
+  const handleSeed = step.id.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(-6).padStart(6, "0");
+
+  return {
+    ...timing,
+    modelName: pick(lang, stepExecutionModels[index % stepExecutionModels.length]),
+    handleId: `hdl-${handleSeed}-${String(index + 1).padStart(3, "0")}`,
+  };
+}
+
 function StepLogDialog({
   lang,
   step,
+  stepIndex,
   open,
   onOpenChange,
 }: {
   lang: Lang;
   step: PlanStep | null;
+  stepIndex: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   if (!step) return null;
 
+  const meta = getStepExecutionMeta(step, stepIndex, lang);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[min(760px,88vh)] max-h-[88vh] flex-col overflow-hidden rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[980px]">
         <DialogHeader className="border-b border-slate-100 px-5 py-4">
-          <DialogTitle className="text-[15px] font-semibold text-[#070261]">{getStepLogTitle(step, lang)} · {pick(lang, step.title)}</DialogTitle>
+          <DialogTitle className="text-[15px] font-semibold text-[#070261]">{lang === "zh" ? "节点详情" : "Step details"} · {pick(lang, step.title)}</DialogTitle>
           <p className="mt-1 text-[12px] leading-5 text-slate-500">
-            {lang === "zh" ? "展示该节点的运行记录；运行中为实时日志，完成后保留为结果日志。" : "Shows logs for this step. Running steps show live logs; completed steps keep result logs."}
+            {lang === "zh" ? "展示该节点的执行信息与运行日志。" : "Shows execution metadata and logs for this step."}
           </p>
         </DialogHeader>
         <div className="flex min-h-0 flex-1 flex-col p-5">
@@ -4372,6 +4396,25 @@ function StepLogDialog({
             </div>
             <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-slate-500">{step.status}</span>
           </div>
+          <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-[14px] border border-slate-100 bg-white px-3 py-2">
+              <p className="text-[11px] text-slate-400">{lang === "zh" ? "开始时间" : "Start time"}</p>
+              <p className="mt-1 text-[12px] font-semibold text-slate-700">{meta.start}</p>
+            </div>
+            <div className="rounded-[14px] border border-slate-100 bg-white px-3 py-2">
+              <p className="text-[11px] text-slate-400">{lang === "zh" ? "结束时间" : "End time"}</p>
+              <p className="mt-1 text-[12px] font-semibold text-slate-700">{meta.end}</p>
+            </div>
+            <div className="rounded-[14px] border border-slate-100 bg-white px-3 py-2">
+              <p className="text-[11px] text-slate-400">{lang === "zh" ? "模型名称" : "Model"}</p>
+              <p className="mt-1 truncate text-[12px] font-semibold text-slate-700" title={meta.modelName}>{meta.modelName}</p>
+            </div>
+            <div className="rounded-[14px] border border-slate-100 bg-white px-3 py-2">
+              <p className="text-[11px] text-slate-400">{lang === "zh" ? "Handle 号" : "Handle"}</p>
+              <p className="mt-1 truncate font-mono text-[12px] font-semibold text-slate-700" title={meta.handleId}>{meta.handleId}</p>
+            </div>
+          </div>
+          <p className="mb-2 text-[12px] font-semibold text-slate-700">{getStepLogTitle(step, lang)}</p>
           <pre className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap break-words rounded-[18px] bg-slate-950 px-4 py-4 font-mono text-[10px] leading-5 text-slate-100">{buildStepLogText(step, lang)}</pre>
         </div>
       </DialogContent>
@@ -4387,7 +4430,7 @@ function MonitorPanelContent({
   steps: PlanStep[];
 }) {
   const text = copy[lang];
-  const [selectedStepLog, setSelectedStepLog] = useState<PlanStep | null>(null);
+  const [selectedStepLog, setSelectedStepLog] = useState<{ step: PlanStep; index: number } | null>(null);
   const doneCount = steps.filter((step) => step.status === "done").length;
   const runningStep = steps.find((step) => step.status === "running");
   const failedStep = steps.find((step) => step.status === "failed");
@@ -4464,10 +4507,12 @@ function MonitorPanelContent({
                   </div>
                   <p className="min-w-0 flex-1 truncate text-[12px] font-medium text-slate-700">{pick(lang, step.title)}</p>
                   <button
-                    onClick={() => setSelectedStepLog(step)}
-                    className="shrink-0 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-slate-500 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+                    onClick={() => setSelectedStepLog({ step, index })}
+                    title={lang === "zh" ? "查看节点详情" : "View step details"}
+                    aria-label={lang === "zh" ? "查看节点详情" : "View step details"}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
                   >
-                    {lang === "zh" ? "查看日志" : "View logs"}
+                    <FileText className="h-3.5 w-3.5" />
                   </button>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 pl-10 text-[10px]">
@@ -4488,7 +4533,8 @@ function MonitorPanelContent({
 
       <StepLogDialog
         lang={lang}
-        step={selectedStepLog}
+        step={selectedStepLog?.step ?? null}
+        stepIndex={selectedStepLog?.index ?? 0}
         open={Boolean(selectedStepLog)}
         onOpenChange={(open) => !open && setSelectedStepLog(null)}
       />
@@ -4569,7 +4615,7 @@ function SidePanel({
   const [planPreferencesOpen, setPlanPreferencesOpen] = useState(false);
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [expandedPreviousRunIds, setExpandedPreviousRunIds] = useState<string[]>([]);
-  const [selectedStepLog, setSelectedStepLog] = useState<PlanStep | null>(null);
+  const [selectedStepLog, setSelectedStepLog] = useState<{ step: PlanStep; index: number } | null>(null);
   const [saveSkillOpen, setSaveSkillOpen] = useState(false);
   const [skillName, setSkillName] = useState(lang === "zh" ? "DLL3 双抗预测模版" : "DLL3 bispecific prediction Template");
   const [skillDescription, setSkillDescription] = useState(
@@ -4799,7 +4845,7 @@ function SidePanel({
                 </DialogContent>
               </Dialog>
               <div className="space-y-3">
-                {steps.map((step) => {
+                {steps.map((step, index) => {
                   const style = statusStyles[step.status];
                   const iconDone = step.status === "done";
                   const message =
@@ -4825,10 +4871,12 @@ function SidePanel({
                             <p className="text-[13px] font-semibold text-slate-800">{pick(lang, step.title)}</p>
                             <div className="flex shrink-0 items-center gap-1.5">
                               <button
-                                onClick={() => setSelectedStepLog(step)}
-                                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-medium text-slate-500 opacity-0 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD] group-hover:opacity-100"
+                                onClick={() => setSelectedStepLog({ step, index })}
+                                title={lang === "zh" ? "查看节点详情" : "View step details"}
+                                aria-label={lang === "zh" ? "查看节点详情" : "View step details"}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 opacity-0 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD] group-hover:opacity-100"
                               >
-                                {getStepLogTitle(step, lang)}
+                                <FileText className="h-3.5 w-3.5" />
                               </button>
                               <span className="text-[11px] text-slate-400">{step.duration}</span>
                             </div>
@@ -4842,7 +4890,8 @@ function SidePanel({
               </div>
               <StepLogDialog
                 lang={lang}
-                step={selectedStepLog}
+                step={selectedStepLog?.step ?? null}
+                stepIndex={selectedStepLog?.index ?? 0}
                 open={Boolean(selectedStepLog)}
                 onOpenChange={(open) => !open && setSelectedStepLog(null)}
               />
