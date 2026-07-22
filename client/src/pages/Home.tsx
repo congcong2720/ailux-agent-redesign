@@ -4383,19 +4383,9 @@ function StepLogDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[min(760px,88vh)] max-h-[88vh] flex-col overflow-hidden rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[980px]">
         <DialogHeader className="border-b border-slate-100 px-5 py-4">
-          <DialogTitle className="text-[15px] font-semibold text-[#070261]">{lang === "zh" ? "节点详情" : "Step details"} · {pick(lang, step.title)}</DialogTitle>
-          <p className="mt-1 text-[12px] leading-5 text-slate-500">
-            {lang === "zh" ? "展示该节点的执行信息与运行日志。" : "Shows execution metadata and logs for this step."}
-          </p>
+          <DialogTitle className="text-[15px] font-semibold text-[#070261]">{pick(lang, step.title)}</DialogTitle>
         </DialogHeader>
         <div className="flex min-h-0 flex-1 flex-col p-5">
-          <div className="mb-3 flex items-center justify-between gap-3 rounded-[14px] bg-slate-50 px-3 py-2">
-            <div className="min-w-0">
-              <p className="text-[12px] font-medium text-slate-700">{pick(lang, step.title)}</p>
-              <p className="mt-0.5 truncate text-[10px] text-slate-400">{lang === "zh" ? "节点耗时" : "Duration"} · {step.duration}</p>
-            </div>
-            <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-slate-500">{step.status}</span>
-          </div>
           <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-[14px] border border-slate-100 bg-white px-3 py-2">
               <p className="text-[11px] text-slate-400">{lang === "zh" ? "开始时间" : "Start time"}</p>
