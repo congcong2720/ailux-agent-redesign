@@ -12,6 +12,7 @@ import { PdbViewer } from "@/components/PdbViewer";
 import { ProjectPanel } from "@/components/ProjectPanel";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { AgentPreferencePanel, ResourcePanel, TEMPLATES } from "@/components/ResourcePanel";
+import { ReportRating } from "@/components/ReportRating";
 import { UserCenter } from "@/components/UserCenter";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -2534,11 +2535,14 @@ function Sidebar({
 function NewTaskWorkspace({
   attachedInputs,
   effectivePreferences,
+  ignoredPreferenceCount,
   lang,
   prompt,
   relevantKnowledgeRecords,
   onOpenResourceDialog,
   onOpenUploadDialog,
+  onIgnoreKnowledgeRecord,
+  onIgnorePreference,
   onPromptChange,
   onPromptPick,
   onRemoveAttachedInput,
@@ -2546,11 +2550,14 @@ function NewTaskWorkspace({
 }: {
   attachedInputs: AttachedInput[];
   effectivePreferences: AgentPreference[];
+  ignoredPreferenceCount: number;
   lang: Lang;
   prompt: string;
   relevantKnowledgeRecords: ProjectKnowledgeRecord[];
   onOpenResourceDialog: () => void;
   onOpenUploadDialog: () => void;
+  onIgnoreKnowledgeRecord: (id: string) => void;
+  onIgnorePreference: (id: string) => void;
   onPromptChange: (value: string) => void;
   onPromptPick: (prompt: RecommendedPrompt) => void;
   onRemoveAttachedInput: (id: string) => void;
@@ -2560,8 +2567,7 @@ function NewTaskWorkspace({
   const projectPreferenceCount = effectivePreferences.filter((preference) => preference.scope === "project").length;
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [knowledgeOpen, setKnowledgeOpen] = useState(false);
-  const [ignoredKnowledgeIds, setIgnoredKnowledgeIds] = useState<string[]>([]);
-  const visibleKnowledgeRecords = relevantKnowledgeRecords.filter((record) => !ignoredKnowledgeIds.includes(record.id)).slice(0, 1);
+  const visibleKnowledgeRecords = relevantKnowledgeRecords.slice(0, 1);
 
   return (
     <section className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
@@ -2617,13 +2623,22 @@ function NewTaskWorkspace({
                   </div>
                   <p className="mb-2 text-[11px] leading-5 text-blue-800">
                     {lang === "zh"
-                      ? `${projectPreferenceCount} 条项目偏好会覆盖冲突的通用偏好。`
+                      ? `${projectPreferenceCount} 条项目偏好会覆盖冲突的通用偏好。${ignoredPreferenceCount > 0 ? `已排除 ${ignoredPreferenceCount} 条。` : ""}`
                       : `${effectivePreferences.length} active preferences will be used. Project preferences override conflicts.`}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {effectivePreferences.slice(0, 4).map((preference) => (
-                      <span key={preference.id} className="rounded-full border border-blue-100 bg-white/80 px-2.5 py-1 text-[10px] font-medium text-[#161FAD]">
+                      <span key={preference.id} className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-white/80 px-2.5 py-1 text-[10px] font-medium text-[#161FAD]">
                         {preference.scope === "project" ? (lang === "zh" ? "项目" : "Project") : (lang === "zh" ? "通用" : "General")} · {preference.title}
+                        <button
+                          type="button"
+                          onClick={() => onIgnorePreference(preference.id)}
+                          className="ml-0.5 rounded-full p-0.5 text-blue-300 transition hover:bg-blue-50 hover:text-[#161FAD]"
+                          aria-label={lang === "zh" ? "本次不使用该偏好" : "Do not use this preference this time"}
+                          title={lang === "zh" ? "本次不使用" : "Do not use this time"}
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
                       </span>
                     ))}
                   </div>
@@ -2655,7 +2670,7 @@ function NewTaskWorkspace({
                         </p>
                         <div className="mt-2 flex items-center gap-2">
                           <button
-                            onClick={() => setIgnoredKnowledgeIds((current) => [...current, record.id])}
+                            onClick={() => onIgnoreKnowledgeRecord(record.id)}
                             className="rounded-xl border border-blue-100 bg-white/80 px-3 py-1.5 text-[12px] font-medium text-blue-700 transition hover:bg-white"
                           >
                             {lang === "zh" ? "本次不用" : "Do not use this time"}
@@ -3098,8 +3113,104 @@ function AgentDemoCard({
   );
 }
 
+function UsedContextSummary({
+  effectivePreferences,
+  ignoredKnowledgeRecords,
+  ignoredPreferences,
+  lang,
+  usedKnowledgeRecords,
+}: {
+  effectivePreferences: AgentPreference[];
+  ignoredKnowledgeRecords: ProjectKnowledgeRecord[];
+  ignoredPreferences: AgentPreference[];
+  lang: Lang;
+  usedKnowledgeRecords: ProjectKnowledgeRecord[];
+}) {
+  const [open, setOpen] = useState(false);
+  const usedCount = effectivePreferences.length + usedKnowledgeRecords.length;
+  const ignoredCount = ignoredPreferences.length + ignoredKnowledgeRecords.length;
+
+  if (usedCount + ignoredCount === 0) return null;
+
+  return (
+    <div className="rounded-[16px] border border-slate-200 bg-slate-50/80">
+      <button
+        onClick={() => setOpen((current) => !current)}
+        className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <Brain className="h-3.5 w-3.5 shrink-0 text-[#161FAD]" />
+          <span className="text-[12px] font-semibold text-[#070261]">
+            {lang === "zh" ? "本次使用的上下文" : "Context used this run"}
+          </span>
+          <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-slate-500">
+            {lang === "zh" ? `${usedCount} 条使用` : `${usedCount} used`}
+          </span>
+          {ignoredCount > 0 ? (
+            <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-slate-400">
+              {lang === "zh" ? `${ignoredCount} 条本次不用` : `${ignoredCount} ignored`}
+            </span>
+          ) : null}
+        </div>
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open ? (
+        <div className="space-y-3 border-t border-slate-200 px-3 py-3">
+          {effectivePreferences.length > 0 ? (
+            <div>
+              <p className="mb-1.5 text-[11px] font-semibold text-slate-500">{lang === "zh" ? "Agent 偏好" : "Agent preferences"}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {effectivePreferences.map((preference) => (
+                  <span key={preference.id} className="rounded-full border border-blue-100 bg-white px-2.5 py-1 text-[10px] font-medium text-[#161FAD]">
+                    {preference.scope === "project" ? (lang === "zh" ? "项目" : "Project") : (lang === "zh" ? "通用" : "General")} · {preference.title}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {usedKnowledgeRecords.length > 0 ? (
+            <div>
+              <p className="mb-1.5 text-[11px] font-semibold text-slate-500">{lang === "zh" ? "项目知识库" : "Project knowledge"}</p>
+              <div className="space-y-1.5">
+                {usedKnowledgeRecords.map((record) => (
+                  <div key={record.id} className="rounded-xl bg-white px-2.5 py-2 text-[11px] leading-5 text-slate-600">
+                    <span className="mr-1 font-mono text-[10px] text-slate-400">{record.runId}</span>
+                    {record.findings[0]}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {ignoredCount > 0 ? (
+            <div>
+              <p className="mb-1.5 text-[11px] font-semibold text-slate-500">{lang === "zh" ? "本次不用" : "Not used this time"}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {ignoredPreferences.map((preference) => (
+                  <span key={preference.id} className="rounded-full bg-white px-2.5 py-1 text-[10px] font-medium text-slate-400">
+                    {preference.title}
+                  </span>
+                ))}
+                {ignoredKnowledgeRecords.map((record) => (
+                  <span key={record.id} className="rounded-full bg-white px-2.5 py-1 text-[10px] font-medium text-slate-400">
+                    {lang === "zh" ? "知识库" : "Knowledge"} · {record.runId}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function RunningWorkspace({
   attachedInputs,
+  effectivePreferences,
+  ignoredKnowledgeRecords,
+  ignoredPreferences,
   lang,
   title,
   messages,
@@ -3114,10 +3225,14 @@ function RunningWorkspace({
   onContinueRun,
   onViewResults,
   steps,
+  usedKnowledgeRecords,
   workflowCompleted,
   compact = false,
 }: {
   attachedInputs: AttachedInput[];
+  effectivePreferences: AgentPreference[];
+  ignoredKnowledgeRecords: ProjectKnowledgeRecord[];
+  ignoredPreferences: AgentPreference[];
   lang: Lang;
   title: LocalizedText;
   messages: RunningMessage[];
@@ -3132,6 +3247,7 @@ function RunningWorkspace({
   onContinueRun: () => void;
   onViewResults: () => void;
   steps: PlanStep[];
+  usedKnowledgeRecords: ProjectKnowledgeRecord[];
   workflowCompleted: boolean;
   compact?: boolean;
 }) {
@@ -3376,8 +3492,8 @@ function RunningWorkspace({
 
           {workflowCompleted ? (
             <div className="flex justify-start">
-              <article className="w-full max-w-[980px] rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.06)] sm:px-5">
-                <div                   className="mb-2 flex items-center gap-2">
+              <article className="group w-full max-w-[980px] rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.06)] sm:px-5">
+                <div className="mb-2 flex items-center gap-2">
                   <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#161FAD_0%,#848CFE_100%)] text-white shadow-[0_3px_8px_rgba(22,31,173,0.2)]">
                     <Bot className="h-3.5 w-3.5" />
                   </div>
@@ -3398,10 +3514,23 @@ function RunningWorkspace({
                 >
                   {lang === "zh" ? "查看最终报告详情" : "View final report"}
                 </button>
-                <p className="mt-2 text-[10px] text-slate-400">18:31</p>
+                <ReportRating
+                  lang={lang}
+                  targetId={`final-summary-${reports[0]?.id ?? "default"}`}
+                  timestamp="18:31"
+                  copyText={[text.finalSummaryTitle, text.finalSummaryBody, text.finalSummaryOutcome].join("\n\n")}
+                />
               </article>
             </div>
           ) : null}
+
+          <UsedContextSummary
+            effectivePreferences={effectivePreferences}
+            ignoredKnowledgeRecords={ignoredKnowledgeRecords}
+            ignoredPreferences={ignoredPreferences}
+            lang={lang}
+            usedKnowledgeRecords={usedKnowledgeRecords}
+          />
 
           <div className="pt-2">
             <div className="rounded-[18px] border border-slate-200 bg-slate-50/90 px-3 py-2.5">
@@ -5183,6 +5312,8 @@ export default function Home() {
   const [pendingSaveFiles, setPendingSaveFiles] = useState<ResultFile[]>([]);
   const [saveDescription, setSaveDescription] = useState("");
   const [saveFolderName, setSaveFolderName] = useState("");
+  const [ignoredPreferenceIds, setIgnoredPreferenceIds] = useState<string[]>([]);
+  const [ignoredKnowledgeIds, setIgnoredKnowledgeIds] = useState<string[]>([]);
   const activeScenario = demoScenarios[activeScenarioId];
   const currentTaskId = "run-20260626-dll3-003";
   const [runtimeSteps, setRuntimeSteps] = useState<PlanStep[]>(() =>
@@ -5195,6 +5326,22 @@ export default function Home() {
   const effectiveAgentPreferences = useMemo(
     () => agentPreferences.filter((preference) => preference.status === "active" && (preference.scope === "global" || preference.projectId === activeProject.id)),
     [activeProject.id, agentPreferences],
+  );
+  const activeAgentPreferences = useMemo(
+    () => effectiveAgentPreferences.filter((preference) => !ignoredPreferenceIds.includes(preference.id)),
+    [effectiveAgentPreferences, ignoredPreferenceIds],
+  );
+  const ignoredAgentPreferences = useMemo(
+    () => effectiveAgentPreferences.filter((preference) => ignoredPreferenceIds.includes(preference.id)),
+    [effectiveAgentPreferences, ignoredPreferenceIds],
+  );
+  const activeKnowledgeRecords = useMemo(
+    () => activeProject.knowledge.filter((record) => !ignoredKnowledgeIds.includes(record.id)).slice(0, 1),
+    [activeProject.knowledge, ignoredKnowledgeIds],
+  );
+  const ignoredKnowledgeRecords = useMemo(
+    () => activeProject.knowledge.filter((record) => ignoredKnowledgeIds.includes(record.id)),
+    [activeProject.knowledge, ignoredKnowledgeIds],
   );
 
   useEffect(() => {
@@ -5268,6 +5415,8 @@ export default function Home() {
     setSideTab("plan");
     setComposerValue(pick(lang, prompt.text));
     setAttachedInputs([]);
+    setIgnoredPreferenceIds([]);
+    setIgnoredKnowledgeIds([]);
   };
 
   const handleStart = () => {
@@ -5320,6 +5469,8 @@ export default function Home() {
     setSearchQuery("");
     setUserMenuOpen(false);
     setAttachedInputs([]);
+    setIgnoredPreferenceIds([]);
+    setIgnoredKnowledgeIds([]);
   };
 
   const handleAttachInputs = (items: AttachedInput[]) => {
@@ -5553,12 +5704,15 @@ export default function Home() {
           ) : activeView === "new" ? (
             <NewTaskWorkspace
               attachedInputs={attachedInputs}
-              effectivePreferences={effectiveAgentPreferences}
+              effectivePreferences={activeAgentPreferences}
+              ignoredPreferenceCount={ignoredAgentPreferences.length}
               lang={lang}
               prompt={composerValue}
-              relevantKnowledgeRecords={activeProject.knowledge}
+              relevantKnowledgeRecords={activeKnowledgeRecords}
               onOpenResourceDialog={() => setAttachDialogVariant("resource")}
               onOpenUploadDialog={() => setAttachDialogVariant("upload")}
+              onIgnoreKnowledgeRecord={(id) => setIgnoredKnowledgeIds((current) => Array.from(new Set([...current, id])))}
+              onIgnorePreference={(id) => setIgnoredPreferenceIds((current) => Array.from(new Set([...current, id])))}
               onPromptChange={setComposerValue}
               onPromptPick={handlePromptPick}
               onRemoveAttachedInput={handleRemoveAttachedInput}
@@ -5567,6 +5721,9 @@ export default function Home() {
           ) : (
             <RunningWorkspace
               attachedInputs={attachedInputs}
+              effectivePreferences={activeAgentPreferences}
+              ignoredKnowledgeRecords={ignoredKnowledgeRecords}
+              ignoredPreferences={ignoredAgentPreferences}
               lang={lang}
               title={activeScenario.title}
               messages={activeScenario.messages}
@@ -5581,6 +5738,7 @@ export default function Home() {
               onContinueRun={handleContinueRun}
               onViewResults={handleViewCurrentResults}
               steps={runtimeSteps}
+              usedKnowledgeRecords={activeKnowledgeRecords}
               workflowCompleted={workflowCompleted}
               compact={activeView === "result"}
             />
@@ -5591,7 +5749,7 @@ export default function Home() {
               lang={lang}
               view={activeView}
               sideTab={sideTab}
-              effectivePreferences={effectiveAgentPreferences}
+              effectivePreferences={activeAgentPreferences}
               steps={runtimeSteps}
               resultFiles={activeScenario.resultFiles}
               reports={activeScenario.reports}
