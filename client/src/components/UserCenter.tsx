@@ -3,6 +3,9 @@ import {
   ArrowLeft,
   Bell,
   Camera,
+  Check,
+  Link2,
+  Plus,
   ReceiptText,
   Save,
   UserCircle2,
@@ -11,7 +14,17 @@ import { useProject } from "@/contexts/ProjectContext";
 import { toast } from "sonner";
 
 type Lang = "zh" | "en";
-type UserCenterTab = "profile" | "notifications" | "usage";
+type UserCenterTab = "profile" | "notifications" | "usage" | "connectors";
+
+function FeishuMark({ className = "h-8 w-8" }: { className?: string }) {
+  return (
+    <span className={`inline-flex items-center justify-center rounded-xl bg-[#3370FF] text-white ${className}`}>
+      <svg viewBox="0 0 24 24" className="h-[58%] w-[58%]" fill="currentColor" aria-hidden>
+        <path d="M4.6 8.2c0-2.3 1.9-4.2 4.2-4.2h.8v4.8c0 .4-.3.7-.7.7H4.6V8.2Zm10.4 0V4h.8c2.3 0 4.2 1.9 4.2 4.2v1.3h-4.3c-.4 0-.7-.3-.7-.7V8.2ZM4.6 14.5v1.3c0 2.3 1.9 4.2 4.2 4.2h.8v-4.8c0-.4-.3-.7-.7-.7H4.6Zm10.4 0c0-.4.3-.7.7-.7h4.3v1.3c0 2.3-1.9 4.2-4.2 4.2h-.8v-4.8Z" />
+      </svg>
+    </span>
+  );
+}
 type UsagePeriod = "current" | "last" | "quarter" | "custom";
 
 const usageRecords = [
@@ -46,7 +59,7 @@ const notificationRules = [
 ];
 
 export function UserCenter({ initialTab = "profile", lang }: { initialTab?: UserCenterTab; lang: Lang }) {
-  const { setMainView } = useProject();
+  const { setMainView, feishuConnected, setFeishuConnected } = useProject();
   const [activeTab, setActiveTab] = useState<UserCenterTab>(initialTab);
   const [displayName, setDisplayName] = useState("于靖华");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -66,6 +79,7 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
 
   const tabs: { key: UserCenterTab; label: string; labelEn: string; icon: React.ReactNode }[] = [
     { key: "profile", label: "个人信息", labelEn: "Profile", icon: <UserCircle2 className="h-3.5 w-3.5" /> },
+    { key: "connectors", label: "连接器", labelEn: "Connectors", icon: <Link2 className="h-3.5 w-3.5" /> },
     { key: "notifications", label: "通知设置", labelEn: "Notifications", icon: <Bell className="h-3.5 w-3.5" /> },
     { key: "usage", label: "用量明细", labelEn: "Usage", icon: <ReceiptText className="h-3.5 w-3.5" /> },
   ];
@@ -125,7 +139,7 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-semibold text-[#070261]">{lang === "zh" ? "用户中心" : "User Center"}</p>
           <p className="mt-0.5 text-[11px] text-slate-400">
-            {lang === "zh" ? "管理个人信息、通知设置和用量明细" : "Manage profile, notifications, and usage"}
+            {lang === "zh" ? "管理个人信息、连接器、通知设置和用量明细" : "Manage profile, connectors, notifications, and usage"}
           </p>
         </div>
       </div>
@@ -227,6 +241,60 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
               </div>
             </div>
           </form>
+        ) : null}
+
+        {activeTab === "connectors" ? (
+          <div className="grid gap-4">
+            <div className="rounded-[20px] border border-slate-200 bg-white">
+              <div className="border-b border-slate-100 px-5 py-3">
+                <p className="text-[13px] font-semibold text-slate-700">{lang === "zh" ? "可用连接器" : "Available connectors"}</p>
+              </div>
+              <div className="p-4">
+                <article className="flex items-center gap-3 rounded-[18px] border border-slate-100 bg-slate-50/70 px-4 py-4">
+                  <FeishuMark className="h-11 w-11 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-[14px] font-semibold text-[#070261]">{lang === "zh" ? "飞书" : "Feishu"}</p>
+                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                        {lang === "zh" ? "连接器" : "Connector"}
+                      </span>
+                      {feishuConnected ? (
+                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600">
+                          {lang === "zh" ? "已关联" : "Connected"}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-[12px] text-slate-400">
+                      {lang === "zh" ? "关联账号后，可在项目中绑定飞书文档。" : "Connect your account to bind Feishu docs in projects."}
+                    </p>
+                  </div>
+                  {feishuConnected ? (
+                    <button
+                      onClick={() => {
+                        setFeishuConnected(false);
+                        toast.success(lang === "zh" ? "已取消关联飞书" : "Feishu disconnected");
+                      }}
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"
+                      title={lang === "zh" ? "取消关联" : "Disconnect"}
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setFeishuConnected(true);
+                        toast.success(lang === "zh" ? "已关联飞书账号" : "Feishu connected");
+                      }}
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+                      title={lang === "zh" ? "关联飞书" : "Connect Feishu"}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  )}
+                </article>
+              </div>
+            </div>
+          </div>
         ) : null}
 
         {activeTab === "notifications" ? (

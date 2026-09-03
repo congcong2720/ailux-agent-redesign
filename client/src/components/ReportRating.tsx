@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Star } from "lucide-react";
+import { Copy, Star, X } from "lucide-react";
 import { toast } from "sonner";
 
 type Lang = "zh" | "en";
@@ -15,31 +15,81 @@ const STORAGE_PREFIX = "ailux-agent-chat-rating:";
 const STAR_HINTS_ZH = ["非常不满意", "不满意", "一般", "满意", "非常满意"];
 const STAR_HINTS_EN = ["Very dissatisfied", "Dissatisfied", "Neutral", "Satisfied", "Very satisfied"];
 
-const ISSUE_OPTIONS_ZH = [
+const NEGATIVE_OPTIONS_ZH = [
   "目标理解不准确",
   "Plan 拆解不合理",
   "数据或文件识别错误",
   "Skill 调用不合适",
-  "执行过程不稳定",
-  "结果解释不可信",
-  "缺少证据或可追溯性",
+  "缺少证据或结果不可信",
   "报告/产物不完整",
-  "等待时间过长",
   "其他",
 ];
 
-const ISSUE_OPTIONS_EN = [
-  "Goal understanding issue",
-  "Plan breakdown issue",
-  "Data or file recognition issue",
-  "Skill selection issue",
-  "Execution instability",
-  "Unreliable result interpretation",
-  "Missing evidence or traceability",
+const NEGATIVE_OPTIONS_EN = [
+  "Inaccurate goal understanding",
+  "Unreasonable plan breakdown",
+  "Data or file recognition error",
+  "Inappropriate skill use",
+  "Weak evidence or unreliable result",
   "Incomplete report / outputs",
-  "Long waiting time",
   "Other",
 ];
+
+const POSITIVE_OPTIONS_ZH = [
+  "目标理解准确",
+  "Plan 拆解合理",
+  "数据或文件识别正确",
+  "Skill 调用合适",
+  "证据充分、结果可信",
+  "报告/产物完整",
+  "其他",
+];
+
+const POSITIVE_OPTIONS_EN = [
+  "Accurate goal understanding",
+  "Reasonable plan breakdown",
+  "Correct data / file recognition",
+  "Appropriate skill use",
+  "Strong evidence and reliable result",
+  "Complete report / outputs",
+  "Other",
+];
+
+const CHAT_NEGATIVE_OPTIONS_ZH = [
+  "回答不准确",
+  "原因没解释清",
+  "建议不可执行",
+  "遗漏关键信息",
+  "其他",
+];
+
+const CHAT_NEGATIVE_OPTIONS_EN = [
+  "Inaccurate answer",
+  "Unclear explanation",
+  "Suggestions not actionable",
+  "Missing key information",
+  "Other",
+];
+
+const CHAT_POSITIVE_OPTIONS_ZH = [
+  "回答准确",
+  "解释清楚",
+  "建议可执行",
+  "信息完整",
+  "其他",
+];
+
+const CHAT_POSITIVE_OPTIONS_EN = [
+  "Accurate answer",
+  "Clear explanation",
+  "Actionable suggestions",
+  "Complete information",
+  "Other",
+];
+
+function isPositiveRating(value: number) {
+  return value >= 4;
+}
 
 function storageKey(targetId: string) {
   return `${STORAGE_PREFIX}${targetId}`;
@@ -69,15 +119,21 @@ export function ReportRating({
   lang,
   targetId,
   timestamp,
+  duration,
   copyText,
   forceVisible = false,
+  dimensionSet = "task",
+  variant = "report",
 }: {
   lang: Lang;
   targetId: string;
   timestamp: string;
+  duration: string;
   copyText?: string;
   /** Keep visible after interaction (rating panel open / submitted). */
   forceVisible?: boolean;
+  dimensionSet?: "task" | "chat";
+  variant?: "report" | "chat";
 }) {
   const [rating, setRating] = useState<number | null>(null);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
@@ -110,37 +166,55 @@ export function ReportRating({
         ? {
             title: "结果评分",
             thanks: "感谢你的反馈",
-            issueTitle: "选择评估维度",
-            commentTitle: "留言",
-            commentPlaceholder: "请告诉我我们做得好或者待改进的地方",
-            ignore: "忽略",
+            negativePrompt: "哪里还可以改进？",
+            positivePrompt: "你觉得什么让你满意？",
+            commentPlaceholder: "选填，补充具体说明",
+            close: "关闭",
             submit: "提交",
             copied: "已复制当前对话内容",
+            durationPrefix: "用时",
+            other: "其他",
           }
         : {
             title: "Result rating",
             thanks: "Thanks for your feedback",
-            issueTitle: "Select issue types",
-            commentTitle: "Comment",
-            commentPlaceholder: "Tell us what went well or what to improve",
-            ignore: "Dismiss",
+            negativePrompt: "What could be improved?",
+            positivePrompt: "What made you satisfied?",
+            commentPlaceholder: "Optional — add more detail",
+            close: "Close",
             submit: "Submit",
             copied: "Message copied",
+            durationPrefix: "Took",
+            other: "Other",
           },
-    [lang],
+    [lang, variant],
   );
 
-  const issueOptions = lang === "zh" ? ISSUE_OPTIONS_ZH : ISSUE_OPTIONS_EN;
+  const positive = rating != null && isPositiveRating(rating);
+  const dimensionOptions = (() => {
+    if (rating == null) return [];
+    if (dimensionSet === "chat") {
+      if (lang === "zh") return positive ? CHAT_POSITIVE_OPTIONS_ZH : CHAT_NEGATIVE_OPTIONS_ZH;
+      return positive ? CHAT_POSITIVE_OPTIONS_EN : CHAT_NEGATIVE_OPTIONS_EN;
+    }
+    if (lang === "zh") return positive ? POSITIVE_OPTIONS_ZH : NEGATIVE_OPTIONS_ZH;
+    return positive ? POSITIVE_OPTIONS_EN : NEGATIVE_OPTIONS_EN;
+  })();
+  const dimensionPrompt = positive ? labels.positivePrompt : labels.negativePrompt;
   const starHints = lang === "zh" ? STAR_HINTS_ZH : STAR_HINTS_EN;
   const activeValue = hoverRating ?? rating ?? 0;
   const locked = submitted;
-  const keepVisible = forceVisible || panelOpen || submitted;
+  const canSubmit = selectedIssues.length > 0 || comment.trim().length > 0;
+  const metaText = `${timestamp} · ${labels.durationPrefix} ${duration}`;
 
   const handleRate = (value: number) => {
     if (locked) return;
+    if (rating != null && isPositiveRating(rating) !== isPositiveRating(value)) {
+      setSelectedIssues([]);
+      setComment("");
+    }
     setRating(value);
     setHoverRating(null);
-    // Low score: open issue panel; high score: also allow optional comment panel
     setPanelOpen(true);
   };
 
@@ -152,7 +226,7 @@ export function ReportRating({
   };
 
   const handleSubmit = () => {
-    if (!rating) return;
+    if (!rating || !canSubmit) return;
     const feedback: StoredFeedback = {
       rating,
       issues: selectedIssues,
@@ -164,17 +238,18 @@ export function ReportRating({
     toast.success(labels.thanks);
   };
 
-  const handleIgnore = () => {
+  const handleClose = () => {
     if (!rating) {
       setPanelOpen(false);
       return;
     }
-    // Still record the star rating even if user dismisses details
     writeStoredFeedback(targetId, {
       rating,
       issues: [],
       comment: "",
     });
+    setSelectedIssues([]);
+    setComment("");
     setSubmitted(true);
     setPanelOpen(false);
   };
@@ -190,12 +265,8 @@ export function ReportRating({
   };
 
   return (
-    <div
-      className={`mt-3 transition-opacity duration-150 ${
-        keepVisible ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"
-      }`}
-    >
-      <div className="flex flex-wrap items-center gap-2.5 text-[11px] text-slate-400">
+    <div className="group/rating mt-3">
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
         {copyText ? (
           <button
             type="button"
@@ -206,8 +277,6 @@ export function ReportRating({
             <Copy className="h-3.5 w-3.5" />
           </button>
         ) : null}
-        <span>{timestamp}</span>
-        <span className="text-slate-300">·</span>
         <span className="font-medium text-slate-500">{labels.title}</span>
         <div
           className="relative flex items-center gap-0.5"
@@ -246,65 +315,65 @@ export function ReportRating({
           })}
         </div>
         {submitted ? <span className="text-slate-400">{labels.thanks}</span> : null}
+        <span
+          className={`ml-auto text-[11px] text-slate-400 transition-opacity duration-150 ${
+            forceVisible
+              ? "visible opacity-100"
+              : "invisible opacity-0 group-hover:visible group-hover:opacity-100 group-hover/rating:visible group-hover/rating:opacity-100"
+          }`}
+          data-testid="rating-meta"
+        >
+          {metaText}
+        </span>
       </div>
 
       {panelOpen && !submitted && rating ? (
-        <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
-          {(rating <= 2 || rating >= 3) && (
-            <>
-              {rating <= 2 ? (
-                <>
-                  <p className="text-[12px] font-semibold text-slate-700">{labels.issueTitle}</p>
-                  <div className="mt-2.5 flex flex-wrap gap-2">
-                    {issueOptions.map((issue) => {
-                      const active = selectedIssues.includes(issue);
-                      return (
-                        <button
-                          key={issue}
-                          type="button"
-                          onClick={() => toggleIssue(issue)}
-                          className={`rounded-full border px-2.5 py-1 text-[11px] transition ${
-                            active
-                              ? "border-[#161FAD] bg-[rgba(22,31,173,0.08)] text-[#161FAD]"
-                              : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
-                          }`}
-                        >
-                          {issue}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              ) : null}
-
-              <p className={`text-[12px] font-semibold text-slate-700 ${rating <= 2 ? "mt-4" : ""}`}>
-                {labels.commentTitle}
-              </p>
-              <textarea
-                value={comment}
-                onChange={(event) => setComment(event.target.value)}
-                placeholder={labels.commentPlaceholder}
-                className="mt-2 min-h-[88px] w-full resize-none rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-[12px] leading-5 text-slate-700 outline-none transition focus:border-[#161FAD] focus:bg-white"
-              />
-
-              <div className="mt-3 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={handleIgnore}
-                  className="rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-[12px] font-medium text-slate-600 transition hover:bg-slate-50"
-                >
-                  {labels.ignore}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  className="rounded-xl bg-slate-700 px-3.5 py-1.5 text-[12px] font-medium text-white transition hover:bg-slate-800"
-                >
-                  {labels.submit}
-                </button>
-              </div>
-            </>
-          )}
+        <div className="relative mt-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="absolute right-2.5 top-2.5 rounded-md p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+            aria-label={labels.close}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+          <input
+            value={comment}
+            onChange={(event) => setComment(event.target.value)}
+            placeholder={dimensionPrompt}
+            className="w-full border-0 bg-transparent pr-6 text-[12px] leading-5 text-slate-700 outline-none placeholder:text-slate-500"
+          />
+          <div className="mt-2 flex items-end justify-between gap-3">
+            <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+              {dimensionOptions.map((issue) => {
+                const active = selectedIssues.includes(issue);
+                return (
+                  <button
+                    key={issue}
+                    type="button"
+                    onClick={() => toggleIssue(issue)}
+                    className={`rounded-md border px-2 py-0.5 text-[11px] leading-5 transition ${
+                      active
+                        ? "border-[#161FAD] bg-[rgba(22,31,173,0.08)] text-[#161FAD]"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                    }`}
+                  >
+                    {issue}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+              className={`shrink-0 rounded-lg px-3 py-1 text-[12px] font-medium text-white transition ${
+                canSubmit ? "bg-[#7B8CFF] hover:bg-[#6A7CF5]" : "cursor-not-allowed bg-[#B8C2FF]"
+              }`}
+            >
+              {labels.submit}
+            </button>
+          </div>
         </div>
       ) : null}
     </div>

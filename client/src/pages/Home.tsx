@@ -13,15 +13,18 @@ import { ProjectPanel } from "@/components/ProjectPanel";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { AgentPreferencePanel, ResourcePanel, TEMPLATES } from "@/components/ResourcePanel";
 import { ReportRating } from "@/components/ReportRating";
+import { SidePanelEmptyState } from "@/components/SidePanelEmptyState";
+import { StreamingAgentTurn, type StreamVariant } from "@/components/StreamingAgentTurn";
 import { UserCenter } from "@/components/UserCenter";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useProject, type AgentPreference, type ProjectDataAsset, type ProjectDataFileType, type ProjectKnowledgeRecord } from "@/contexts/ProjectContext";
+import { useProject, type AgentPreference, type ProjectDataAsset, type ProjectDataFileType, type ProjectKnowledgeRecord, type ProjectLinkedDoc } from "@/contexts/ProjectContext";
 import { demoPdbContent } from "@/lib/demoPdb";
 import {
   ArrowDownToLine,
+  ArrowLeft,
   ArrowUpRight,
   AlertTriangle,
   AtSign,
@@ -40,6 +43,7 @@ import {
   Folder,
   FolderOpen,
   GitBranch,
+  Link2,
   Globe2,
   History,
   LogOut,
@@ -66,7 +70,11 @@ type ViewMode = "new" | "running" | "result";
 type SideTab = "plan" | "results" | "reports" | "monitor";
 type StepStatus = "done" | "running" | "waiting" | "failed";
 type ResultType = "csv" | "docx" | "json" | "png" | "xlsx" | "pdb";
-type ScenarioId = "dll3" | "a2ui";
+type ScenarioId = "dll3" | "a2ui" | "chat" | "stream";
+type ScenarioKind = "workflow" | "chat" | "stream";
+type DispatchScope = "run" | "conversation";
+type DispatchStatusFilter = "all" | "running" | "error" | "done" | "queued";
+type DispatchJobStatus = "queued" | "running" | "done" | "error";
 type DemoCard = "plan-confirm" | "plan-preview" | "hitl-decision" | "recovery-action" | "results-summary";
 type AgentDemoAction =
   | "confirm-run"
@@ -171,11 +179,33 @@ type RunReport = {
   sections: ReportSection[];
 };
 
+type DispatchJob = {
+  id: string;
+  runId: string;
+  runLabel: string;
+  conversationId: string;
+  planStepId: string;
+  model: string;
+  name: string;
+  startedAt: string;
+  endedAt?: string;
+  duration: string;
+  status: DispatchJobStatus;
+  cpu: number;
+  gpu: number;
+  gpuModel: string;
+  memory: number;
+};
+
 type RunningMessage = {
   role: "user" | "agent";
   content: LocalizedText;
   time: string;
   card?: DemoCard;
+  timestamp?: LocalizedText;
+  duration?: LocalizedText;
+  rateable?: boolean;
+  streamVariant?: StreamVariant;
 };
 
 type RecommendedPrompt = {
@@ -185,6 +215,7 @@ type RecommendedPrompt = {
 
 type DemoScenario = {
   id: ScenarioId;
+  kind?: ScenarioKind;
   title: LocalizedText;
   messages: RunningMessage[];
   steps: PlanStep[];
@@ -194,6 +225,23 @@ type DemoScenario = {
 
 const l = (zh: string, en: string): LocalizedText => ({ zh, en });
 const pick = (lang: Lang, value: LocalizedText) => value[lang];
+
+function renderRichText(text: string) {
+  return text.split("\n").map((line, lineIndex) => (
+    <span key={`line-${lineIndex}`}>
+      {lineIndex > 0 ? <br /> : null}
+      {line.split(/(\*\*[^*]+\*\*)/g).map((part, partIndex) =>
+        part.startsWith("**") && part.endsWith("**") ? (
+          <strong key={`part-${lineIndex}-${partIndex}`} className="font-semibold text-slate-800">
+            {part.slice(2, -2)}
+          </strong>
+        ) : (
+          <span key={`part-${lineIndex}-${partIndex}`}>{part}</span>
+        ),
+      )}
+    </span>
+  ));
+}
 const PRODUCT_ICON_URL = `${import.meta.env.BASE_URL}ailux-product-icon.png`;
 const MODEL_RANKING_IMAGE_URL = "/manus-storage/ailux-model-ranking-user-final-v2_2de81eaf.png";
 const FEATURE_SCATTER_IMAGE_URL = "/manus-storage/feature_scatter_relationship_2a6adde1.png";
@@ -329,6 +377,20 @@ const recommendedPrompts: RecommendedPrompt[] = [
   {
     id: "dll3",
     text: l("输入 PDB 与 CSV 后，帮我生成结构、特征和结果解释报告", "After I provide PDB and CSV files, generate a structure, feature, and result interpretation report."),
+  },
+  {
+    id: "chat",
+    text: l(
+      "现在 agent 可以正常使用吗？为什么会出现 LLM quota insufficient？",
+      "Is the agent available now? Why did I get an LLM quota insufficient error?",
+    ),
+  },
+  {
+    id: "stream",
+    text: l(
+      "换一个不依赖外部平台的 Skill，帮我做 7K3L 蛋白结构可视化",
+      "Switch to a Skill that does not depend on an external platform and visualize the 7K3L protein structure.",
+    ),
   },
 ];
 
@@ -856,9 +918,93 @@ const a2uiRunReports: RunReport[] = [
   },
 ];
 
+const chatMessages: RunningMessage[] = [
+  {
+    role: "user",
+    content: l("现在agent可以正常使用吗？", "Is the agent available now?"),
+    time: "10:46",
+  },
+  {
+    role: "agent",
+    content: l(
+      "可以正常使用。\n\n我可以协助你进行 **structure prediction**、**antibody design**、**feature calculation** 和 **report generation** 等科研任务。直接描述目标，或上传数据后提问即可开始。",
+      "Yes, it is available.\n\nI can help with **structure prediction**, **antibody design**, **feature calculation**, and **report generation**. Describe your goal, or upload data and ask a question to start.",
+    ),
+    time: "10:46",
+    timestamp: l("9月3日 10:46", "Sep 3, 10:46"),
+    duration: l("6秒", "6s"),
+    rateable: true,
+  },
+  {
+    role: "user",
+    content: l("为什么会出现 LLM quota insufficient 的报错？", "Why did I get an LLM quota insufficient error?"),
+    time: "10:47",
+  },
+  {
+    role: "agent",
+    content: l(
+      "**常见原因可能是：**\n\n1. **平台 / 账号侧 LLM 调用额度**不足，或已达到本周期上限\n2. 当前选用的 **特定模型额度**已用尽\n3. 同时发起的任务触发了 **并发限制**\n\n**建议：**\n- 到用量页查看剩余额度和刷新时间\n- 等待额度刷新后再重试\n- 把完整报错日志发给我，我可以帮你判断是账号额度、模型额度还是并发问题",
+      "**Common causes may include:**\n\n1. The **platform / account LLM quota** is exhausted or has hit the period cap\n2. The **specific model quota** currently selected is used up\n3. Concurrent tasks have hit a **rate limit**\n\n**Suggestions:**\n- Check remaining quota and refresh time on the usage page\n- Retry after the quota resets\n- Send me the full error log so I can tell whether this is account quota, model quota, or concurrency",
+    ),
+    time: "10:48",
+    timestamp: l("9月3日 10:48", "Sep 3, 10:48"),
+    duration: l("18秒", "18s"),
+    rateable: true,
+  },
+  {
+    role: "user",
+    content: l("用量页在哪里看？", "Where can I check the usage page?"),
+    time: "10:49",
+  },
+  {
+    role: "agent",
+    content: l(
+      "打开右上角 **用户中心 → 用量**，可以看到本周期剩余额度、已用调用次数和刷新时间。",
+      "Open **User Center → Usage** in the top right to see remaining quota, used calls, and the refresh time for this period.",
+    ),
+    time: "10:49",
+    timestamp: l("9月3日 10:49", "Sep 3, 10:49"),
+    duration: l("7秒", "7s"),
+    rateable: true,
+  },
+  {
+    role: "user",
+    content: l("额度一般什么时候刷新？", "When does the quota usually refresh?"),
+    time: "10:51",
+  },
+  {
+    role: "agent",
+    content: l(
+      "账号侧额度通常按 **自然月** 刷新；单个模型额度可能按日或按任务批次重置。用量页里的刷新时间以平台配置为准。",
+      "Account quota usually resets on a **calendar month**. A specific model quota may reset daily or per batch. Use the refresh time on the usage page as the source of truth.",
+    ),
+    time: "10:51",
+    timestamp: l("9月3日 10:51", "Sep 3, 10:51"),
+    duration: l("9秒", "9s"),
+    rateable: true,
+  },
+  {
+    role: "user",
+    content: l("我把报错日志发你，帮我看下是哪种额度。", "I will send the error log. Can you tell which quota it is?"),
+    time: "10:53",
+  },
+  {
+    role: "agent",
+    content: l(
+      "从日志里的 `account_quota_exceeded` 看，这次是 **账号侧周期额度** 用尽，不是单个模型额度，也不是并发限制。等额度刷新后重试即可，不必换模型。",
+      "The log shows `account_quota_exceeded`, so this is the **account period quota**, not a model-specific quota or a concurrency limit. Retry after it refreshes; you do not need to switch models.",
+    ),
+    time: "10:53",
+    timestamp: l("9月3日 10:53", "Sep 3, 10:53"),
+    duration: l("12秒", "12s"),
+    rateable: true,
+  },
+];
+
 const demoScenarios: Record<ScenarioId, DemoScenario> = {
   dll3: {
     id: "dll3",
+    kind: "workflow",
     title: l("内化预测建模工作流程", "Internalization Predictive Modeling Workflow"),
     messages: runningMessages,
     steps: runningSteps,
@@ -867,11 +1013,65 @@ const demoScenarios: Record<ScenarioId, DemoScenario> = {
   },
   a2ui: {
     id: "a2ui",
+    kind: "workflow",
     title: l("DLL3 双抗功能预测固定流程", "DLL3 Bispecific Fixed Prediction Workflow"),
     messages: a2uiRunningMessages,
     steps: a2uiRunningSteps,
     resultFiles: a2uiResultFiles,
     reports: a2uiRunReports,
+  },
+  chat: {
+    id: "chat",
+    kind: "chat",
+    title: l("现在agent可以正常使用吗？", "Is the agent available now?"),
+    messages: chatMessages,
+    steps: [],
+    resultFiles: [],
+    reports: [],
+  },
+  stream: {
+    id: "stream",
+    kind: "stream",
+    title: l("7K3L 本地结构可视化", "7K3L local structure visualization"),
+    messages: [
+      {
+        role: "user",
+        content: l(
+          "换一个不依赖外部平台的 Skill，帮我做 7K3L 蛋白结构可视化",
+          "Switch to a Skill that does not depend on an external platform and visualize the 7K3L protein structure.",
+        ),
+        time: "14:21",
+      },
+      {
+        role: "agent",
+        content: l("7K3L 本地结构可视化", "7K3L local structure visualization"),
+        time: "14:21",
+        timestamp: l("9月3日 14:21", "Sep 3, 14:21"),
+        duration: l("18秒", "18s"),
+        rateable: true,
+        streamVariant: "log",
+      },
+      {
+        role: "user",
+        content: l(
+          "结合口袋再标注一下配体，并解释为什么选这个视角",
+          "Annotate the ligand in the pocket, and explain why you chose this viewpoint.",
+        ),
+        time: "14:23",
+      },
+      {
+        role: "agent",
+        content: l("7K3L 口袋配体注释", "7K3L pocket ligand annotation"),
+        time: "14:24",
+        timestamp: l("9月3日 14:24", "Sep 3, 14:24"),
+        duration: l("16秒", "16s"),
+        rateable: true,
+        streamVariant: "steps",
+      },
+    ],
+    steps: [],
+    resultFiles: [],
+    reports: [],
   },
 };
 
@@ -1083,6 +1283,246 @@ const historyRunItems: HistoryRunItem[] = [
   },
 ];
 
+const CURRENT_DISPATCH_RUN_ID = "run-03";
+const CURRENT_CONVERSATION_ID = "conv-dll3-20260626";
+
+const dispatchJobs: DispatchJob[] = [
+  {
+    id: "job-001",
+    runId: CURRENT_DISPATCH_RUN_ID,
+    runLabel: "Run #3",
+    conversationId: CURRENT_CONVERSATION_ID,
+    planStepId: "step-01",
+    model: "agent_planner",
+    name: "validate_inputs_and_freeze_snapshot",
+    startedAt: "2026-06-26 14:36:02",
+    endedAt: "2026-06-26 14:36:14",
+    duration: "12s",
+    status: "done",
+    cpu: 2,
+    gpu: 0,
+    gpuModel: "-",
+    memory: 16,
+  },
+  {
+    id: "job-002",
+    runId: CURRENT_DISPATCH_RUN_ID,
+    runLabel: "Run #3",
+    conversationId: CURRENT_CONVERSATION_ID,
+    planStepId: "step-02",
+    model: "StructureExtractor",
+    name: "build_binder_context",
+    startedAt: "2026-06-26 14:36:18",
+    endedAt: "2026-06-26 14:36:48",
+    duration: "30s",
+    status: "done",
+    cpu: 8,
+    gpu: 0,
+    gpuModel: "-",
+    memory: 24,
+  },
+  {
+    id: "job-003",
+    runId: CURRENT_DISPATCH_RUN_ID,
+    runLabel: "Run #3",
+    conversationId: CURRENT_CONVERSATION_ID,
+    planStepId: "step-03",
+    model: "DockedPoses Filter B",
+    name: "prodigy_features_[split]_Mcb008",
+    startedAt: "2026-06-26 14:37:02",
+    endedAt: "2026-06-26 14:38:01",
+    duration: "59s",
+    status: "done",
+    cpu: 8,
+    gpu: 0,
+    gpuModel: "-",
+    memory: 14,
+  },
+  {
+    id: "job-004",
+    runId: CURRENT_DISPATCH_RUN_ID,
+    runLabel: "Run #3",
+    conversationId: CURRENT_CONVERSATION_ID,
+    planStepId: "step-03",
+    model: "DockedPoses Filter B",
+    name: "prodigy_features_[split]_Msb028",
+    startedAt: "2026-06-26 14:37:04",
+    endedAt: "2026-06-26 14:38:04",
+    duration: "1m",
+    status: "done",
+    cpu: 8,
+    gpu: 0,
+    gpuModel: "-",
+    memory: 14,
+  },
+  {
+    id: "job-005",
+    runId: CURRENT_DISPATCH_RUN_ID,
+    runLabel: "Run #3",
+    conversationId: CURRENT_CONVERSATION_ID,
+    planStepId: "step-03",
+    model: "DockedPoses Filter B",
+    name: "prodigy_features_[split]_ZG006-1",
+    startedAt: "2026-06-26 14:37:06",
+    endedAt: "2026-06-26 14:38:10",
+    duration: "1m 4s",
+    status: "done",
+    cpu: 8,
+    gpu: 0,
+    gpuModel: "-",
+    memory: 14,
+  },
+  {
+    id: "job-006",
+    runId: CURRENT_DISPATCH_RUN_ID,
+    runLabel: "Run #3",
+    conversationId: CURRENT_CONVERSATION_ID,
+    planStepId: "step-03",
+    model: "DockedPoses Filter B",
+    name: "rosetta_energy_[split]_ZG006-2",
+    startedAt: "2026-06-26 14:37:08",
+    endedAt: "2026-06-26 14:37:42",
+    duration: "34s",
+    status: "error",
+    cpu: 16,
+    gpu: 0,
+    gpuModel: "-",
+    memory: 32,
+  },
+  {
+    id: "job-007",
+    runId: CURRENT_DISPATCH_RUN_ID,
+    runLabel: "Run #3",
+    conversationId: CURRENT_CONVERSATION_ID,
+    planStepId: "step-03",
+    model: "Rosetta Feature Engine",
+    name: "resume_rosetta_energy_ZG006-2",
+    startedAt: "2026-06-26 14:38:28",
+    endedAt: "2026-06-26 14:40:16",
+    duration: "1m 48s",
+    status: "done",
+    cpu: 16,
+    gpu: 0,
+    gpuModel: "-",
+    memory: 32,
+  },
+  {
+    id: "job-008",
+    runId: CURRENT_DISPATCH_RUN_ID,
+    runLabel: "Run #3",
+    conversationId: CURRENT_CONVERSATION_ID,
+    planStepId: "step-04",
+    model: "FeatureRank GBM",
+    name: "feature_selection_topK20",
+    startedAt: "2026-06-26 14:40:22",
+    endedAt: "2026-06-26 14:42:10",
+    duration: "1m 48s",
+    status: "done",
+    cpu: 4,
+    gpu: 0,
+    gpuModel: "-",
+    memory: 16,
+  },
+  {
+    id: "job-009",
+    runId: CURRENT_DISPATCH_RUN_ID,
+    runLabel: "Run #3",
+    conversationId: CURRENT_CONVERSATION_ID,
+    planStepId: "step-04",
+    model: "LightGBM-Antibody",
+    name: "train_model_fold_[split]_1",
+    startedAt: "2026-06-26 14:42:18",
+    duration: "running",
+    status: "running",
+    cpu: 8,
+    gpu: 1,
+    gpuModel: "A10",
+    memory: 48,
+  },
+  {
+    id: "job-010",
+    runId: CURRENT_DISPATCH_RUN_ID,
+    runLabel: "Run #3",
+    conversationId: CURRENT_CONVERSATION_ID,
+    planStepId: "step-04",
+    model: "LightGBM-Antibody",
+    name: "train_model_fold_[split]_2",
+    startedAt: "2026-06-26 14:42:21",
+    duration: "running",
+    status: "running",
+    cpu: 8,
+    gpu: 1,
+    gpuModel: "A10",
+    memory: 48,
+  },
+  {
+    id: "job-011",
+    runId: CURRENT_DISPATCH_RUN_ID,
+    runLabel: "Run #3",
+    conversationId: CURRENT_CONVERSATION_ID,
+    planStepId: "step-04",
+    model: "CatBoost Regression",
+    name: "train_model_fold_[split]_3",
+    startedAt: "2026-06-26 14:42:24",
+    duration: "queued",
+    status: "queued",
+    cpu: 8,
+    gpu: 1,
+    gpuModel: "A10",
+    memory: 48,
+  },
+  {
+    id: "job-012",
+    runId: CURRENT_DISPATCH_RUN_ID,
+    runLabel: "Run #3",
+    conversationId: CURRENT_CONVERSATION_ID,
+    planStepId: "step-05",
+    model: "Ailux ReportSynth",
+    name: "generate_final_report",
+    startedAt: "2026-06-26 14:45:02",
+    duration: "waiting",
+    status: "queued",
+    cpu: 2,
+    gpu: 0,
+    gpuModel: "-",
+    memory: 16,
+  },
+  {
+    id: "job-013",
+    runId: "run-02",
+    runLabel: "Run #2",
+    conversationId: CURRENT_CONVERSATION_ID,
+    planStepId: "step-02",
+    model: "strategist",
+    name: "regenerate_model_config_10nM",
+    startedAt: "2026-06-26 15:12:40",
+    endedAt: "2026-06-26 15:12:57",
+    duration: "17s",
+    status: "done",
+    cpu: 2,
+    gpu: 0,
+    gpuModel: "-",
+    memory: 16,
+  },
+  {
+    id: "job-014",
+    runId: "run-01",
+    runLabel: "Run #1",
+    conversationId: CURRENT_CONVERSATION_ID,
+    planStepId: "step-02",
+    model: "StructureExtractor",
+    name: "baseline_feature_extraction",
+    startedAt: "2026-06-26 14:49:02",
+    endedAt: "2026-06-26 14:55:10",
+    duration: "6m 8s",
+    status: "done",
+    cpu: 16,
+    gpu: 0,
+    gpuModel: "-",
+    memory: 32,
+  },
+];
+
 const datasetPreviewRows = [
   ["BsAb_001", "8.134", "16.298", "ScFv-Fc", "mid-stalk", "membrane-proximal"],
   ["BsAb_002", "3.797", "2.976", "IgG-like", "distal", "distal"],
@@ -1129,6 +1569,45 @@ const taskStatusMeta: Record<NonNullable<HistoryTask["status"]>, { label: Locali
     className: "bg-slate-100 text-slate-500",
   },
 };
+
+const dispatchStatusMeta: Record<DispatchJobStatus, { label: LocalizedText; className: string }> = {
+  queued: {
+    label: l("queued", "queued"),
+    className: "bg-slate-100 text-slate-500",
+  },
+  running: {
+    label: l("running", "running"),
+    className: "bg-amber-50 text-amber-700",
+  },
+  done: {
+    label: l("done", "done"),
+    className: "bg-emerald-50 text-emerald-700",
+  },
+  error: {
+    label: l("error", "error"),
+    className: "bg-red-50 text-red-600",
+  },
+};
+
+function getDispatchSummary(jobs: DispatchJob[]) {
+  return {
+    total: jobs.length,
+    running: jobs.filter((job) => job.status === "running").length,
+    failed: jobs.filter((job) => job.status === "error").length,
+  };
+}
+
+function formatDispatchSummary(lang: Lang, summary: ReturnType<typeof getDispatchSummary>) {
+  if (summary.total === 0) return lang === "zh" ? "当前对话尚未提交调度任务" : "No dispatch jobs submitted in this conversation";
+  return lang === "zh"
+    ? `${summary.total} 个作业 · ${summary.running} 运行中 · ${summary.failed} 失败`
+    : `${summary.total} jobs · ${summary.running} running · ${summary.failed} failed`;
+}
+
+function getDispatchJobsForScope(scope: DispatchScope) {
+  if (scope === "run") return dispatchJobs.filter((job) => job.runId === CURRENT_DISPATCH_RUN_ID);
+  return dispatchJobs.filter((job) => job.conversationId === CURRENT_CONVERSATION_ID);
+}
 
 const runningStepDurationsMs = [1400, 1500, 1600, 1700, 1800];
 
@@ -1252,6 +1731,10 @@ const copy = {
     overallProgress: "整体进度",
     emptyResults: "暂无结果文件",
     emptyResultsBody: "当任务启动后，系统会按步骤将数据集、图像、日志、JSON 汇总等文件增量写入当前任务的结果区，并支持按文件名搜索。",
+    emptyPlanTitle: "暂无计划",
+    emptyChatResultsTitle: "暂无结果",
+    emptyReportsTitle: "暂无报告",
+    emptyMonitorTitle: "暂无监控",
     currentRun: "当前 Run",
     currentRunLabel: "当前 Run · Run #3",
     currentRunHint: "默认展示最新一轮结果，旧轮次收起到下方文件夹。",
@@ -1421,6 +1904,10 @@ const copy = {
     emptyResults: "No result files yet",
     emptyResultsBody:
       "Once the task starts, datasets, charts, logs, and JSON summaries will be written incrementally into the current result area and remain searchable by filename.",
+    emptyPlanTitle: "No plan yet",
+    emptyChatResultsTitle: "No results yet",
+    emptyReportsTitle: "No reports yet",
+    emptyMonitorTitle: "No monitor yet",
     currentRun: "Current run",
     currentRunLabel: "Current run · Run #3",
     currentRunHint: "The latest run is shown by default, while older runs stay folded below.",
@@ -1692,7 +2179,7 @@ function dataAssetFromReport(report: RunReport): Omit<ProjectDataAsset, "id" | "
   };
 }
 
-type UserMenuAction = "profile" | "resources" | "preferences" | "notifications" | "network" | "language" | "logout";
+type UserMenuAction = "profile" | "resources" | "preferences" | "connectors" | "notifications" | "network" | "language" | "logout";
 
 function UserMenu({ lang, onAction }: { lang: Lang; onAction: (action: UserMenuAction) => void }) {
   const text = copy[lang];
@@ -1721,14 +2208,6 @@ function UserMenu({ lang, onAction }: { lang: Lang; onAction: (action: UserMenuA
       >
         <Brain className="h-4 w-4" />
         {text.agentPreferences}
-      </button>
-
-      <button
-        onClick={() => onAction("notifications")}
-        className="flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[13px] font-medium text-slate-700 transition hover:bg-slate-50 hover:text-[#161FAD]"
-      >
-        <Bell className="h-4 w-4" />
-        {lang === "zh" ? "通知设置" : "Notification settings"}
       </button>
 
       <button
@@ -2534,14 +3013,19 @@ function Sidebar({
 
 function NewTaskWorkspace({
   attachedInputs,
+  canReadLinkedDocs,
   effectivePreferences,
   ignoredPreferenceCount,
   lang,
+  linkedDocs,
+  adoptedDocIds,
   prompt,
   relevantKnowledgeRecords,
+  onAdoptLinkedDoc,
   onOpenResourceDialog,
   onOpenUploadDialog,
   onIgnoreKnowledgeRecord,
+  onIgnoreLinkedDoc,
   onIgnorePreference,
   onPromptChange,
   onPromptPick,
@@ -2549,14 +3033,19 @@ function NewTaskWorkspace({
   onStart,
 }: {
   attachedInputs: AttachedInput[];
+  canReadLinkedDocs: boolean;
   effectivePreferences: AgentPreference[];
   ignoredPreferenceCount: number;
   lang: Lang;
+  linkedDocs: ProjectLinkedDoc[];
+  adoptedDocIds: string[];
   prompt: string;
   relevantKnowledgeRecords: ProjectKnowledgeRecord[];
+  onAdoptLinkedDoc: (id: string) => void;
   onOpenResourceDialog: () => void;
   onOpenUploadDialog: () => void;
   onIgnoreKnowledgeRecord: (id: string) => void;
+  onIgnoreLinkedDoc: (id: string) => void;
   onIgnorePreference: (id: string) => void;
   onPromptChange: (value: string) => void;
   onPromptPick: (prompt: RecommendedPrompt) => void;
@@ -2567,7 +3056,9 @@ function NewTaskWorkspace({
   const projectPreferenceCount = effectivePreferences.filter((preference) => preference.scope === "project").length;
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [knowledgeOpen, setKnowledgeOpen] = useState(false);
+  const [documentsOpen, setDocumentsOpen] = useState(false);
   const visibleKnowledgeRecords = relevantKnowledgeRecords.slice(0, 1);
+  const visibleLinkedDocs = linkedDocs.slice(0, 3);
 
   return (
     <section className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/84 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
@@ -2605,7 +3096,7 @@ function NewTaskWorkspace({
         </div>
 
         <div className="mt-6 rounded-[18px] border border-slate-200 bg-slate-50/90 p-3">
-          {(preferencesOpen || knowledgeOpen) ? (
+          {(preferencesOpen || knowledgeOpen || documentsOpen) ? (
             <div className="mb-3 grid gap-2 rounded-[14px] border border-blue-100 bg-blue-50/60 px-3 py-2">
               {preferencesOpen ? (
                 <div>
@@ -2681,6 +3172,77 @@ function NewTaskWorkspace({
                   })}
                 </div>
               ) : null}
+
+              {documentsOpen && visibleLinkedDocs.length > 0 ? (
+                <div className={preferencesOpen || knowledgeOpen ? "border-t border-blue-100/70 pt-2" : ""}>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Link2 className="h-3.5 w-3.5 text-[#161FAD]" />
+                      <p className="text-[12px] font-semibold text-[#070261]">
+                        {lang === "zh" ? "项目文档" : "Project documents"}
+                      </p>
+                      <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-medium text-[#161FAD]">{visibleLinkedDocs.length}</span>
+                    </div>
+                    <button onClick={() => setDocumentsOpen(false)} className="text-[11px] font-medium text-[#161FAD]">
+                      {lang === "zh" ? "收起" : "Collapse"}
+                    </button>
+                  </div>
+                  <p className="mb-2 text-[11px] leading-5 text-blue-800">
+                    {lang === "zh"
+                      ? "飞书仍是原文。采纳后才按需拉取大纲或指定章节，不会默认塞入全文。"
+                      : "Feishu remains the source. Adopt first, then fetch the outline or specified section on demand."}
+                  </p>
+                  <div className="space-y-2">
+                    {visibleLinkedDocs.map((doc) => {
+                      const adopted = adoptedDocIds.includes(doc.id);
+                      return (
+                        <div key={doc.id} className="rounded-xl bg-white/80 px-3 py-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="truncate text-[12px] font-medium text-slate-700">{doc.title}</p>
+                              <p className="mt-0.5 text-[10px] text-slate-400">
+                                {doc.scope === "section"
+                                  ? (lang === "zh" ? `指定章节：${doc.sectionTitle}` : `Section: ${doc.sectionTitle}`)
+                                  : (lang === "zh" ? "整篇 · 先拉大纲" : "Full doc · outline first")}
+                              </p>
+                            </div>
+                            {adopted ? (
+                              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600">
+                                {canReadLinkedDocs ? (lang === "zh" ? "已采纳" : "Adopted") : (lang === "zh" ? "无权注入" : "Blocked")}
+                              </span>
+                            ) : null}
+                          </div>
+                          {!canReadLinkedDocs ? (
+                            <p className="mt-1 text-[10px] leading-4 text-amber-700">
+                              {lang === "zh" ? "当前账号对该飞书文档无读权限，任务不会注入正文。" : "Current account cannot read this Feishu doc. It will not be injected."}
+                            </p>
+                          ) : null}
+                          <div className="mt-2 flex items-center gap-2">
+                            {adopted ? (
+                              <button
+                                onClick={() => onIgnoreLinkedDoc(doc.id)}
+                                className="rounded-xl border border-blue-100 bg-white px-2.5 py-1 text-[11px] font-medium text-blue-700"
+                              >
+                                {lang === "zh" ? "本次不用" : "Do not use"}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => onAdoptLinkedDoc(doc.id)}
+                                className="rounded-xl bg-[#161FAD] px-2.5 py-1 text-[11px] font-medium text-white"
+                              >
+                                {lang === "zh" ? "采纳" : "Adopt"}
+                              </button>
+                            )}
+                            <a href={doc.url} target="_blank" rel="noreferrer" className="text-[11px] font-medium text-[#161FAD]">
+                              {lang === "zh" ? "打开原文" : "Open source"}
+                            </a>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
           <textarea
@@ -2729,6 +3291,19 @@ function NewTaskWorkspace({
                   {lang === "zh" ? "知识库" : "Knowledge"}
                   <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] text-emerald-600">{lang === "zh" ? "已启用" : "On"}</span>
                   <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] text-slate-500">{visibleKnowledgeRecords.length}</span>
+                </button>
+              ) : null}
+              {visibleLinkedDocs.length > 0 ? (
+                <button
+                  onClick={() => setDocumentsOpen((current) => !current)}
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-xl border px-2.5 text-[11px] font-medium transition ${
+                    documentsOpen ? "border-blue-100 bg-blue-50 text-[#161FAD]" : "border-slate-200 bg-white text-slate-500 hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+                  }`}
+                  title={lang === "zh" ? "项目文档" : "Project documents"}
+                >
+                  <Link2 className="h-3.5 w-3.5" />
+                  {lang === "zh" ? "文档" : "Docs"}
+                  <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] text-slate-500">{visibleLinkedDocs.length}</span>
                 </button>
               ) : null}
             </div>
@@ -3114,21 +3689,27 @@ function AgentDemoCard({
 }
 
 function UsedContextSummary({
+  blockedLinkedDocs,
   effectivePreferences,
   ignoredKnowledgeRecords,
+  ignoredLinkedDocs,
   ignoredPreferences,
   lang,
   usedKnowledgeRecords,
+  usedLinkedDocs,
 }: {
+  blockedLinkedDocs: ProjectLinkedDoc[];
   effectivePreferences: AgentPreference[];
   ignoredKnowledgeRecords: ProjectKnowledgeRecord[];
+  ignoredLinkedDocs: ProjectLinkedDoc[];
   ignoredPreferences: AgentPreference[];
   lang: Lang;
   usedKnowledgeRecords: ProjectKnowledgeRecord[];
+  usedLinkedDocs: ProjectLinkedDoc[];
 }) {
   const [open, setOpen] = useState(false);
-  const usedCount = effectivePreferences.length + usedKnowledgeRecords.length;
-  const ignoredCount = ignoredPreferences.length + ignoredKnowledgeRecords.length;
+  const usedCount = effectivePreferences.length + usedKnowledgeRecords.length + usedLinkedDocs.length;
+  const ignoredCount = ignoredPreferences.length + ignoredKnowledgeRecords.length + ignoredLinkedDocs.length + blockedLinkedDocs.length;
 
   if (usedCount + ignoredCount === 0) return null;
 
@@ -3183,6 +3764,26 @@ function UsedContextSummary({
             </div>
           ) : null}
 
+          {usedLinkedDocs.length > 0 ? (
+            <div>
+              <p className="mb-1.5 text-[11px] font-semibold text-slate-500">{lang === "zh" ? "项目文档" : "Project documents"}</p>
+              <div className="space-y-1.5">
+                {usedLinkedDocs.map((doc) => (
+                  <a
+                    key={doc.id}
+                    href={doc.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block rounded-xl bg-white px-2.5 py-2 text-[11px] leading-5 text-[#161FAD]"
+                  >
+                    {doc.title}
+                    {doc.scope === "section" && doc.sectionTitle ? ` · ${doc.sectionTitle}` : ""}
+                  </a>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           {ignoredCount > 0 ? (
             <div>
               <p className="mb-1.5 text-[11px] font-semibold text-slate-500">{lang === "zh" ? "本次不用" : "Not used this time"}</p>
@@ -3197,6 +3798,16 @@ function UsedContextSummary({
                     {lang === "zh" ? "知识库" : "Knowledge"} · {record.runId}
                   </span>
                 ))}
+                {ignoredLinkedDocs.map((doc) => (
+                  <span key={doc.id} className="rounded-full bg-white px-2.5 py-1 text-[10px] font-medium text-slate-400">
+                    {lang === "zh" ? "文档" : "Doc"} · {doc.title}
+                  </span>
+                ))}
+                {blockedLinkedDocs.map((doc) => (
+                  <span key={doc.id} className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-medium text-amber-700">
+                    {lang === "zh" ? "无权限未注入" : "Blocked"} · {doc.title}
+                  </span>
+                ))}
               </div>
             </div>
           ) : null}
@@ -3208,8 +3819,10 @@ function UsedContextSummary({
 
 function RunningWorkspace({
   attachedInputs,
+  blockedLinkedDocs,
   effectivePreferences,
   ignoredKnowledgeRecords,
+  ignoredLinkedDocs,
   ignoredPreferences,
   lang,
   title,
@@ -3226,12 +3839,16 @@ function RunningWorkspace({
   onViewResults,
   steps,
   usedKnowledgeRecords,
+  usedLinkedDocs,
   workflowCompleted,
   compact = false,
+  kind = "workflow",
 }: {
   attachedInputs: AttachedInput[];
+  blockedLinkedDocs: ProjectLinkedDoc[];
   effectivePreferences: AgentPreference[];
   ignoredKnowledgeRecords: ProjectKnowledgeRecord[];
+  ignoredLinkedDocs: ProjectLinkedDoc[];
   ignoredPreferences: AgentPreference[];
   lang: Lang;
   title: LocalizedText;
@@ -3248,8 +3865,10 @@ function RunningWorkspace({
   onViewResults: () => void;
   steps: PlanStep[];
   usedKnowledgeRecords: ProjectKnowledgeRecord[];
+  usedLinkedDocs: ProjectLinkedDoc[];
   workflowCompleted: boolean;
   compact?: boolean;
+  kind?: ScenarioKind;
 }) {
   const text = copy[lang];
   const currentRunningStep = steps.find((step) => step.status === "running");
@@ -3261,6 +3880,14 @@ function RunningWorkspace({
   const [selectedReport, setSelectedReport] = useState<RunReport | null>(null);
   const [expandedReasoningKeys, setExpandedReasoningKeys] = useState<string[]>([]);
   const [taskNotificationsMuted, setTaskNotificationsMuted] = useState(false);
+  const [activeJumpIndex, setActiveJumpIndex] = useState(0);
+  const [streamFollowUpReady, setStreamFollowUpReady] = useState(false);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const messageRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const visibleMessages = useMemo(
+    () => (kind === "stream" && !streamFollowUpReady ? messages.slice(0, 2) : messages),
+    [kind, messages, streamFollowUpReady],
+  );
 
   useEffect(() => {
     setParametersOpen(false);
@@ -3271,7 +3898,38 @@ function RunningWorkspace({
     setSelectedReport(null);
     setExpandedReasoningKeys([]);
     setTaskNotificationsMuted(false);
+    setActiveJumpIndex(0);
+    setStreamFollowUpReady(false);
   }, [messages]);
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (!root) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((left, right) => right.intersectionRatio - left.intersectionRatio);
+        const index = Number(visible[0]?.target.getAttribute("data-msg-index"));
+        if (!Number.isNaN(index)) {
+          setActiveJumpIndex(index);
+        }
+      },
+      { root, threshold: [0.3, 0.6, 0.9] },
+    );
+
+    messageRefs.current.forEach((node) => {
+      if (node) observer.observe(node);
+    });
+
+    return () => observer.disconnect();
+  }, [visibleMessages]);
+
+  const jumpToMessage = (index: number) => {
+    setActiveJumpIndex(index);
+    messageRefs.current[index]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const toggleReasoning = (key: string) => {
     setExpandedReasoningKeys((current) => (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]));
@@ -3414,12 +4072,79 @@ function RunningWorkspace({
         </div>
       </div>
 
-      <div className={`min-h-0 flex-1 overflow-y-auto ${compact ? "px-4 py-4" : "px-6 py-6"}`}>
+      <div className="relative min-h-0 flex-1">
+      <div
+        ref={scrollRef}
+        className={`h-full overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${
+          compact ? "px-4 py-4 pr-10" : "px-6 py-6 pr-12"
+        }`}
+      >
         <div className="space-y-4 pb-1">
-          {messages.map((message, index) => {
+          {kind === "chat" || kind === "stream"
+            ? visibleMessages.map((message, index) => {
+                const isUser = message.role === "user";
+                return (
+                  <div
+                    key={`${message.role}-${index}`}
+                    id={`conversation-msg-${index}`}
+                    data-msg-index={index}
+                    ref={(node) => {
+                      messageRefs.current[index] = node;
+                    }}
+                    className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                  >
+                    {isUser ? (
+                      <div className="max-w-[72%] rounded-2xl bg-[#E8F1FF] px-4 py-3 text-[13px] leading-6 text-slate-800">
+                        {pick(lang, message.content)}
+                      </div>
+                    ) : kind === "stream" ? (
+                      <StreamingAgentTurn
+                        lang={lang}
+                        scrollRef={scrollRef}
+                        variant={message.streamVariant ?? "log"}
+                        onComplete={index === 1 ? () => setStreamFollowUpReady(true) : undefined}
+                      />
+                    ) : (
+                      <div className="group w-full max-w-[760px]">
+                        <div className="mb-2 flex items-center gap-2">
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[linear-gradient(135deg,#161FAD_0%,#848CFE_100%)] text-white">
+                            <Bot className="h-3.5 w-3.5" />
+                          </div>
+                          <span className="text-[13px] font-semibold text-[#161FAD]">Ailux Agent</span>
+                        </div>
+                        <div className="pl-8 text-[13px] leading-7 text-slate-700">
+                          {renderRichText(pick(lang, message.content))}
+                        </div>
+                        {message.rateable ? (
+                          <div className="pl-8">
+                            <ReportRating
+                              lang={lang}
+                              variant="chat"
+                              dimensionSet="chat"
+                              targetId={`chat-reply-${index}`}
+                              timestamp={message.timestamp ? pick(lang, message.timestamp) : message.time}
+                              duration={message.duration ? pick(lang, message.duration) : lang === "zh" ? "数秒" : "a few seconds"}
+                              copyText={pick(lang, message.content)}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            : messages.map((message, index) => {
             const isUser = message.role === "user";
             return (
-              <div key={`${message.role}-${index}`} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+              <div
+                key={`${message.role}-${index}`}
+                id={`conversation-msg-${index}`}
+                data-msg-index={index}
+                ref={(node) => {
+                  messageRefs.current[index] = node;
+                }}
+                className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+              >
                 <div
                   className={`max-w-[72%] rounded-[22px] border px-4 py-4 text-[13px] leading-6 shadow-[0_10px_28px_rgba(15,23,42,0.04)] ${
                     isUser
@@ -3490,7 +4215,7 @@ function RunningWorkspace({
             );
           })}
 
-          {workflowCompleted ? (
+          {workflowCompleted && kind !== "chat" && kind !== "stream" ? (
             <div className="flex justify-start">
               <article className="group w-full max-w-[980px] rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.06)] sm:px-5">
                 <div className="mb-2 flex items-center gap-2">
@@ -3517,53 +4242,82 @@ function RunningWorkspace({
                 <ReportRating
                   lang={lang}
                   targetId={`final-summary-${reports[0]?.id ?? "default"}`}
-                  timestamp="18:31"
+                  timestamp={lang === "zh" ? "6月26日 18:31" : "Jun 26, 18:31"}
+                  duration={lang === "zh" ? "1分55秒" : "1m 55s"}
                   copyText={[text.finalSummaryTitle, text.finalSummaryBody, text.finalSummaryOutcome].join("\n\n")}
                 />
               </article>
             </div>
           ) : null}
 
-          <UsedContextSummary
-            effectivePreferences={effectivePreferences}
-            ignoredKnowledgeRecords={ignoredKnowledgeRecords}
-            ignoredPreferences={ignoredPreferences}
-            lang={lang}
-            usedKnowledgeRecords={usedKnowledgeRecords}
-          />
-
-          <div className="pt-2">
-            <div className="rounded-[18px] border border-slate-200 bg-slate-50/90 px-3 py-2.5">
-              <textarea
-                value={prompt}
-                onChange={(event) => onPromptChange(event.target.value)}
-                className="min-h-[40px] w-full resize-none border-0 bg-transparent text-[13px] leading-5 outline-none placeholder:text-slate-400"
-                placeholder={text.runningPlaceholder}
+          {kind === "chat" || kind === "stream" ? null : (
+            <UsedContextSummary
+              blockedLinkedDocs={blockedLinkedDocs}
+              effectivePreferences={effectivePreferences}
+              ignoredKnowledgeRecords={ignoredKnowledgeRecords}
+              ignoredLinkedDocs={ignoredLinkedDocs}
+              ignoredPreferences={ignoredPreferences}
+              lang={lang}
+              usedKnowledgeRecords={usedKnowledgeRecords}
+              usedLinkedDocs={usedLinkedDocs}
+            />
+          )}
+        </div>
+      </div>
+      <div className="absolute right-4 top-1/2 z-20 flex -translate-y-1/2 flex-col items-end gap-0.5">
+        {visibleMessages.map((message, index) => {
+          const active = index === activeJumpIndex;
+          const preview = pick(lang, message.content).replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
+          return (
+            <button
+              key={`jump-bar-${index}`}
+              type="button"
+              data-testid={`jump-bar-${index}`}
+              onClick={() => jumpToMessage(index)}
+              aria-label={lang === "zh" ? `跳转到：${preview}` : `Jump to: ${preview}`}
+              title={preview}
+              className="group flex items-center justify-end py-1"
+            >
+              <span
+                className={`block h-[2px] rounded-full transition-all ${
+                  active ? "w-5 bg-slate-800" : "w-2.5 bg-slate-300 group-hover:w-4 group-hover:bg-slate-500"
+                }`}
               />
-              <AttachedContextChips items={attachedInputs} lang={lang} onRemove={onRemoveAttachedInput} />
-              <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-2">
-                <div className="flex items-center gap-1.5 text-slate-500">
-                  <button
-                    onClick={onOpenUploadDialog}
-                    className="rounded-xl p-1.5 transition hover:bg-white hover:text-[#161FAD]"
-                    title={text.uploadFile}
-                  >
-                    <Upload className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={onOpenResourceDialog}
-                    className="rounded-xl p-1.5 transition hover:bg-white hover:text-[#161FAD]"
-                    title={text.resourceReference}
-                  >
-                    <AtSign className="h-4 w-4" />
-                  </button>
-                </div>
-                <Button className="h-8 rounded-xl bg-[#161FAD] px-3.5 text-[12px] text-white hover:bg-[#1724D8]">
-                  {text.send}
-                  <SendHorizonal className="ml-1.5 h-3.5 w-3.5" />
-                </Button>
-              </div>
+            </button>
+          );
+        })}
+      </div>
+      </div>
+      <div className={`shrink-0 border-t border-slate-100 bg-white/90 ${compact ? "px-4 py-3" : "px-6 py-3"}`}>
+        <div className="rounded-[18px] border border-slate-200 bg-slate-50/90 px-3 py-2.5">
+          <textarea
+            value={prompt}
+            onChange={(event) => onPromptChange(event.target.value)}
+            className="min-h-[40px] w-full resize-none border-0 bg-transparent text-[13px] leading-5 outline-none placeholder:text-slate-400"
+            placeholder={text.runningPlaceholder}
+          />
+          <AttachedContextChips items={attachedInputs} lang={lang} onRemove={onRemoveAttachedInput} />
+          <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-2">
+            <div className="flex items-center gap-1.5 text-slate-500">
+              <button
+                onClick={onOpenUploadDialog}
+                className="rounded-xl p-1.5 transition hover:bg-white hover:text-[#161FAD]"
+                title={text.uploadFile}
+              >
+                <Upload className="h-4 w-4" />
+              </button>
+              <button
+                onClick={onOpenResourceDialog}
+                className="rounded-xl p-1.5 transition hover:bg-white hover:text-[#161FAD]"
+                title={text.resourceReference}
+              >
+                <AtSign className="h-4 w-4" />
+              </button>
             </div>
+            <Button className="h-8 rounded-xl bg-[#161FAD] px-3.5 text-[12px] text-white hover:bg-[#1724D8]">
+              {text.send}
+              <SendHorizonal className="ml-1.5 h-3.5 w-3.5" />
+            </Button>
           </div>
         </div>
       </div>
@@ -4544,9 +5298,11 @@ function StepLogDialog({
 function MonitorPanelContent({
   lang,
   steps,
+  onOpenDispatchMonitor,
 }: {
   lang: Lang;
   steps: PlanStep[];
+  onOpenDispatchMonitor: (status?: DispatchStatusFilter) => void;
 }) {
   const text = copy[lang];
   const [selectedStepLog, setSelectedStepLog] = useState<{ step: PlanStep; index: number } | null>(null);
@@ -4579,24 +5335,26 @@ function MonitorPanelContent({
     <div className="space-y-4">
       <div className="rounded-[18px] border border-slate-100 bg-white px-4 py-4">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="text-[13px] font-semibold text-slate-700">{text.monitorCluster}</p>
+          <p className="text-[13px] font-semibold text-slate-700">{lang === "zh" ? "调度任务" : "Dispatch jobs"}</p>
           <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[11px] text-slate-400">{text.monitorQueueValue}</span>
         </div>
         <div className="rounded-[14px] bg-slate-50/80 px-3 py-3">
           <div className="flex items-start gap-3">
             <Database className="mt-0.5 h-4 w-4 shrink-0 text-[#161FAD]" />
             <div className="min-w-0 flex-1">
-              <p className="text-[12px] leading-5 text-slate-600">{text.monitorClusterBody}</p>
+              <p className="text-[12px] leading-5 text-slate-600">
+                {lang === "zh" ? "调度平台明细在新标签页打开，默认按当前 Run 过滤。" : "Open dispatch platform details in a new tab, filtered to the current run by default."}
+              </p>
               <p className="mt-2 font-mono text-[11px] text-slate-400">{taskId}</p>
             </div>
           </div>
           <div className="mt-3 flex gap-2">
             <button
-              onClick={() => toast.message(lang === "zh" ? "将打开集群监控外链" : "Cluster monitor link will open")}
+              onClick={() => onOpenDispatchMonitor("all")}
               className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#161FAD] px-3 py-2 text-[12px] font-semibold text-white transition hover:bg-[#1724D8]"
             >
               <ArrowUpRight className="h-3.5 w-3.5" />
-              {text.monitorOpenCluster}
+              {lang === "zh" ? "查看调度任务" : "View dispatch jobs"}
             </button>
             <button
               onClick={handleCopyTaskId}
@@ -4680,6 +5438,173 @@ function MonitorPanelContent({
   );
 }
 
+function DispatchMonitorPage({
+  lang,
+  scope,
+  statusFilter,
+  taskTitle,
+  onBack,
+  onScopeChange,
+  onStatusFilterChange,
+}: {
+  lang: Lang;
+  scope: DispatchScope;
+  statusFilter: DispatchStatusFilter;
+  taskTitle: LocalizedText;
+  onBack: () => void;
+  onScopeChange: (scope: DispatchScope) => void;
+  onStatusFilterChange: (status: DispatchStatusFilter) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const scopedJobs = getDispatchJobsForScope(scope);
+  const summary = getDispatchSummary(scopedJobs);
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleJobs = scopedJobs.filter((job) => {
+    const statusMatch = statusFilter === "all" || job.status === statusFilter;
+    const queryMatch =
+      !normalizedQuery ||
+      `${job.model} ${job.name} ${job.runLabel} ${job.status} ${job.gpuModel}`.toLowerCase().includes(normalizedQuery);
+    return statusMatch && queryMatch;
+  });
+
+  return (
+    <section className="flex h-full min-h-0 flex-col rounded-[24px] border border-white/70 bg-white/90 shadow-[0_16px_40px_rgba(15,23,42,0.045)] backdrop-blur">
+      <div className="shrink-0 border-b border-slate-100 px-5 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <button
+              onClick={onBack}
+              className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-500 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              {lang === "zh" ? "返回工作台" : "Back to workspace"}
+            </button>
+            <p className="text-[18px] font-semibold text-[#070261]">{lang === "zh" ? "调度任务监控" : "Dispatch job monitor"}</p>
+            <p className="mt-1 text-[12px] leading-5 text-slate-500">
+              {lang === "zh" ? "来自 Ailux Agent" : "From Ailux Agent"} · {pick(lang, taskTitle)} · Run #3
+            </p>
+          </div>
+          <div className="rounded-[18px] border border-blue-100 bg-blue-50/60 px-4 py-3 text-right">
+            <p className="text-[11px] font-medium text-blue-700">{lang === "zh" ? "当前过滤结果" : "Current filter"}</p>
+            <p className="mt-1 text-[13px] font-semibold text-[#161FAD]">{formatDispatchSummary(lang, summary)}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1">
+            {[
+              { id: "run" as DispatchScope, label: lang === "zh" ? "本轮 Run" : "This run" },
+              { id: "conversation" as DispatchScope, label: lang === "zh" ? "整个对话" : "Conversation" },
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => onScopeChange(item.id)}
+                className={`rounded-xl px-3 py-1.5 text-[12px] font-medium transition ${
+                  scope === item.id ? "bg-white text-[#161FAD] shadow-[0_6px_16px_rgba(15,23,42,0.06)]" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={statusFilter}
+              onChange={(event) => onStatusFilterChange(event.target.value as DispatchStatusFilter)}
+              className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-[12px] text-slate-600 outline-none transition focus:border-[rgba(23,36,216,0.35)]"
+            >
+              <option value="all">{lang === "zh" ? "全部状态" : "All status"}</option>
+              <option value="running">{lang === "zh" ? "运行中" : "Running"}</option>
+              <option value="error">{lang === "zh" ? "失败" : "Error"}</option>
+              <option value="done">{lang === "zh" ? "完成" : "Done"}</option>
+              <option value="queued">{lang === "zh" ? "排队中" : "Queued"}</option>
+            </select>
+            <label className="flex h-9 min-w-[220px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-slate-400 transition focus-within:border-[rgba(23,36,216,0.35)]">
+              <Search className="h-3.5 w-3.5" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={lang === "zh" ? "搜索模型或作业名称" : "Search model or job"}
+                className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-300"
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
+        {visibleJobs.length === 0 ? (
+          <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 p-8 text-center">
+            <p className="text-[14px] font-semibold text-slate-700">
+              {scopedJobs.length === 0
+                ? lang === "zh" ? "当前对话尚未提交调度任务" : "No dispatch jobs submitted in this conversation"
+                : lang === "zh" ? "没有匹配的调度作业" : "No matching dispatch jobs"}
+            </p>
+            <p className="mt-2 text-[12px] text-slate-400">{lang === "zh" ? "调整状态或搜索条件后再试。" : "Try another status or search term."}</p>
+          </div>
+        ) : (
+          <div className="min-w-[980px] overflow-hidden rounded-[20px] border border-slate-200 bg-white">
+            <div className="grid grid-cols-[70px_160px_minmax(180px,1fr)_180px_80px_82px_82px_120px_96px_90px] border-b border-slate-100 bg-slate-50/80 px-4 py-3 text-[11px] font-semibold text-slate-400">
+              <span>#</span>
+              <span>{lang === "zh" ? "模型" : "Model"}</span>
+              <span>{lang === "zh" ? "名称" : "Name"}</span>
+              <span>{lang === "zh" ? "开始 / 结束时间" : "Start / end"}</span>
+              <span>{lang === "zh" ? "运行时间" : "Duration"}</span>
+              <span>{lang === "zh" ? "状态" : "Status"}</span>
+              <span>CPU</span>
+              <span>GPU</span>
+              <span>Memory</span>
+              <span>{lang === "zh" ? "操作" : "Actions"}</span>
+            </div>
+            {visibleJobs.map((job, index) => (
+              <div
+                key={job.id}
+                className={`grid grid-cols-[70px_160px_minmax(180px,1fr)_180px_80px_82px_82px_120px_96px_90px] items-center px-4 py-3 text-[12px] ${
+                  index !== 0 ? "border-t border-slate-100" : ""
+                } ${job.status === "error" ? "bg-red-50/35" : index % 2 ? "bg-slate-50/45" : "bg-white"}`}
+              >
+                <span className="font-mono text-[11px] text-slate-400">{index + 1}</span>
+                <span className="truncate text-slate-600" title={job.model}>{job.model}</span>
+                <span className="truncate font-medium text-slate-700" title={job.name}>{job.name}</span>
+                <span className="text-[11px] leading-4 text-slate-500">
+                  {job.startedAt}
+                  <br />
+                  {job.endedAt ?? "-"}
+                </span>
+                <span className="text-slate-500">{job.duration}</span>
+                <span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${dispatchStatusMeta[job.status].className}`}>
+                    {pick(lang, dispatchStatusMeta[job.status].label)}
+                  </span>
+                </span>
+                <span className="text-slate-500">{job.cpu}</span>
+                <span className="text-slate-500">{job.gpu}{job.gpuModel !== "-" ? ` · ${job.gpuModel}` : ""}</span>
+                <span className="text-slate-500">{job.memory} GB</span>
+                <span className="flex items-center gap-1.5 text-[#161FAD]">
+                  <button
+                    onClick={() => toast.message(lang === "zh" ? `打开日志：${job.name}` : `Open logs: ${job.name}`)}
+                    className="rounded-lg p-1.5 transition hover:bg-blue-50"
+                    title={lang === "zh" ? "日志" : "Logs"}
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => toast.message(lang === "zh" ? `打开详情：${job.id}` : `Open detail: ${job.id}`)}
+                    className="rounded-lg p-1.5 transition hover:bg-blue-50"
+                    title={lang === "zh" ? "详情" : "Detail"}
+                  >
+                    <PanelRightOpen className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function SidePanel({
   lang,
   view,
@@ -4702,6 +5627,7 @@ function SidePanel({
   onSaveFileToProject,
   onSaveFilesToProject,
   onSaveReportToProject,
+  onOpenDispatchMonitor,
   onSavePlanAsSkill,
 }: {
   lang: Lang;
@@ -4725,10 +5651,16 @@ function SidePanel({
   onSaveFileToProject: (file: ResultFile) => void;
   onSaveFilesToProject: (files: ResultFile[]) => void;
   onSaveReportToProject: (report: RunReport) => void;
+  onOpenDispatchMonitor: (status?: DispatchStatusFilter) => void;
   onSavePlanAsSkill: (name: string, description: string, steps: number) => void;
 }) {
   const text = copy[lang];
   const showEmpty = view === "new";
+  const planEmpty = showEmpty || steps.length === 0;
+  const resultsEmpty = showEmpty || resultFiles.length === 0;
+  const reportsEmpty = showEmpty || reports.length === 0;
+  const monitorEmpty = showEmpty || steps.length === 0;
+  const hideHistory = planEmpty && resultsEmpty && reportsEmpty;
   const projectPreferenceCount = effectivePreferences.filter((preference) => preference.scope === "project").length;
   const [flowOpen, setFlowOpen] = useState(false);
   const [planPreferencesOpen, setPlanPreferencesOpen] = useState(false);
@@ -4840,12 +5772,8 @@ function SidePanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {sideTab === "plan" ? (
-          showEmpty ? (
-            <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 p-5">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.plan}</p>
-              <h3 className="mt-1 text-[15px] font-semibold text-[#070261]">{text.waitingPlan}</h3>
-              <p className="mt-3 text-[12px] leading-6 text-slate-500">{text.waitingPlanBody}</p>
-            </div>
+          planEmpty ? (
+            <SidePanelEmptyState kind="plan" title={text.emptyPlanTitle} />
           ) : (
             <div>
               <div className="mb-4 pt-1">
@@ -4987,7 +5915,7 @@ function SidePanel({
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-3">
-                            <p className="text-[13px] font-semibold text-slate-800">{pick(lang, step.title)}</p>
+                            <p className="truncate text-[13px] font-semibold text-slate-800">{pick(lang, step.title)}</p>
                             <div className="flex shrink-0 items-center gap-1.5">
                               <button
                                 onClick={() => setSelectedStepLog({ step, index })}
@@ -5018,11 +5946,8 @@ function SidePanel({
             </div>
           )
         ) : sideTab === "reports" ? (
-          showEmpty ? (
-            <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 p-5">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.reports}</p>
-              <h3 className="mt-1 text-[15px] font-semibold text-[#070261]">{text.finalReports}</h3>
-            </div>
+          reportsEmpty ? (
+            <SidePanelEmptyState kind="reports" title={text.emptyReportsTitle} />
           ) : (
             <ReportsPanelContent
               lang={lang}
@@ -5032,24 +5957,17 @@ function SidePanel({
             />
           )
         ) : sideTab === "monitor" ? (
-          showEmpty ? (
-            <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 p-5">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.monitor}</p>
-              <h3 className="mt-1 text-[15px] font-semibold text-[#070261]">{text.monitorTitle}</h3>
-              <p className="mt-3 text-[12px] leading-6 text-slate-500">{text.monitorBody}</p>
-            </div>
+          monitorEmpty ? (
+            <SidePanelEmptyState kind="monitor" title={text.emptyMonitorTitle} />
           ) : (
             <MonitorPanelContent
               lang={lang}
               steps={steps}
+              onOpenDispatchMonitor={onOpenDispatchMonitor}
             />
           )
-        ) : showEmpty ? (
-          <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 p-5">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{text.results}</p>
-            <h3 className="mt-1 text-[15px] font-semibold text-[#070261]">{text.emptyResults}</h3>
-            <p className="mt-3 text-[12px] leading-6 text-slate-500">{text.emptyResultsBody}</p>
-          </div>
+        ) : resultsEmpty ? (
+          <SidePanelEmptyState kind="results" title={text.emptyChatResultsTitle} />
         ) : (
           <div>
             <div className="mb-4 rounded-[18px] border border-slate-200 bg-slate-50/90 px-3 py-2.5">
@@ -5265,7 +6183,7 @@ function SidePanel({
         )}
       </div>
 
-      {!showEmpty ? (
+      {!hideHistory ? (
         <div
           className={`shrink-0 border-t border-slate-200/80 bg-white/86 transition-[height] duration-300 ${
             historyExpanded ? "flex h-[52%] min-h-[320px] flex-col" : "h-[52px]"
@@ -5296,7 +6214,7 @@ function SidePanel({
 }
 
 export default function Home() {
-  const { activeProject, addProjectDataAsset, addUserResource, agentPreferences, mainView, setMainView, setResourceTab } = useProject();
+  const { activeProject, addProjectDataAsset, addUserResource, agentPreferences, currentUserCanReadDocs, feishuConnected, mainView, setMainView, setResourceTab } = useProject();
   const [lang, setLang] = useState<Lang>("zh");
   const [activeView, setActiveView] = useState<ViewMode>("new");
   const [activeScenarioId, setActiveScenarioId] = useState<ScenarioId>("dll3");
@@ -5306,7 +6224,7 @@ export default function Home() {
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [userCenterTab, setUserCenterTab] = useState<"profile" | "notifications" | "usage">("profile");
+  const [userCenterTab, setUserCenterTab] = useState<"profile" | "notifications" | "usage" | "connectors">("profile");
   const [attachDialogVariant, setAttachDialogVariant] = useState<"upload" | "resource" | null>(null);
   const [attachedInputs, setAttachedInputs] = useState<AttachedInput[]>([]);
   const [pendingSaveFiles, setPendingSaveFiles] = useState<ResultFile[]>([]);
@@ -5314,6 +6232,8 @@ export default function Home() {
   const [saveFolderName, setSaveFolderName] = useState("");
   const [ignoredPreferenceIds, setIgnoredPreferenceIds] = useState<string[]>([]);
   const [ignoredKnowledgeIds, setIgnoredKnowledgeIds] = useState<string[]>([]);
+  const [adoptedDocIds, setAdoptedDocIds] = useState<string[]>([]);
+  const [ignoredDocIds, setIgnoredDocIds] = useState<string[]>([]);
   const activeScenario = demoScenarios[activeScenarioId];
   const currentTaskId = "run-20260626-dll3-003";
   const [runtimeSteps, setRuntimeSteps] = useState<PlanStep[]>(() =>
@@ -5342,6 +6262,18 @@ export default function Home() {
   const ignoredKnowledgeRecords = useMemo(
     () => activeProject.knowledge.filter((record) => ignoredKnowledgeIds.includes(record.id)),
     [activeProject.knowledge, ignoredKnowledgeIds],
+  );
+  const usedLinkedDocs = useMemo(
+    () => activeProject.linkedDocs.filter((doc) => adoptedDocIds.includes(doc.id) && feishuConnected && currentUserCanReadDocs),
+    [activeProject.linkedDocs, adoptedDocIds, currentUserCanReadDocs, feishuConnected],
+  );
+  const blockedLinkedDocs = useMemo(
+    () => activeProject.linkedDocs.filter((doc) => adoptedDocIds.includes(doc.id) && (!feishuConnected || !currentUserCanReadDocs)),
+    [activeProject.linkedDocs, adoptedDocIds, currentUserCanReadDocs, feishuConnected],
+  );
+  const ignoredLinkedDocs = useMemo(
+    () => activeProject.linkedDocs.filter((doc) => ignoredDocIds.includes(doc.id)),
+    [activeProject.linkedDocs, ignoredDocIds],
   );
 
   useEffect(() => {
@@ -5417,15 +6349,20 @@ export default function Home() {
     setAttachedInputs([]);
     setIgnoredPreferenceIds([]);
     setIgnoredKnowledgeIds([]);
+    setAdoptedDocIds([]);
+    setIgnoredDocIds([]);
   };
 
   const handleStart = () => {
+    const isLiteConversation = activeScenario.kind === "chat" || activeScenario.kind === "stream";
     setRuntimeSteps(
-      activeScenarioId === "a2ui"
-        ? activeScenario.steps.map((step): PlanStep => ({ ...step, status: "waiting" }))
-        : createRuntimeSteps(activeScenario.steps),
+      isLiteConversation
+        ? []
+        : activeScenarioId === "a2ui"
+          ? activeScenario.steps.map((step): PlanStep => ({ ...step, status: "waiting" }))
+          : createRuntimeSteps(activeScenario.steps),
     );
-    setWorkflowCompleted(false);
+    setWorkflowCompleted(isLiteConversation);
     setMainView("workspace");
     setActiveView("running");
     setSideTab("plan");
@@ -5452,6 +6389,11 @@ export default function Home() {
     setSideTab("results");
   };
 
+  const handleOpenDispatchMonitor = (status: DispatchStatusFilter = "all") => {
+    const basePath = import.meta.env.BASE_URL === "/" ? "" : import.meta.env.BASE_URL.replace(/\/$/, "");
+    window.open(`${basePath}/dispatch-monitor?scope=run&status=${status}`, "_blank", "noopener,noreferrer");
+  };
+
   const handleNewConversation = () => {
     if (workflowTimerRef.current) {
       window.clearTimeout(workflowTimerRef.current);
@@ -5471,6 +6413,8 @@ export default function Home() {
     setAttachedInputs([]);
     setIgnoredPreferenceIds([]);
     setIgnoredKnowledgeIds([]);
+    setAdoptedDocIds([]);
+    setIgnoredDocIds([]);
   };
 
   const handleAttachInputs = (items: AttachedInput[]) => {
@@ -5641,6 +6585,13 @@ export default function Home() {
       return;
     }
 
+    if (action === "connectors") {
+      setUserCenterTab("connectors");
+      setMainView("user-center");
+      setUserMenuOpen(false);
+      return;
+    }
+
     if (action === "notifications") {
       setUserCenterTab("notifications");
       setMainView("user-center");
@@ -5671,7 +6622,7 @@ export default function Home() {
         <div
           ref={menuBoundaryRef}
           className={`grid min-h-0 flex-1 gap-4 ${
-            mainView !== "workspace" || activeView === "new"
+            mainView !== "workspace" || activeView === "new" || activeScenario.kind === "stream"
               ? "xl:grid-cols-[260px_minmax(0,1fr)]"
               : activeView === "result"
                 ? "xl:grid-cols-[88px_minmax(0,1fr)_360px]"
@@ -5704,14 +6655,25 @@ export default function Home() {
           ) : activeView === "new" ? (
             <NewTaskWorkspace
               attachedInputs={attachedInputs}
+              adoptedDocIds={adoptedDocIds}
+              canReadLinkedDocs={feishuConnected && currentUserCanReadDocs}
               effectivePreferences={activeAgentPreferences}
               ignoredPreferenceCount={ignoredAgentPreferences.length}
               lang={lang}
+              linkedDocs={activeProject.linkedDocs}
               prompt={composerValue}
               relevantKnowledgeRecords={activeKnowledgeRecords}
+              onAdoptLinkedDoc={(id) => {
+                setAdoptedDocIds((current) => Array.from(new Set([...current, id])));
+                setIgnoredDocIds((current) => current.filter((item) => item !== id));
+              }}
               onOpenResourceDialog={() => setAttachDialogVariant("resource")}
               onOpenUploadDialog={() => setAttachDialogVariant("upload")}
               onIgnoreKnowledgeRecord={(id) => setIgnoredKnowledgeIds((current) => Array.from(new Set([...current, id])))}
+              onIgnoreLinkedDoc={(id) => {
+                setIgnoredDocIds((current) => Array.from(new Set([...current, id])));
+                setAdoptedDocIds((current) => current.filter((item) => item !== id));
+              }}
               onIgnorePreference={(id) => setIgnoredPreferenceIds((current) => Array.from(new Set([...current, id])))}
               onPromptChange={setComposerValue}
               onPromptPick={handlePromptPick}
@@ -5721,8 +6683,10 @@ export default function Home() {
           ) : (
             <RunningWorkspace
               attachedInputs={attachedInputs}
+              blockedLinkedDocs={blockedLinkedDocs}
               effectivePreferences={activeAgentPreferences}
               ignoredKnowledgeRecords={ignoredKnowledgeRecords}
+              ignoredLinkedDocs={ignoredLinkedDocs}
               ignoredPreferences={ignoredAgentPreferences}
               lang={lang}
               title={activeScenario.title}
@@ -5739,12 +6703,14 @@ export default function Home() {
               onViewResults={handleViewCurrentResults}
               steps={runtimeSteps}
               usedKnowledgeRecords={activeKnowledgeRecords}
+              usedLinkedDocs={usedLinkedDocs}
               workflowCompleted={workflowCompleted}
               compact={activeView === "result"}
+              kind={activeScenario.kind}
             />
           )}
 
-          {mainView === "workspace" && activeView !== "new" ? (
+          {mainView === "workspace" && activeView !== "new" && activeScenario.kind !== "stream" ? (
             <SidePanel
               lang={lang}
               view={activeView}
@@ -5767,6 +6733,7 @@ export default function Home() {
               onSaveFileToProject={handleSaveFileToProject}
               onSaveFilesToProject={openBatchSaveDialog}
               onSaveReportToProject={handleSaveReportToProject}
+              onOpenDispatchMonitor={handleOpenDispatchMonitor}
               onSavePlanAsSkill={handleSavePlanAsSkill}
             />
           ) : null}

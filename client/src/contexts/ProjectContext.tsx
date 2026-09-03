@@ -42,6 +42,22 @@ export type ProjectKnowledgeRecord = {
   tags?: string[];
 };
 
+export type ProjectLinkedDocType = "docx" | "wiki";
+export type ProjectLinkedDocScope = "full" | "section";
+
+export type ProjectLinkedDoc = {
+  id: string;
+  url: string;
+  docToken: string;
+  title: string;
+  type: ProjectLinkedDocType;
+  boundBy: string;
+  boundAt: string;
+  scope: ProjectLinkedDocScope;
+  sectionTitle?: string;
+  outline: string[];
+};
+
 export type UserResource = {
   id: string;
   kind: "tool" | "skill";
@@ -79,7 +95,7 @@ export type AgentPreference = {
 
 export type ProjectDataFileType = Exclude<ProjectDataAsset["type"], "folder">;
 
-export type ProjectDetailView = "data" | "knowledge" | "members";
+export type ProjectDetailView = "data" | "knowledge" | "documents" | "members";
 
 export type Project = {
   id: string;
@@ -91,6 +107,7 @@ export type Project = {
   members: ProjectMember[];
   data: ProjectDataAsset[];
   knowledge: ProjectKnowledgeRecord[];
+  linkedDocs: ProjectLinkedDoc[];
   createdAt: string;
 };
 
@@ -186,6 +203,32 @@ const defaultKnowledge: ProjectKnowledgeRecord[] = [
       "接口疏水面积与实验活性存在非线性关系，建议使用树模型优先建模。",
     ],
     tags: ["internalization", "GBM", "cutoff"],
+  },
+];
+
+const defaultLinkedDocs: ProjectLinkedDoc[] = [
+  {
+    id: "ld-dll3-goal",
+    url: "https://xtalpi.feishu.cn/docx/LnTVdVkyKossMIx18bUc7uy4nre",
+    docToken: "LnTVdVkyKossMIx18bUc7uy4nre",
+    title: "DLL3 项目目标与约束",
+    type: "docx",
+    boundBy: "于靖华",
+    boundAt: "2026-08-20",
+    scope: "section",
+    sectionTitle: "实验约束",
+    outline: ["项目目标", "实验约束", "数据口径", "评审结论"],
+  },
+  {
+    id: "ld-dll3-review",
+    url: "https://xtalpi.feishu.cn/wiki/LMl8wxr5OixCcKkEExfcrxkHnYg",
+    docToken: "LMl8wxr5OixCcKkEExfcrxkHnYg",
+    title: "DLL3 周评审纪要",
+    type: "wiki",
+    boundBy: "于靖华",
+    boundAt: "2026-08-22",
+    scope: "full",
+    outline: ["本周结论", "待确认事项", "下一轮实验安排"],
   },
 ];
 
@@ -396,6 +439,7 @@ export const SAMPLE_PROJECTS: Project[] = [
     members: defaultMembers,
     data: defaultData,
     knowledge: defaultKnowledge,
+    linkedDocs: defaultLinkedDocs,
     createdAt: "2026-03-01",
   },
   {
@@ -406,6 +450,20 @@ export const SAMPLE_PROJECTS: Project[] = [
     color: "#0891b2",
     members: [defaultMembers[0], defaultMembers[1]],
     data: [defaultData[3]],
+    linkedDocs: [
+      {
+        id: "ld-egfr-brief",
+        url: "https://xtalpi.feishu.cn/docx/EGFRBriefToken001",
+        docToken: "EGFRBriefToken001",
+        title: "EGFR 项目背景",
+        type: "docx",
+        boundBy: "Chen Lab",
+        boundAt: "2026-07-18",
+        scope: "section",
+        sectionTitle: "CDR 优化约束",
+        outline: ["背景", "CDR 优化约束", "候选筛选标准"],
+      },
+    ],
     knowledge: [
       {
         id: "kb-egfr-001",
@@ -430,6 +488,7 @@ export const SAMPLE_PROJECTS: Project[] = [
     members: [defaultMembers[0]],
     data: [],
     knowledge: [],
+    linkedDocs: [],
     createdAt: "2026-04-15",
   },
 ];
@@ -457,6 +516,13 @@ type ProjectContextType = {
   addProjectMember: (projectId: string, email: string, role: ProjectMember["role"]) => ProjectMember | null;
   updateProjectMemberRole: (projectId: string, memberId: string, role: ProjectMember["role"]) => void;
   removeProjectMember: (projectId: string, memberId: string) => void;
+  addLinkedDoc: (projectId: string, doc: Omit<ProjectLinkedDoc, "id" | "boundAt">) => "created" | "existing" | "invalid";
+  updateLinkedDoc: (projectId: string, docId: string, updates: Partial<Pick<ProjectLinkedDoc, "title" | "scope" | "sectionTitle">>) => void;
+  removeLinkedDoc: (projectId: string, docId: string) => void;
+  feishuConnected: boolean;
+  setFeishuConnected: (connected: boolean) => void;
+  currentUserCanReadDocs: boolean;
+  setCurrentUserCanReadDocs: (canRead: boolean) => void;
   // Legacy (kept for backward compat, now unused)
   projectPanelOpen: boolean;
   setProjectPanelOpen: (open: boolean) => void;
@@ -480,6 +546,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [mainView, setMainView] = useState<MainView>("workspace");
   const [projectDetailView, setProjectDetailView] = useState<ProjectDetailView>("data");
   const [resourceTab, setResourceTab] = useState<"data" | "skill" | "template" | "preference">("data");
+  const [feishuConnected, setFeishuConnected] = useState(true);
+  const [currentUserCanReadDocs, setCurrentUserCanReadDocs] = useState(true);
 
   const createProject = (name: string, description: string, projectCode?: string): Project => {
     const colors = ["#161FAD", "#0891b2", "#7c3aed", "#059669", "#dc2626", "#d97706"];
@@ -492,6 +560,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       members: [defaultMembers[0]],
       data: [],
       knowledge: [],
+      linkedDocs: [],
       createdAt: new Date().toISOString().slice(0, 10),
     };
     setProjects((prev) => [...prev, newProject]);
@@ -681,6 +750,49 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return addedMember;
   };
 
+  const addLinkedDoc = (projectId: string, doc: Omit<ProjectLinkedDoc, "id" | "boundAt">) => {
+    let result: "created" | "existing" | "invalid" = "created";
+    if (!doc.docToken || !doc.url || !doc.title) {
+      return "invalid";
+    }
+
+    syncProject(projectId, (project) => {
+      const exists = project.linkedDocs.some((item) => item.docToken === doc.docToken && item.sectionTitle === doc.sectionTitle);
+      if (exists) {
+        result = "existing";
+        return project;
+      }
+
+      return {
+        ...project,
+        linkedDocs: [
+          {
+            ...doc,
+            id: `ld-${Date.now()}`,
+            boundAt: new Date().toISOString().slice(0, 10),
+          },
+          ...project.linkedDocs,
+        ],
+      };
+    });
+
+    return result;
+  };
+
+  const updateLinkedDoc = (projectId: string, docId: string, updates: Partial<Pick<ProjectLinkedDoc, "title" | "scope" | "sectionTitle">>) => {
+    syncProject(projectId, (project) => ({
+      ...project,
+      linkedDocs: project.linkedDocs.map((doc) => (doc.id === docId ? { ...doc, ...updates } : doc)),
+    }));
+  };
+
+  const removeLinkedDoc = (projectId: string, docId: string) => {
+    syncProject(projectId, (project) => ({
+      ...project,
+      linkedDocs: project.linkedDocs.filter((doc) => doc.id !== docId),
+    }));
+  };
+
   const updateProjectMemberRole = (projectId: string, memberId: string, role: ProjectMember["role"]) => {
     syncProject(projectId, (project) => {
       return {
@@ -723,6 +835,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         addProjectMember,
         updateProjectMemberRole,
         removeProjectMember,
+        addLinkedDoc,
+        updateLinkedDoc,
+        removeLinkedDoc,
+        feishuConnected,
+        setFeishuConnected,
+        currentUserCanReadDocs,
+        setCurrentUserCanReadDocs,
         projectPanelOpen,
         setProjectPanelOpen,
         mainView,

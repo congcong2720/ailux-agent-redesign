@@ -1,6 +1,6 @@
 /*
  * ProjectPanel — 项目详情内嵌视图（替换原弹窗，直接渲染在主区域）
- * Tabs: 数据 / 知识库 / 成员
+ * Tabs: 数据 / 知识库 / 关联文档 / 成员
  * 设计语言：Ailux 蓝色系，HarmonyOS Sans SC
  */
 import { useRef, useState } from "react";
@@ -8,6 +8,8 @@ import {
   Database,
   Users,
   FileText,
+  Link2,
+  ExternalLink,
   Upload,
   FolderUp,
   FolderOpen,
@@ -25,13 +27,14 @@ import {
   X,
   Mail,
   Pencil,
+  Plus,
   Trash2,
   ArrowDownToLine,
   Eye,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useProject, Project, ProjectDataAsset, ProjectDataChild, ProjectDataFileType, ProjectMember } from "@/contexts/ProjectContext";
+import { useProject, Project, ProjectDataAsset, ProjectDataChild, ProjectDataFileType, ProjectLinkedDoc, ProjectMember } from "@/contexts/ProjectContext";
 import { toast } from "sonner";
 
 type Lang = "zh" | "en";
@@ -871,6 +874,242 @@ function KnowledgeBaseTab({ project, lang }: { project: Project; lang: Lang }) {
   );
 }
 
+function parseFeishuDocLink(raw: string) {
+  const value = raw.trim();
+  const match = value.match(/https?:\/\/[^/\s]+\/(docx|wiki)\/([A-Za-z0-9]+)/i);
+  if (!match) return null;
+  return {
+    url: value.split(/[?#]/)[0],
+    type: match[1].toLowerCase() as ProjectLinkedDoc["type"],
+    docToken: match[2],
+  };
+}
+
+function LinkedDocumentsTab({ project, lang }: { project: Project; lang: Lang }) {
+  const { addLinkedDoc, removeLinkedDoc, updateLinkedDoc, feishuConnected } = useProject();
+  const [bindOpen, setBindOpen] = useState(false);
+  const [url, setUrl] = useState("");
+  const [title, setTitle] = useState("");
+  const [editingDoc, setEditingDoc] = useState<ProjectLinkedDoc | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [removeDocId, setRemoveDocId] = useState<string | null>(null);
+  const removeDoc = project.linkedDocs.find((doc) => doc.id === removeDocId);
+
+  const resetBindForm = () => {
+    setUrl("");
+    setTitle("");
+  };
+
+  const handleBind = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!feishuConnected) {
+      toast.error(lang === "zh" ? "请先在用户中心关联飞书" : "Connect Feishu in User Center first");
+      return;
+    }
+
+    const parsed = parseFeishuDocLink(url);
+    if (!parsed) {
+      toast.error(lang === "zh" ? "请粘贴有效的飞书文档或 Wiki 链接" : "Paste a valid Feishu docx or wiki link");
+      return;
+    }
+
+    const nextTitle = title.trim() || (parsed.type === "wiki" ? (lang === "zh" ? "未命名 Wiki 节点" : "Untitled wiki node") : (lang === "zh" ? "未命名飞书文档" : "Untitled Feishu doc"));
+    const result = addLinkedDoc(project.id, {
+      url: parsed.url,
+      docToken: parsed.docToken,
+      title: nextTitle,
+      type: parsed.type,
+      boundBy: "于靖华",
+      scope: "full",
+      outline: [],
+    });
+
+    if (result === "existing") {
+      toast.message(lang === "zh" ? "该文档已绑定" : "This document is already bound");
+      return;
+    }
+
+    setBindOpen(false);
+    resetBindForm();
+    toast.success(lang === "zh" ? "已绑定" : "Bound");
+  };
+
+  const handleEdit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingDoc || !editTitle.trim()) {
+      toast.error(lang === "zh" ? "标题不能为空" : "Title is required");
+      return;
+    }
+    updateLinkedDoc(project.id, editingDoc.id, { title: editTitle.trim() });
+    setEditingDoc(null);
+    toast.success(lang === "zh" ? "已更新" : "Updated");
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[12px] text-slate-400">
+          {lang === "zh" ? `关联飞书文档，只保存链接与标题。${project.linkedDocs.length} 篇` : `${project.linkedDocs.length} linked docs. Links and titles only.`}
+        </p>
+        <button
+          onClick={() => setBindOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-[#161FAD] px-3.5 py-2 text-[12px] font-semibold text-white transition hover:bg-[#111996]"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {lang === "zh" ? "绑定文档" : "Bind"}
+        </button>
+      </div>
+
+      {project.linkedDocs.length > 0 ? (
+        <div className="overflow-hidden rounded-[16px] border border-slate-200 bg-white">
+          <div className="grid grid-cols-[minmax(0,1fr)_72px_150px_88px] border-b border-slate-100 bg-slate-50/80 px-4 py-2.5 text-[11px] font-medium text-slate-400">
+            <span>{lang === "zh" ? "文档" : "Document"}</span>
+            <span>{lang === "zh" ? "类型" : "Type"}</span>
+            <span>{lang === "zh" ? "绑定人 / 时间" : "Bound by"}</span>
+            <span className="text-right">{lang === "zh" ? "操作" : "Actions"}</span>
+          </div>
+          {project.linkedDocs.map((doc, index) => (
+            <div
+              key={doc.id}
+              className={`grid grid-cols-[minmax(0,1fr)_72px_150px_88px] items-center px-4 py-2.5 ${index !== 0 ? "border-t border-slate-100" : ""}`}
+            >
+              <div className="min-w-0">
+                <p className="truncate text-[13px] font-medium text-slate-800">{doc.title}</p>
+              </div>
+              <span className="text-[11px] text-slate-400">{doc.type === "wiki" ? "Wiki" : "Docx"}</span>
+              <span className="truncate text-[11px] text-slate-400">{doc.boundBy} · {doc.boundAt}</span>
+              <div className="flex justify-end gap-1">
+                <a
+                  href={doc.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50 hover:text-[#161FAD]"
+                  title={lang === "zh" ? "打开" : "Open"}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+                <button
+                  onClick={() => {
+                    setEditingDoc(doc);
+                    setEditTitle(doc.title);
+                  }}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50 hover:text-[#161FAD]"
+                  title={lang === "zh" ? "编辑" : "Edit"}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => setRemoveDocId(doc.id)}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"
+                  title={lang === "zh" ? "删除" : "Delete"}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center rounded-[16px] border border-dashed border-slate-200 bg-slate-50/70 py-14 text-center">
+          <p className="text-[13px] text-slate-400">{lang === "zh" ? "暂无关联文档" : "No linked documents"}</p>
+        </div>
+      )}
+
+      <Dialog open={bindOpen} onOpenChange={(open) => { setBindOpen(open); if (!open) resetBindForm(); }}>
+        <DialogContent className="rounded-[24px] border-white/70 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[460px]">
+          <DialogHeader className="border-b border-slate-100 px-5 py-4">
+            <DialogTitle className="text-[15px] font-semibold text-[#070261]">
+              {lang === "zh" ? "绑定文档" : "Bind document"}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleBind} className="grid gap-4 px-5 py-5">
+            <label className="grid gap-1.5">
+              <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "飞书链接" : "Feishu URL"}</span>
+              <input
+                value={url}
+                onChange={(event) => setUrl(event.target.value)}
+                placeholder="https://xxx.feishu.cn/docx/..."
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 outline-none focus:border-[rgba(23,36,216,0.3)]"
+              />
+            </label>
+            <label className="grid gap-1.5">
+              <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "标题" : "Title"}</span>
+              <input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 outline-none focus:border-[rgba(23,36,216,0.3)]"
+              />
+            </label>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setBindOpen(false)} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-medium text-slate-500">
+                {lang === "zh" ? "取消" : "Cancel"}
+              </button>
+              <button type="submit" className="rounded-xl bg-[#161FAD] px-4 py-2 text-[12px] font-semibold text-white">
+                {lang === "zh" ? "绑定" : "Bind"}
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(editingDoc)} onOpenChange={(open) => !open && setEditingDoc(null)}>
+        <DialogContent className="rounded-[24px] border-white/70 bg-white p-0 sm:max-w-[420px]">
+          <DialogHeader className="border-b border-slate-100 px-5 py-4">
+            <DialogTitle className="text-[15px] font-semibold text-[#070261]">
+              {lang === "zh" ? "编辑标题" : "Edit title"}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="grid gap-4 px-5 py-5">
+            <input
+              value={editTitle}
+              onChange={(event) => setEditTitle(event.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 outline-none focus:border-[rgba(23,36,216,0.3)]"
+            />
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setEditingDoc(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-[12px] text-slate-500">
+                {lang === "zh" ? "取消" : "Cancel"}
+              </button>
+              <button type="submit" className="rounded-xl bg-[#161FAD] px-4 py-2 text-[12px] font-semibold text-white">
+                {lang === "zh" ? "保存" : "Save"}
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(removeDoc)} onOpenChange={(open) => !open && setRemoveDocId(null)}>
+        <DialogContent className="rounded-[24px] border-white/70 bg-white p-0 sm:max-w-[420px]">
+          <DialogHeader className="border-b border-slate-100 px-5 py-4">
+            <DialogTitle className="text-[15px] font-semibold text-[#070261]">
+              {lang === "zh" ? "删除关联" : "Remove link"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="px-5 py-5">
+            <p className="text-[13px] text-slate-600">
+              {lang === "zh" ? `删除「${removeDoc?.title}」？` : `Remove "${removeDoc?.title}"?`}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button onClick={() => setRemoveDocId(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-[12px] text-slate-500">
+                {lang === "zh" ? "取消" : "Cancel"}
+              </button>
+              <button
+                onClick={() => {
+                  if (removeDoc) removeLinkedDoc(project.id, removeDoc.id);
+                  setRemoveDocId(null);
+                  toast.success(lang === "zh" ? "已删除" : "Removed");
+                }}
+                className="rounded-xl bg-red-500 px-4 py-2 text-[12px] font-semibold text-white"
+              >
+                {lang === "zh" ? "删除" : "Delete"}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 function MembersTab({ project, lang }: { project: Project; lang: Lang }) {
   const { addProjectMember, updateProjectMemberRole, removeProjectMember } = useProject();
   const members = project.members;
@@ -1168,9 +1407,10 @@ export function ProjectPanel({ lang }: { lang: Lang }) {
     toast.success(lang === "zh" ? `已删除项目「${deletedProjectName}」` : `Deleted project "${deletedProjectName}"`);
   };
 
-  const tabs: { key: "data" | "knowledge" | "members"; label: string; labelEn: string; icon: React.ReactNode }[] = [
+  const tabs: { key: "data" | "knowledge" | "documents" | "members"; label: string; labelEn: string; icon: React.ReactNode }[] = [
     { key: "data", label: "数据", labelEn: "Data", icon: <Database className="h-3.5 w-3.5" /> },
     { key: "knowledge", label: "知识库", labelEn: "Knowledge Base", icon: <FileText className="h-3.5 w-3.5" /> },
+    { key: "documents", label: "关联文档", labelEn: "Linked Docs", icon: <Link2 className="h-3.5 w-3.5" /> },
     { key: "members", label: "成员", labelEn: "Members", icon: <Users className="h-3.5 w-3.5" /> },
   ];
 
@@ -1349,6 +1589,7 @@ export function ProjectPanel({ lang }: { lang: Lang }) {
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {projectDetailView === "data" && <DataTab project={activeProject} lang={lang} />}
         {projectDetailView === "knowledge" && <KnowledgeBaseTab project={activeProject} lang={lang} />}
+        {projectDetailView === "documents" && <LinkedDocumentsTab project={activeProject} lang={lang} />}
         {projectDetailView === "members" && <MembersTab project={activeProject} lang={lang} />}
       </div>
 

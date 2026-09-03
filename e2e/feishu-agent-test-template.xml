@@ -1,0 +1,207 @@
+<title>AiluxAgent 测试环境备忘（模版）</title>
+<callout emoji="📝" background-color="light-blue" border-color="blue" text-color="blue">
+<p><b>用途</b>：集中维护 Agent 测试所需的环境信息、登录方式、本地命令与走查清单。请把下方「【待填写】」改成你的实际值；本模版可复制多份（按环境/迭代）。</p>
+<p><b>安全</b>：<span text-color="red">access_token 等同账号钥匙</span>。勿把真实 token 贴到公开群/对外文档；建议仅本人可编辑，过期后及时作废并更新本页。</p>
+</callout>
+<h1>1. 环境信息（请填写）</h1>
+<table>
+  <colgroup>
+    <col width="160"/>
+    <col width="420"/>
+    <col width="200"/>
+  </colgroup>
+  <thead>
+    <tr>
+      <th background-color="light-blue">项</th>
+      <th background-color="light-blue">值</th>
+      <th background-color="light-blue">备注</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>环境名称</td>
+      <td>【待填写】例：测试环境 / 预发</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>平台首页</td>
+      <td>https://test-agent.ailuxbio.com/</td>
+      <td>可改</td>
+    </tr>
+    <tr>
+      <td>登录页</td>
+      <td>https://test-agent.ailuxbio.com/login</td>
+      <td>XOps SSO</td>
+    </tr>
+    <tr>
+      <td>Agent 入口</td>
+      <td>https://test-agent.ailuxbio.com/agent</td>
+      <td>微前端 iframe</td>
+    </tr>
+    <tr>
+      <td>测试账号邮箱</td>
+      <td>【待填写】</td>
+      <td>勿写密码</td>
+    </tr>
+    <tr>
+      <td>access_token</td>
+      <td>【待填写】从 Cookie 复制</td>
+      <td>见下节取法</td>
+    </tr>
+    <tr>
+      <td>token 过期时间</td>
+      <td>【待填写】</td>
+      <td>JWT exp</td>
+    </tr>
+    <tr>
+      <td>本地仓库路径</td>
+      <td>【待填写】例：Desktop\python\ailux-agent-redesign</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>负责人</td>
+      <td>【待填写】</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>更新日期</td>
+      <td>【待填写】</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+<hr/>
+<h1>2. 登录与 Token</h1>
+<callout emoji="⚠️" background-color="light-orange" border-color="orange" text-color="orange">
+<p>测试站登录走 <b>XOps</b>（<code>VITE_SSO_PROVIDER=xops</code>）。账密提交 <code>POST /api/v1/xops/oauth2/authorize</code>，成功后跳转 <code>redirect_url</code>。自动化弹窗易卡在此链路，推荐用 token / 已登录 Chrome 导出态。</p>
+</callout>
+<h2>2.1 如何取 access_token</h2>
+<ol>
+  <li seq="auto">用日常浏览器登录测试站</li>
+  <li seq="auto">F12 → Application → Cookies → 选中站点域名</li>
+  <li seq="auto">复制 <code>access_token</code> 的值，粘贴到上表</li>
+  <li seq="auto">可选校验：请求 <code>GET /api/v1/auth/me</code>，Header <code>Authorization: Bearer &lt;token&gt;</code>，期望 200</li>
+</ol>
+<h2>2.2 本地注入（PowerShell）</h2>
+<pre lang="powershell" caption="用 token 写入登录态并打开页面">
+cd 【仓库路径】
+$env:AILUX_ACCESS_TOKEN="【粘贴 token】"
+$env:TARGET_URL="https://test-agent.ailuxbio.com/home"
+pnpm test:e2e:auth:token
+</pre>
+<p>成功后会生成 <code>e2e/.auth/user.json</code>（已 gitignore，勿提交）。</p>
+<hr/>
+<h1>3. 本地自动化命令</h1>
+<table>
+  <colgroup>
+    <col width="220"/>
+    <col width="280"/>
+    <col width="280"/>
+  </colgroup>
+  <thead>
+    <tr>
+      <th background-color="light-green">命令</th>
+      <th background-color="light-green">作用</th>
+      <th background-color="light-green">前置</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pnpm test:e2e:auth:token</code></td>
+      <td>token 注入登录态</td>
+      <td>AILUX_ACCESS_TOKEN</td>
+    </tr>
+    <tr>
+      <td><code>pnpm test:e2e:remote:ask</code></td>
+      <td>提问「核心能力」冒烟</td>
+      <td>user.json</td>
+    </tr>
+    <tr>
+      <td><code>pnpm test:e2e:remote:walk</code></td>
+      <td>远程功能走查（约 19 项）</td>
+      <td>user.json</td>
+    </tr>
+    <tr>
+      <td><code>pnpm test:e2e:remote:headed</code></td>
+      <td>远程 Playwright 套件（有界面）</td>
+      <td>user.json</td>
+    </tr>
+    <tr>
+      <td><code>pnpm test:e2e</code></td>
+      <td>本地原型黄金路径</td>
+      <td>无需登录</td>
+    </tr>
+  </tbody>
+</table>
+<hr/>
+<h1>4. Agent 走查清单（可勾选）</h1>
+<p>按需增删；通过打勾，失败在「问题记录」写链接/截图。</p>
+<checkbox done="false">首页已登录，可见「探索 AiluxAgent」与登出</checkbox>
+<checkbox done="false">进入 /agent，侧栏可见新任务 / 全局资源 / 任务列表 / 已登录</checkbox>
+<checkbox done="false">新任务页：输入框 + 推荐任务可见</checkbox>
+<checkbox done="false">打开历史会话，追问框 placeholder 正常</checkbox>
+<checkbox done="false">向 Agent 提问并收到完整回复（非一直「思考中」）</checkbox>
+<checkbox done="false">回复后可切换：计划 / 结果 / 报告（及历史计划若有）</checkbox>
+<checkbox done="false">全局资源面板可打开</checkbox>
+<checkbox done="false">侧栏任务搜索可用</checkbox>
+<checkbox done="false">用户身份展示正确（姓名 / 角色）</checkbox>
+<checkbox done="false">【待补充】偏好设置 / 我的资源</checkbox>
+<checkbox done="false">【待补充】上传文件后提问</checkbox>
+<checkbox done="false">【待补充】长任务 Plan→执行→结果</checkbox>
+<hr/>
+<h1>5. 建议提问样例</h1>
+<ul>
+  <li>请用中文简要说明你有哪些核心能力？列出 5 条即可。</li>
+  <li>请用一句话介绍你自己。</li>
+  <li>【待填写】业务场景题 1</li>
+  <li>【待填写】业务场景题 2</li>
+</ul>
+<hr/>
+<h1>6. 问题与备注</h1>
+<table>
+  <colgroup>
+    <col width="80"/>
+    <col width="200"/>
+    <col width="280"/>
+    <col width="120"/>
+  </colgroup>
+  <thead>
+    <tr>
+      <th background-color="light-yellow">日期</th>
+      <th background-color="light-yellow">现象</th>
+      <th background-color="light-yellow">原因/处理</th>
+      <th background-color="light-yellow">状态</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>【待填】</td>
+      <td>例：账密登录一直转圈</td>
+      <td>XOps 跳转/代理；改用 token</td>
+      <td>已知</td>
+    </tr>
+    <tr>
+      <td>【待填】</td>
+      <td>例：新任务页无计划 Tab</td>
+      <td>需先有会话回复后才出现</td>
+      <td>产品行为</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+<hr/>
+<h1>7. 相关链接</h1>
+<ul>
+  <li>测试站：<a href="https://test-agent.ailuxbio.com/">https://test-agent.ailuxbio.com/</a></li>
+  <li>【待填写】完整测试方案文档链接</li>
+  <li>【待填写】需求 / PRD 链接</li>
+  <li>本地报告目录：<code>test-results/remote-walkthrough/</code>、<code>test-results/remote-agent-smoke/</code></li>
+</ul>
+<callout emoji="✅" background-color="light-green" border-color="green" text-color="green">
+<p>使用建议：复制本模版 → 改标题为「AiluxAgent 测试备忘 · YYYY-MM」→ 只改表格与勾选，命令区尽量保持稳定，方便迭代对比。</p>
+</callout>
