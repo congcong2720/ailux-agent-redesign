@@ -150,7 +150,23 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+function spaDeepLinkFallback(): Plugin {
+  return {
+    name: "spa-deep-link-fallback",
+    closeBundle() {
+      const outDir = path.resolve(PROJECT_ROOT, "dist/public");
+      const index = path.join(outDir, "index.html");
+      if (!fs.existsSync(index)) return;
+      fs.copyFileSync(index, path.join(outDir, "404.html"));
+      fs.writeFileSync(path.join(outDir, ".nojekyll"), "");
+      const nested = path.join(outDir, "dispatch-monitor");
+      fs.mkdirSync(nested, { recursive: true });
+      fs.copyFileSync(index, path.join(nested, "index.html"));
+    },
+  };
+}
+
+const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), spaDeepLinkFallback()];
 const isGitHubPages = process.env.GITHUB_PAGES === "true";
 
 export default defineConfig({

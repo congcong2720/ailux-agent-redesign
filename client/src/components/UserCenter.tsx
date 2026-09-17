@@ -36,24 +36,35 @@ const usageRecords = [
 
 const notificationRules = [
   {
-    id: "hitl-required",
-    zh: "需要人工确认",
-    en: "Human confirmation required",
-    channel: "HITL 阻塞满 15 分钟仍未确认时提醒",
-    enabled: true,
-  },
-  {
     id: "task-failed",
     zh: "任务失败",
     en: "Task failed",
-    channel: "异常终态通知",
+    channel: "已确认本轮有 HPC 作业后才通知；对话式任务、尚无法判断时都不通知",
+    channelEn: "Notify only after an HPC job is confirmed; conversational and undetermined runs stay silent",
+    enabled: true,
+  },
+  {
+    id: "hitl-required",
+    zh: "需要人工处理",
+    en: "Human action required",
+    channel: "已确认本轮有 HPC 作业后才通知；对话式任务、尚无法判断时都不通知",
+    channelEn: "Notify only after an HPC job is confirmed; conversational and undetermined runs stay silent",
     enabled: true,
   },
   {
     id: "task-done",
-    zh: "任务完成",
-    en: "Task completed",
-    channel: "结果就绪通知",
+    zh: "长任务完成",
+    en: "Long task completed",
+    channel: "已确认本轮有 HPC 作业后才通知；对话式任务、尚无法判断时都不通知",
+    channelEn: "Notify only after an HPC job is confirmed; conversational and undetermined runs stay silent",
+    enabled: true,
+  },
+  {
+    id: "report-ready",
+    zh: "报告生成",
+    en: "Report generated",
+    channel: "已确认本轮有 HPC 作业后才通知；对话式任务、尚无法判断时都不通知",
+    channelEn: "Notify only after an HPC job is confirmed; conversational and undetermined runs stay silent",
     enabled: true,
   },
 ];
@@ -310,7 +321,7 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
                 >
                   <div>
                     <p className="text-[13px] font-medium text-slate-800">{lang === "zh" ? rule.zh : rule.en}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">{rule.channel}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">{lang === "zh" ? rule.channel : rule.channelEn}</p>
                   </div>
                   <button
                     onClick={() => toggleNotification(rule.id)}

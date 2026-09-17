@@ -5302,7 +5302,7 @@ function MonitorPanelContent({
 }: {
   lang: Lang;
   steps: PlanStep[];
-  onOpenDispatchMonitor: (status?: DispatchStatusFilter) => void;
+  onOpenDispatchMonitor: (status?: DispatchStatusFilter, scope?: DispatchScope) => void;
 }) {
   const text = copy[lang];
   const [selectedStepLog, setSelectedStepLog] = useState<{ step: PlanStep; index: number } | null>(null);
@@ -5343,7 +5343,9 @@ function MonitorPanelContent({
             <Database className="mt-0.5 h-4 w-4 shrink-0 text-[#161FAD]" />
             <div className="min-w-0 flex-1">
               <p className="text-[12px] leading-5 text-slate-600">
-                {lang === "zh" ? "调度平台明细在新标签页打开，默认按当前 Run 过滤。" : "Open dispatch platform details in a new tab, filtered to the current run by default."}
+                {lang === "zh"
+                  ? "当前 Run 的调度明细在新标签页打开。整个对话的 HPC 历史请点底部「历史记录」。"
+                  : "Open this run’s dispatch jobs in a new tab. Use History at the bottom for the whole conversation."}
               </p>
               <p className="mt-2 font-mono text-[11px] text-slate-400">{taskId}</p>
             </div>
@@ -5651,7 +5653,7 @@ function SidePanel({
   onSaveFileToProject: (file: ResultFile) => void;
   onSaveFilesToProject: (files: ResultFile[]) => void;
   onSaveReportToProject: (report: RunReport) => void;
-  onOpenDispatchMonitor: (status?: DispatchStatusFilter) => void;
+  onOpenDispatchMonitor: (status?: DispatchStatusFilter, scope?: DispatchScope) => void;
   onSavePlanAsSkill: (name: string, description: string, steps: number) => void;
 }) {
   const text = copy[lang];
@@ -6184,30 +6186,48 @@ function SidePanel({
       </div>
 
       {!hideHistory ? (
-        <div
-          className={`shrink-0 border-t border-slate-200/80 bg-white/86 transition-[height] duration-300 ${
-            historyExpanded ? "flex h-[52%] min-h-[320px] flex-col" : "h-[52px]"
-          }`}
-        >
+        sideTab === "monitor" ? (
           <button
-            onClick={() => setHistoryExpanded((current) => !current)}
-            className="flex h-[52px] w-full items-center justify-between gap-3 px-4 text-left transition hover:bg-slate-50/80"
+            onClick={() => onOpenDispatchMonitor("all", "conversation")}
+            className="flex h-[52px] w-full shrink-0 items-center justify-between gap-3 border-t border-slate-200/80 bg-white/86 px-4 text-left transition hover:bg-slate-50/80"
           >
             <div className="flex min-w-0 items-center gap-2.5">
               <History className="h-4 w-4 shrink-0 text-[#161FAD]" />
               <div className="min-w-0">
                 <p className="text-[13px] font-semibold text-[#070261]">{text.history}</p>
+                <p className="truncate text-[11px] text-slate-400">
+                  {lang === "zh" ? "整个对话的 HPC 任务运行情况" : "HPC jobs across this conversation"}
+                </p>
               </div>
             </div>
-            <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${historyExpanded ? "rotate-180" : ""}`} />
+            <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-400" />
           </button>
+        ) : (
+          <div
+            className={`shrink-0 border-t border-slate-200/80 bg-white/86 transition-[height] duration-300 ${
+              historyExpanded ? "flex h-[52%] min-h-[320px] flex-col" : "h-[52px]"
+            }`}
+          >
+            <button
+              onClick={() => setHistoryExpanded((current) => !current)}
+              className="flex h-[52px] w-full items-center justify-between gap-3 px-4 text-left transition hover:bg-slate-50/80"
+            >
+              <div className="flex min-w-0 items-center gap-2.5">
+                <History className="h-4 w-4 shrink-0 text-[#161FAD]" />
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-[#070261]">{text.history}</p>
+                </div>
+              </div>
+              <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${historyExpanded ? "rotate-180" : ""}`} />
+            </button>
 
-          {historyExpanded ? (
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1">
-              <HistoryPanelContent lang={lang} />
-            </div>
-          ) : null}
-        </div>
+            {historyExpanded ? (
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1">
+                <HistoryPanelContent lang={lang} />
+              </div>
+            ) : null}
+          </div>
+        )
       ) : null}
     </aside>
   );
@@ -6389,9 +6409,9 @@ export default function Home() {
     setSideTab("results");
   };
 
-  const handleOpenDispatchMonitor = (status: DispatchStatusFilter = "all") => {
+  const handleOpenDispatchMonitor = (status: DispatchStatusFilter = "all", scope: DispatchScope = "run") => {
     const basePath = import.meta.env.BASE_URL === "/" ? "" : import.meta.env.BASE_URL.replace(/\/$/, "");
-    window.open(`${basePath}/dispatch-monitor?scope=run&status=${status}`, "_blank", "noopener,noreferrer");
+    window.open(`${basePath}/dispatch-monitor/?scope=${scope}&status=${status}`, "_blank", "noopener,noreferrer");
   };
 
   const handleNewConversation = () => {
