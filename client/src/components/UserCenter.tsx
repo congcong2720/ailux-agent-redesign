@@ -4,11 +4,13 @@ import {
   Bell,
   Camera,
   Check,
+  KeyRound,
   Link2,
   Plus,
   ReceiptText,
   Save,
   UserCircle2,
+  X,
 } from "lucide-react";
 import { useProject } from "@/contexts/ProjectContext";
 import { toast } from "sonner";
@@ -35,39 +37,31 @@ const usageRecords = [
 ];
 
 const notificationRules = [
-  {
-    id: "task-failed",
-    zh: "任务失败",
-    en: "Task failed",
-    channel: "已确认本轮有 HPC 作业后才通知；对话式任务、尚无法判断时都不通知",
-    channelEn: "Notify only after an HPC job is confirmed; conversational and undetermined runs stay silent",
-    enabled: true,
-  },
-  {
-    id: "hitl-required",
-    zh: "需要人工处理",
-    en: "Human action required",
-    channel: "已确认本轮有 HPC 作业后才通知；对话式任务、尚无法判断时都不通知",
-    channelEn: "Notify only after an HPC job is confirmed; conversational and undetermined runs stay silent",
-    enabled: true,
-  },
-  {
-    id: "task-done",
-    zh: "长任务完成",
-    en: "Long task completed",
-    channel: "已确认本轮有 HPC 作业后才通知；对话式任务、尚无法判断时都不通知",
-    channelEn: "Notify only after an HPC job is confirmed; conversational and undetermined runs stay silent",
-    enabled: true,
-  },
-  {
-    id: "report-ready",
-    zh: "报告生成",
-    en: "Report generated",
-    channel: "已确认本轮有 HPC 作业后才通知；对话式任务、尚无法判断时都不通知",
-    channelEn: "Notify only after an HPC job is confirmed; conversational and undetermined runs stay silent",
-    enabled: true,
-  },
+  { id: "task-failed", zh: "任务失败", en: "Task failed", enabled: true },
+  { id: "hitl-required", zh: "需要人工处理", en: "Human action required", enabled: true },
+  { id: "task-done", zh: "长任务完成", en: "Long task completed", enabled: true },
+  { id: "report-ready", zh: "报告生成", en: "Report generated", enabled: true },
 ];
+
+function NexusMark({ className = "h-8 w-8" }: { className?: string }) {
+  return (
+    <span className={`inline-flex items-center justify-center rounded-xl bg-[#0F766E] text-white ${className}`}>
+      <KeyRound className="h-[52%] w-[52%]" />
+    </span>
+  );
+}
+
+function maskNexusKey(raw: string) {
+  const key = raw.trim();
+  if (key.length < 8) return "ak_****";
+  return `${key.slice(0, 2)}_****${key.slice(-4)}`;
+}
+
+function testNexusKey(raw: string) {
+  const key = raw.trim();
+  if (key.length < 8 || /fail/i.test(key)) return false;
+  return true;
+}
 
 export function UserCenter({ initialTab = "profile", lang }: { initialTab?: UserCenterTab; lang: Lang }) {
   const { setMainView, feishuConnected, setFeishuConnected } = useProject();
@@ -83,6 +77,11 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
   const [usagePeriod, setUsagePeriod] = useState<UsagePeriod>("current");
   const [customUsageStart, setCustomUsageStart] = useState("2026-07-01");
   const [customUsageEnd, setCustomUsageEnd] = useState("2026-07-22");
+  const [nexusMode, setNexusMode] = useState<"platform" | "personal">("platform");
+  const [nexusMaskedKey, setNexusMaskedKey] = useState<string | null>(null);
+  const [keyDialogOpen, setKeyDialogOpen] = useState(false);
+  const [draftKey, setDraftKey] = useState("");
+  const [keyTestPassed, setKeyTestPassed] = useState(false);
 
   useEffect(() => {
     setActiveTab(initialTab);
@@ -117,6 +116,46 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
 
   const toggleNotification = (id: string) => {
     setNotificationStates((current) => ({ ...current, [id]: !current[id] }));
+  };
+
+  const openKeyDialog = () => {
+    setDraftKey("");
+    setKeyTestPassed(false);
+    setKeyDialogOpen(true);
+  };
+
+  const handleTestNexusKey = () => {
+    if (testNexusKey(draftKey)) {
+      setKeyTestPassed(true);
+      toast.success(lang === "zh" ? "连接测试通过" : "Connection test passed");
+      return;
+    }
+    setKeyTestPassed(false);
+    toast.error(lang === "zh" ? "测试失败，不能标为已连通" : "Test failed. Key cannot be marked connected.");
+  };
+
+  const handleSaveNexusKey = () => {
+    if (!keyTestPassed || !testNexusKey(draftKey)) {
+      toast.error(lang === "zh" ? "请先测通再保存" : "Test the key before saving");
+      return;
+    }
+    setNexusMaskedKey(maskNexusKey(draftKey));
+    setNexusMode("personal");
+    setKeyDialogOpen(false);
+    setDraftKey("");
+    setKeyTestPassed(false);
+    toast.success(lang === "zh" ? "已切换为我的 Nexus" : "Switched to My Nexus");
+  };
+
+  const handleRestorePlatform = () => {
+    setNexusMode("platform");
+    toast.success(lang === "zh" ? "已恢复使用平台模型" : "Restored platform models");
+  };
+
+  const handleRevokePersonalKey = () => {
+    setNexusMaskedKey(null);
+    setNexusMode("platform");
+    toast.success(lang === "zh" ? "已吊销个人 Key，已回到平台模型" : "Personal key revoked. Back to platform models.");
   };
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -260,24 +299,18 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
               <div className="border-b border-slate-100 px-5 py-3">
                 <p className="text-[13px] font-semibold text-slate-700">{lang === "zh" ? "可用连接器" : "Available connectors"}</p>
               </div>
-              <div className="p-4">
+              <div className="grid gap-3 p-4">
                 <article className="flex items-center gap-3 rounded-[18px] border border-slate-100 bg-slate-50/70 px-4 py-4">
                   <FeishuMark className="h-11 w-11 shrink-0" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-[14px] font-semibold text-[#070261]">{lang === "zh" ? "飞书" : "Feishu"}</p>
-                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                        {lang === "zh" ? "连接器" : "Connector"}
-                      </span>
                       {feishuConnected ? (
                         <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600">
                           {lang === "zh" ? "已关联" : "Connected"}
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-1 text-[12px] text-slate-400">
-                      {lang === "zh" ? "关联账号后，可在项目中绑定飞书文档。" : "Connect your account to bind Feishu docs in projects."}
-                    </p>
                   </div>
                   {feishuConnected ? (
                     <button
@@ -303,6 +336,55 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
                     </button>
                   )}
                 </article>
+
+                <article className="flex items-start gap-3 rounded-[18px] border border-slate-100 bg-slate-50/70 px-4 py-4">
+                  <NexusMark className="h-11 w-11 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-[14px] font-semibold text-[#070261]">Nexus CLI</p>
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600">
+                        {lang === "zh" ? "已连通" : "Connected"}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[12px] text-slate-500">
+                      {nexusMode === "platform"
+                        ? lang === "zh" ? "使用平台模型" : "Platform models"
+                        : lang === "zh" ? "我的 Nexus" : "My Nexus"}
+                      {nexusMode === "personal" && nexusMaskedKey ? ` · ${nexusMaskedKey}` : ""}
+                    </p>
+                    {nexusMode === "platform" && nexusMaskedKey ? (
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        {lang === "zh" ? `已保存 ${nexusMaskedKey}，未启用` : `Saved ${nexusMaskedKey}, not in use`}
+                      </p>
+                    ) : null}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        onClick={openKeyDialog}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+                      >
+                        {nexusMode === "personal" || nexusMaskedKey
+                          ? lang === "zh" ? "轮换 Key" : "Rotate key"
+                          : lang === "zh" ? "更换为自己的 Key" : "Use my key"}
+                      </button>
+                      {nexusMode === "personal" ? (
+                        <button
+                          onClick={handleRestorePlatform}
+                          className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+                        >
+                          {lang === "zh" ? "恢复平台模型" : "Restore platform"}
+                        </button>
+                      ) : null}
+                      {nexusMaskedKey ? (
+                        <button
+                          onClick={handleRevokePersonalKey}
+                          className="rounded-xl px-3 py-1.5 text-[11px] font-medium text-slate-400 transition hover:text-red-500"
+                        >
+                          {lang === "zh" ? "吊销" : "Revoke"}
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </article>
               </div>
             </div>
           </div>
@@ -319,10 +401,7 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
                   key={rule.id}
                   className={`flex items-center justify-between gap-4 px-5 py-4 ${index !== 0 ? "border-t border-slate-100" : ""}`}
                 >
-                  <div>
-                    <p className="text-[13px] font-medium text-slate-800">{lang === "zh" ? rule.zh : rule.en}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">{lang === "zh" ? rule.channel : rule.channelEn}</p>
-                  </div>
+                  <p className="text-[13px] font-medium text-slate-800">{lang === "zh" ? rule.zh : rule.en}</p>
                   <button
                     onClick={() => toggleNotification(rule.id)}
                     className={`relative h-6 w-11 rounded-full transition ${
@@ -425,6 +504,58 @@ export function UserCenter({ initialTab = "profile", lang }: { initialTab?: User
         ) : null}
 
       </div>
+
+      {keyDialogOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-5">
+          <div className="w-full max-w-[440px] overflow-hidden rounded-[24px] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+              <div>
+                <p className="text-[16px] font-semibold text-[#070261]">{lang === "zh" ? "接入个人 Nexus Key" : "Use a personal Nexus key"}</p>
+                <p className="mt-1 text-[12px] text-slate-400">
+                  {lang === "zh" ? "测通后才会启用。密钥只显示掩码，不回显明文。" : "The key is enabled only after a successful test. Only a masked value is stored."}
+                </p>
+              </div>
+              <button
+                onClick={() => setKeyDialogOpen(false)}
+                className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid gap-3 px-5 py-4">
+              <label className="grid gap-1.5">
+                <span className="text-[11px] font-medium text-slate-500">{lang === "zh" ? "个人 Key" : "Personal key"}</span>
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={draftKey}
+                  onChange={(event) => {
+                    setDraftKey(event.target.value);
+                    setKeyTestPassed(false);
+                  }}
+                  placeholder="ak_••••••••"
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-[13px] text-slate-800 outline-none transition focus:border-[rgba(23,36,216,0.3)]"
+                />
+              </label>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={handleTestNexusKey}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
+                >
+                  {lang === "zh" ? "测试连接" : "Test connection"}
+                </button>
+                <button
+                  onClick={handleSaveNexusKey}
+                  disabled={!keyTestPassed}
+                  className="rounded-xl bg-[#161FAD] px-3 py-2 text-[12px] font-semibold text-white transition hover:bg-[#1724D8] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                >
+                  {lang === "zh" ? "保存并启用" : "Save and enable"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

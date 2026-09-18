@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useProject, Project, ProjectDataAsset, ProjectDataChild, ProjectDataFileType, ProjectLinkedDoc, ProjectMember } from "@/contexts/ProjectContext";
+import { useProject, Project, ProjectDataAsset, ProjectDataChild, ProjectDataFileType, ProjectLinkedDoc, ProjectMember, sourceEmailLabel } from "@/contexts/ProjectContext";
 import { toast } from "sonner";
 
 type Lang = "zh" | "en";
@@ -204,6 +204,7 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
           asset.description,
           asset.sourceTaskName,
           asset.sourceTaskId,
+          sourceEmailLabel(asset.sourceEmail),
           asset.savedAt,
           ...(asset.tags ?? []),
           ...flattenChildSearchText(asset.children),
@@ -375,7 +376,7 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
               value={dataSearchQuery}
               onChange={(event) => setDataSearchQuery(event.target.value)}
               className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
-              placeholder={lang === "zh" ? "搜索名称 / 描述" : "Search name / description"}
+              placeholder={lang === "zh" ? "搜索名称 / 描述 / 来源邮箱" : "Search name / description / source account"}
             />
           </div>
           <input
@@ -450,7 +451,7 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
         </div>
       ) : (
         <div className="overflow-hidden rounded-[18px] border border-slate-100 bg-white">
-          <div className="grid grid-cols-[24px_minmax(200px,1.2fr)_82px_92px_96px_minmax(180px,1fr)_112px] items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-2.5 text-[11px] font-medium text-slate-400">
+          <div className="grid grid-cols-[24px_minmax(180px,1.2fr)_72px_80px_110px_96px_minmax(150px,1fr)_112px] items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-2.5 text-[11px] font-medium text-slate-400">
             <Checkbox
               checked={allFilteredSelected}
               onCheckedChange={toggleFilteredSelection}
@@ -459,6 +460,7 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
             <span>{lang === "zh" ? "名称" : "Name"}</span>
             <span>{lang === "zh" ? "大小" : "Size"}</span>
             <span>{lang === "zh" ? "来源" : "Source"}</span>
+            <span>{lang === "zh" ? "来源邮箱" : "Source account"}</span>
             <span>{lang === "zh" ? "更新时间" : "Updated"}</span>
             <span>{lang === "zh" ? "描述" : "Description"}</span>
             <span className="text-right">{lang === "zh" ? "操作" : "Actions"}</span>
@@ -466,7 +468,7 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
           {filtered.map((asset, idx) => (
             <div
               key={asset.id}
-              className={`grid grid-cols-[24px_minmax(200px,1.2fr)_82px_92px_96px_minmax(180px,1fr)_112px] items-center gap-3 px-5 py-4 transition hover:bg-slate-50/80 ${
+              className={`grid grid-cols-[24px_minmax(180px,1.2fr)_72px_80px_110px_96px_minmax(150px,1fr)_112px] items-center gap-3 px-5 py-4 transition hover:bg-slate-50/80 ${
                 idx !== 0 ? "border-t border-slate-100" : ""
               }`}
             >
@@ -518,6 +520,7 @@ function DataTab({ project, lang }: { project: Project; lang: Lang }) {
                   ? lang === "zh" ? "已上传" : "Uploaded"
                   : lang === "zh" ? "Run 产物" : "Run output"}
               </span>
+              <span className="truncate font-mono text-[11px] text-slate-500">{sourceEmailLabel(asset.sourceEmail)}</span>
               <span className="text-[12px] text-slate-400">{asset.updatedAt}</span>
               <div className="min-w-0">
                 <p className="truncate text-[11px] text-slate-500">{asset.sourceTaskName || "-"}</p>

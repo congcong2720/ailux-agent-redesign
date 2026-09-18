@@ -108,13 +108,12 @@ export default function DispatchMonitor() {
   const initialStatus = ["running", "error", "done", "queued"].includes(params.get("status") ?? "")
     ? (params.get("status") as DispatchStatusFilter)
     : "all";
-  const [scope, setScope] = useState<DispatchScope>(initialScope);
   const [statusFilter, setStatusFilter] = useState<DispatchStatusFilter>(initialStatus);
   const [query, setQuery] = useState("");
   const [selectedSplitJob, setSelectedSplitJob] = useState<DispatchJob | null>(null);
   const [selectedLog, setSelectedLog] = useState<{ title: string; lines: string[] } | null>(null);
 
-  const scopedJobs = useMemo(() => getScopedJobs(scope), [scope]);
+  const scopedJobs = useMemo(() => getScopedJobs(initialScope), [initialScope]);
   const visibleJobs = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return scopedJobs.filter((job) => {
@@ -141,45 +140,27 @@ export default function DispatchMonitor() {
             </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1">
-              {[
-                { id: "run" as DispatchScope, label: "本轮 Run" },
-                { id: "conversation" as DispatchScope, label: "整个对话" },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setScope(item.id)}
-                  className={`rounded-xl px-4 py-2 text-[13px] font-medium transition ${
-                    scope === item.id ? "bg-white text-[#161FAD] shadow-[0_6px_16px_rgba(15,23,42,0.06)]" : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value as DispatchStatusFilter)}
-                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-[13px] text-slate-600 outline-none transition focus:border-[rgba(23,36,216,0.35)]"
-              >
-                <option value="all">全部状态</option>
-                <option value="running">running</option>
-                <option value="error">error</option>
-                <option value="done">done</option>
-                <option value="queued">queued</option>
-              </select>
-              <label className="flex h-10 min-w-[260px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-slate-400 transition focus-within:border-[rgba(23,36,216,0.35)]">
-                <Search className="h-3.5 w-3.5" />
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="搜索模型或作业名称"
-                  className="min-w-0 flex-1 bg-transparent text-[13px] text-slate-700 outline-none placeholder:text-slate-300"
-                />
-              </label>
-            </div>
+          <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as DispatchStatusFilter)}
+              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-[13px] text-slate-600 outline-none transition focus:border-[rgba(23,36,216,0.35)]"
+            >
+              <option value="all">全部状态</option>
+              <option value="running">running</option>
+              <option value="error">error</option>
+              <option value="done">done</option>
+              <option value="queued">queued</option>
+            </select>
+            <label className="flex h-10 min-w-[260px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-slate-400 transition focus-within:border-[rgba(23,36,216,0.35)]">
+              <Search className="h-3.5 w-3.5" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="搜索模型或作业名称"
+                className="min-w-0 flex-1 bg-transparent text-[13px] text-slate-700 outline-none placeholder:text-slate-300"
+              />
+            </label>
           </div>
         </header>
 

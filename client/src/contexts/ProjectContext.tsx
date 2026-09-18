@@ -15,6 +15,7 @@ export type ProjectDataAsset = {
   size: string;
   updatedAt: string;
   source: "uploaded" | "run-saved";
+  sourceEmail?: string;
   description?: string;
   sourceTaskName?: string;
   sourceTaskId?: string;
@@ -95,6 +96,13 @@ export type AgentPreference = {
 
 export type ProjectDataFileType = Exclude<ProjectDataAsset["type"], "folder">;
 
+export const CURRENT_USER_EMAIL = "jinghua.yu@xtalpi.com";
+
+export function sourceEmailLabel(email?: string) {
+  const local = email?.split("@")[0]?.trim();
+  return local || "—";
+}
+
 export type ProjectDetailView = "data" | "knowledge" | "documents" | "members";
 
 export type Project = {
@@ -125,6 +133,7 @@ const defaultData: ProjectDataAsset[] = [
     size: "4.6 MB",
     updatedAt: "2026-04-29",
     source: "run-saved",
+    sourceEmail: CURRENT_USER_EMAIL,
     description: "由任务「DLL3 双抗预测流程」保存的完整 Run 结果包，按步骤保留结果文件。",
     sourceTaskName: "DLL3 双抗预测流程",
     sourceTaskId: "run-20260626-dll3-003",
@@ -168,15 +177,16 @@ const defaultData: ProjectDataAsset[] = [
     size: "2.4 MB",
     updatedAt: "2026-04-29",
     source: "run-saved",
+    sourceEmail: CURRENT_USER_EMAIL,
     description: "由任务「DLL3 双抗预测流程」生成，用于后续结构分析复用。",
     sourceTaskName: "DLL3 双抗预测流程",
     sourceTaskId: "run-20260626-dll3-003",
     savedAt: "2026-04-29 14:36",
     tags: ["structure"],
   },
-  { id: "d2", name: "physical_energy_combined_features.csv", type: "csv", size: "128 KB", updatedAt: "2026-04-29", source: "run-saved", sourceTaskName: "DLL3 双抗预测流程", sourceTaskId: "run-20260626-dll3-003", savedAt: "2026-04-29 14:36", tags: ["features"] },
-  { id: "d3", name: "all_ml_evaluation_results_stage2.csv", type: "csv", size: "64 KB", updatedAt: "2026-04-28", source: "run-saved", sourceTaskName: "内化预测建模工作流程", sourceTaskId: "run-20260428-model-002", savedAt: "2026-04-28 18:12", tags: ["model", "evaluation"] },
-  { id: "d4", name: "internalization_experiment_raw.csv", type: "csv", size: "48 KB", updatedAt: "2026-04-20", source: "uploaded", description: "项目初始化时上传的实验原始数据。", tags: ["raw-data"] },
+  { id: "d2", name: "physical_energy_combined_features.csv", type: "csv", size: "128 KB", updatedAt: "2026-04-29", source: "run-saved", sourceEmail: CURRENT_USER_EMAIL, sourceTaskName: "DLL3 双抗预测流程", sourceTaskId: "run-20260626-dll3-003", savedAt: "2026-04-29 14:36", tags: ["features"] },
+  { id: "d3", name: "all_ml_evaluation_results_stage2.csv", type: "csv", size: "64 KB", updatedAt: "2026-04-28", source: "run-saved", sourceEmail: "liwei@xtalpi.com", sourceTaskName: "内化预测建模工作流程", sourceTaskId: "run-20260428-model-002", savedAt: "2026-04-28 18:12", tags: ["model", "evaluation"] },
+  { id: "d4", name: "internalization_experiment_raw.csv", type: "csv", size: "48 KB", updatedAt: "2026-04-20", source: "uploaded", sourceEmail: CURRENT_USER_EMAIL, description: "项目初始化时上传的实验原始数据。", tags: ["raw-data"] },
 ];
 
 const defaultKnowledge: ProjectKnowledgeRecord[] = [
@@ -605,6 +615,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
             id: `d-${Date.now()}-${project.data.length}`,
             updatedAt: new Date().toISOString().slice(0, 10),
             source: asset.source ?? "run-saved",
+            sourceEmail: asset.sourceEmail ?? CURRENT_USER_EMAIL,
           },
           ...project.data,
         ],

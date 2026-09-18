@@ -5344,8 +5344,8 @@ function MonitorPanelContent({
             <div className="min-w-0 flex-1">
               <p className="text-[12px] leading-5 text-slate-600">
                 {lang === "zh"
-                  ? "当前 Run 的调度明细在新标签页打开。整个对话的 HPC 历史请点底部「历史记录」。"
-                  : "Open this run’s dispatch jobs in a new tab. Use History at the bottom for the whole conversation."}
+                  ? "当前 Run 的调度明细在新标签页打开。整个对话的 HPC 历史请点底部「历史记录」，同样会新开标签页。"
+                  : "Open this run’s dispatch jobs in a new tab. History at the bottom also opens a new tab for the whole conversation."}
               </p>
               <p className="mt-2 font-mono text-[11px] text-slate-400">{taskId}</p>
             </div>
@@ -5666,7 +5666,6 @@ function SidePanel({
   const projectPreferenceCount = effectivePreferences.filter((preference) => preference.scope === "project").length;
   const [flowOpen, setFlowOpen] = useState(false);
   const [planPreferencesOpen, setPlanPreferencesOpen] = useState(false);
-  const [historyExpanded, setHistoryExpanded] = useState(false);
   const [expandedPreviousRunIds, setExpandedPreviousRunIds] = useState<string[]>([]);
   const [selectedStepLog, setSelectedStepLog] = useState<{ step: PlanStep; index: number } | null>(null);
   const [saveSkillOpen, setSaveSkillOpen] = useState(false);
@@ -6186,48 +6185,21 @@ function SidePanel({
       </div>
 
       {!hideHistory ? (
-        sideTab === "monitor" ? (
-          <button
-            onClick={() => onOpenDispatchMonitor("all", "conversation")}
-            className="flex h-[52px] w-full shrink-0 items-center justify-between gap-3 border-t border-slate-200/80 bg-white/86 px-4 text-left transition hover:bg-slate-50/80"
-          >
-            <div className="flex min-w-0 items-center gap-2.5">
-              <History className="h-4 w-4 shrink-0 text-[#161FAD]" />
-              <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-[#070261]">{text.history}</p>
-                <p className="truncate text-[11px] text-slate-400">
-                  {lang === "zh" ? "整个对话的 HPC 任务运行情况" : "HPC jobs across this conversation"}
-                </p>
-              </div>
+        <button
+          onClick={() => onOpenDispatchMonitor("all", "conversation")}
+          className="flex h-[52px] w-full shrink-0 items-center justify-between gap-3 border-t border-slate-200/80 bg-white/86 px-4 text-left transition hover:bg-slate-50/80"
+        >
+          <div className="flex min-w-0 items-center gap-2.5">
+            <History className="h-4 w-4 shrink-0 text-[#161FAD]" />
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-[#070261]">{text.history}</p>
+              <p className="truncate text-[11px] text-slate-400">
+                {lang === "zh" ? "新开标签页查看整个对话的 HPC 任务" : "Open HPC jobs for this conversation in a new tab"}
+              </p>
             </div>
-            <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-400" />
-          </button>
-        ) : (
-          <div
-            className={`shrink-0 border-t border-slate-200/80 bg-white/86 transition-[height] duration-300 ${
-              historyExpanded ? "flex h-[52%] min-h-[320px] flex-col" : "h-[52px]"
-            }`}
-          >
-            <button
-              onClick={() => setHistoryExpanded((current) => !current)}
-              className="flex h-[52px] w-full items-center justify-between gap-3 px-4 text-left transition hover:bg-slate-50/80"
-            >
-              <div className="flex min-w-0 items-center gap-2.5">
-                <History className="h-4 w-4 shrink-0 text-[#161FAD]" />
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-[#070261]">{text.history}</p>
-                </div>
-              </div>
-              <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${historyExpanded ? "rotate-180" : ""}`} />
-            </button>
-
-            {historyExpanded ? (
-              <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1">
-                <HistoryPanelContent lang={lang} />
-              </div>
-            ) : null}
           </div>
-        )
+          <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-400" />
+        </button>
       ) : null}
     </aside>
   );
@@ -6411,7 +6383,14 @@ export default function Home() {
 
   const handleOpenDispatchMonitor = (status: DispatchStatusFilter = "all", scope: DispatchScope = "run") => {
     const basePath = import.meta.env.BASE_URL === "/" ? "" : import.meta.env.BASE_URL.replace(/\/$/, "");
-    window.open(`${basePath}/dispatch-monitor/?scope=${scope}&status=${status}`, "_blank", "noopener,noreferrer");
+    const url = `${window.location.origin}${basePath}/dispatch-monitor/?scope=${scope}&status=${status}`;
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   const handleNewConversation = () => {
