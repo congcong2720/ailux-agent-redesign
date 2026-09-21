@@ -5344,8 +5344,8 @@ function MonitorPanelContent({
             <div className="min-w-0 flex-1">
               <p className="text-[12px] leading-5 text-slate-600">
                 {lang === "zh"
-                  ? "当前 Run 的调度明细在新标签页打开。整个对话的 HPC 历史请点底部「历史记录」，同样会新开标签页。"
-                  : "Open this run’s dispatch jobs in a new tab. History at the bottom also opens a new tab for the whole conversation."}
+                  ? "查看当前 Run 的调度明细。整个对话的 HPC 历史请点底部「历史记录」。"
+                  : "View this run’s dispatch jobs. Use History at the bottom for the whole conversation."}
               </p>
               <p className="mt-2 font-mono text-[11px] text-slate-400">{taskId}</p>
             </div>
@@ -6194,7 +6194,7 @@ function SidePanel({
             <div className="min-w-0">
               <p className="text-[13px] font-semibold text-[#070261]">{text.history}</p>
               <p className="truncate text-[11px] text-slate-400">
-                {lang === "zh" ? "新开标签页查看整个对话的 HPC 任务" : "Open HPC jobs for this conversation in a new tab"}
+                {lang === "zh" ? "查看整个对话的 HPC 任务" : "View HPC jobs for this conversation"}
               </p>
             </div>
           </div>

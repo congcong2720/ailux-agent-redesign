@@ -9,12 +9,14 @@ type DispatchJobStatus = "queued" | "running" | "done" | "error";
 
 type DispatchJob = {
   id: string;
+  seq: number;
   runId: string;
   runLabel: string;
   conversationId: string;
   planStepId: string;
   model: string;
   name: string;
+  cluster: string;
   startedAt: string;
   endedAt?: string;
   duration: string;
@@ -37,22 +39,25 @@ type SplitTaskDetail = {
 
 const CURRENT_DISPATCH_RUN_ID = "run-03";
 const CURRENT_CONVERSATION_ID = "conv-dll3-20260626";
+const CLUSTER_PRIVATE = "cucloud-private-slurmm";
+const CLUSTER_AILUX = "cucloud-ailux-slurmm";
+const CLUSTER_BINGXING = "bingxing-ailux-slurmm";
 
 const dispatchJobs: DispatchJob[] = [
-  { id: "job-001", runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-01", model: "agent_planner", name: "validate_inputs_and_freeze_snapshot", startedAt: "2026-06-26 14:36:02", endedAt: "2026-06-26 14:36:14", duration: "12s", status: "done", cpu: 2, gpu: 0, gpuModel: "-", memory: 16 },
-  { id: "job-002", runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-02", model: "StructureExtractor", name: "build_binder_context", startedAt: "2026-06-26 14:36:18", endedAt: "2026-06-26 14:36:48", duration: "30s", status: "done", cpu: 8, gpu: 0, gpuModel: "-", memory: 24 },
-  { id: "job-003", runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-03", model: "DockedPoses Filter B", name: "prodigy_features_[split]_Mcb008", startedAt: "2026-06-26 14:37:02", endedAt: "2026-06-26 14:38:01", duration: "59s", status: "done", cpu: 8, gpu: 0, gpuModel: "-", memory: 14 },
-  { id: "job-004", runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-03", model: "DockedPoses Filter B", name: "prodigy_features_[split]_Msb028", startedAt: "2026-06-26 14:37:04", endedAt: "2026-06-26 14:38:04", duration: "1m", status: "done", cpu: 8, gpu: 0, gpuModel: "-", memory: 14 },
-  { id: "job-005", runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-03", model: "DockedPoses Filter B", name: "prodigy_features_[split]_ZG006-1", startedAt: "2026-06-26 14:37:06", endedAt: "2026-06-26 14:38:10", duration: "1m 4s", status: "done", cpu: 8, gpu: 0, gpuModel: "-", memory: 14 },
-  { id: "job-006", runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-03", model: "DockedPoses Filter B", name: "rosetta_energy_[split]_ZG006-2", startedAt: "2026-06-26 14:37:08", endedAt: "2026-06-26 14:37:42", duration: "34s", status: "error", cpu: 16, gpu: 0, gpuModel: "-", memory: 32 },
-  { id: "job-007", runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-03", model: "Rosetta Feature Engine", name: "resume_rosetta_energy_ZG006-2", startedAt: "2026-06-26 14:38:28", endedAt: "2026-06-26 14:40:16", duration: "1m 48s", status: "done", cpu: 16, gpu: 0, gpuModel: "-", memory: 32 },
-  { id: "job-008", runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-04", model: "FeatureRank GBM", name: "feature_selection_topK20", startedAt: "2026-06-26 14:40:22", endedAt: "2026-06-26 14:42:10", duration: "1m 48s", status: "done", cpu: 4, gpu: 0, gpuModel: "-", memory: 16 },
-  { id: "job-009", runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-04", model: "LightGBM-Antibody", name: "train_model_fold_[split]_1", startedAt: "2026-06-26 14:42:18", duration: "running", status: "running", cpu: 8, gpu: 1, gpuModel: "A10", memory: 48 },
-  { id: "job-010", runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-04", model: "LightGBM-Antibody", name: "train_model_fold_[split]_2", startedAt: "2026-06-26 14:42:21", duration: "running", status: "running", cpu: 8, gpu: 1, gpuModel: "A10", memory: 48 },
-  { id: "job-011", runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-04", model: "CatBoost Regression", name: "train_model_fold_[split]_3", startedAt: "2026-06-26 14:42:24", duration: "queued", status: "queued", cpu: 8, gpu: 1, gpuModel: "A10", memory: 48 },
-  { id: "job-012", runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-05", model: "Ailux ReportSynth", name: "generate_final_report", startedAt: "2026-06-26 14:45:02", duration: "waiting", status: "queued", cpu: 2, gpu: 0, gpuModel: "-", memory: 16 },
-  { id: "job-013", runId: "run-02", runLabel: "Run #2", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-02", model: "strategist", name: "regenerate_model_config_10nM", startedAt: "2026-06-26 15:12:40", endedAt: "2026-06-26 15:12:57", duration: "17s", status: "done", cpu: 2, gpu: 0, gpuModel: "-", memory: 16 },
-  { id: "job-014", runId: "run-01", runLabel: "Run #1", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-02", model: "StructureExtractor", name: "baseline_feature_extraction", startedAt: "2026-06-26 14:49:02", endedAt: "2026-06-26 14:55:10", duration: "6m 8s", status: "done", cpu: 16, gpu: 0, gpuModel: "-", memory: 32 },
+  { id: "job-001", seq: 1, runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-01", model: "agent_planner", name: "validate_inputs_and_freeze_snapshot", cluster: CLUSTER_PRIVATE, startedAt: "2026-06-26 14:36:02", endedAt: "2026-06-26 14:36:14", duration: "12s", status: "done", cpu: 2, gpu: 0, gpuModel: "-", memory: 16 },
+  { id: "job-002", seq: 2, runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-02", model: "StructureExtractor", name: "build_binder_context", cluster: CLUSTER_AILUX, startedAt: "2026-06-26 14:36:18", endedAt: "2026-06-26 14:36:48", duration: "30s", status: "done", cpu: 8, gpu: 0, gpuModel: "-", memory: 24 },
+  { id: "job-003", seq: 3, runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-03", model: "DockedPoses Filter B", name: "prodigy_features_[split]_Mcb008", cluster: CLUSTER_AILUX, startedAt: "2026-06-26 14:37:02", endedAt: "2026-06-26 14:38:01", duration: "59s", status: "done", cpu: 8, gpu: 0, gpuModel: "-", memory: 14 },
+  { id: "job-004", seq: 4, runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-03", model: "DockedPoses Filter B", name: "prodigy_features_[split]_Msb028", cluster: CLUSTER_AILUX, startedAt: "2026-06-26 14:37:04", endedAt: "2026-06-26 14:38:04", duration: "1m", status: "done", cpu: 8, gpu: 0, gpuModel: "-", memory: 14 },
+  { id: "job-005", seq: 5, runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-03", model: "DockedPoses Filter B", name: "prodigy_features_[split]_ZG006-1", cluster: CLUSTER_AILUX, startedAt: "2026-06-26 14:37:06", endedAt: "2026-06-26 14:38:10", duration: "1m 4s", status: "done", cpu: 8, gpu: 0, gpuModel: "-", memory: 14 },
+  { id: "job-006", seq: 6, runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-03", model: "DockedPoses Filter B", name: "rosetta_energy_[split]_ZG006-2", cluster: CLUSTER_AILUX, startedAt: "2026-06-26 14:37:08", endedAt: "2026-06-26 14:37:42", duration: "34s", status: "error", cpu: 16, gpu: 0, gpuModel: "-", memory: 32 },
+  { id: "job-007", seq: 6, runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-03", model: "Rosetta Feature Engine", name: "resume_rosetta_energy_ZG006-2", cluster: CLUSTER_AILUX, startedAt: "2026-06-26 14:38:28", endedAt: "2026-06-26 14:40:16", duration: "1m 48s", status: "done", cpu: 16, gpu: 0, gpuModel: "-", memory: 32 },
+  { id: "job-008", seq: 7, runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-04", model: "FeatureRank GBM", name: "feature_selection_topK20", cluster: CLUSTER_PRIVATE, startedAt: "2026-06-26 14:40:22", endedAt: "2026-06-26 14:42:10", duration: "1m 48s", status: "done", cpu: 4, gpu: 0, gpuModel: "-", memory: 16 },
+  { id: "job-009", seq: 8, runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-04", model: "LightGBM-Antibody", name: "train_model_fold_[split]_1", cluster: CLUSTER_BINGXING, startedAt: "2026-06-26 14:42:18", duration: "running", status: "running", cpu: 8, gpu: 1, gpuModel: "A10", memory: 48 },
+  { id: "job-010", seq: 9, runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-04", model: "LightGBM-Antibody", name: "train_model_fold_[split]_2", cluster: CLUSTER_BINGXING, startedAt: "2026-06-26 14:42:21", duration: "running", status: "running", cpu: 8, gpu: 1, gpuModel: "A10", memory: 48 },
+  { id: "job-011", seq: 10, runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-04", model: "CatBoost Regression", name: "train_model_fold_[split]_3", cluster: CLUSTER_BINGXING, startedAt: "2026-06-26 14:42:24", duration: "queued", status: "queued", cpu: 8, gpu: 1, gpuModel: "A10", memory: 48 },
+  { id: "job-012", seq: 11, runId: CURRENT_DISPATCH_RUN_ID, runLabel: "Run #3", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-05", model: "Ailux ReportSynth", name: "generate_final_report", cluster: CLUSTER_PRIVATE, startedAt: "2026-06-26 14:45:02", duration: "waiting", status: "queued", cpu: 2, gpu: 0, gpuModel: "-", memory: 16 },
+  { id: "job-013", seq: 12, runId: "run-02", runLabel: "Run #2", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-02", model: "strategist", name: "regenerate_model_config_10nM", cluster: CLUSTER_PRIVATE, startedAt: "2026-06-26 15:12:40", endedAt: "2026-06-26 15:12:57", duration: "17s", status: "done", cpu: 2, gpu: 0, gpuModel: "-", memory: 16 },
+  { id: "job-014", seq: 2, runId: "run-01", runLabel: "Run #1", conversationId: CURRENT_CONVERSATION_ID, planStepId: "step-02", model: "StructureExtractor", name: "baseline_feature_extraction", cluster: CLUSTER_AILUX, startedAt: "2026-06-26 14:49:02", endedAt: "2026-06-26 14:55:10", duration: "6m 8s", status: "done", cpu: 16, gpu: 0, gpuModel: "-", memory: 32 },
 ];
 
 const statusMeta: Record<DispatchJobStatus, { className: string }> = {
@@ -87,7 +92,7 @@ function getScopedJobs(scope: DispatchScope) {
 function buildJobLog(job: DispatchJob) {
   return [
     `[${job.startedAt}] submit job ${job.id}`,
-    `[${job.startedAt}] model=${job.model} cpu=${job.cpu} gpu=${job.gpu} memory=${job.memory}GB`,
+    `[${job.startedAt}] model=${job.model} cluster=${job.cluster} cpu=${job.cpu} gpu=${job.gpu} memory=${job.memory}GB`,
     job.status === "error" ? "[error] Rosetta score cache missing for ZG006-2" : `[${job.endedAt ?? "running"}] status=${job.status}`,
     job.status === "running" ? "[running] streaming logs from scheduler..." : "[done] log archived",
   ];
@@ -118,7 +123,7 @@ export default function DispatchMonitor() {
     const normalizedQuery = query.trim().toLowerCase();
     return scopedJobs.filter((job) => {
       const statusMatch = statusFilter === "all" || job.status === statusFilter;
-      const queryMatch = !normalizedQuery || `${job.model} ${job.name} ${job.runLabel} ${job.status} ${job.gpuModel}`.toLowerCase().includes(normalizedQuery);
+      const queryMatch = !normalizedQuery || `${job.model} ${job.name} ${job.cluster} ${job.runLabel} ${job.status}`.toLowerCase().includes(normalizedQuery);
       return statusMatch && queryMatch;
     });
   }, [query, scopedJobs, statusFilter]);
@@ -157,7 +162,7 @@ export default function DispatchMonitor() {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="搜索模型或作业名称"
+                placeholder="搜索模型、作业或集群"
                 className="min-w-0 flex-1 bg-transparent text-[13px] text-slate-700 outline-none placeholder:text-slate-300"
               />
             </label>
@@ -175,23 +180,21 @@ export default function DispatchMonitor() {
               <p className="mt-2 text-[12px] text-slate-400">调整状态或搜索条件后再试。</p>
             </div>
           ) : (
-            <div className="min-w-[1020px] overflow-hidden rounded-[20px] border border-slate-200 bg-white">
-              <div className="grid grid-cols-[86px_160px_minmax(220px,1fr)_190px_90px_90px_80px_130px_96px_92px] border-b border-slate-100 bg-slate-50/80 px-4 py-3 text-[11px] font-semibold text-slate-400">
+            <div className="min-w-[980px] overflow-hidden rounded-[20px] border border-slate-200 bg-white">
+              <div className="grid grid-cols-[72px_160px_minmax(220px,1fr)_190px_90px_90px_220px_92px] border-b border-slate-100 bg-slate-50/80 px-4 py-3 text-[11px] font-semibold text-slate-400">
                 <span>#</span>
                 <span>模型</span>
                 <span>名称</span>
                 <span>开始 / 结束时间</span>
                 <span>运行时间</span>
                 <span>状态</span>
-                <span>CPU</span>
-                <span>GPU</span>
-                <span>Memory</span>
+                <span>集群名称</span>
                 <span>操作</span>
               </div>
               {visibleJobs.map((job, index) => (
                 <div
                   key={job.id}
-                  className={`grid grid-cols-[86px_160px_minmax(220px,1fr)_190px_90px_90px_80px_130px_96px_92px] items-center px-4 py-3 text-[12px] ${
+                  className={`grid grid-cols-[72px_160px_minmax(220px,1fr)_190px_90px_90px_220px_92px] items-center px-4 py-3 text-[12px] ${
                     index !== 0 ? "border-t border-slate-100" : ""
                   } ${job.status === "error" ? "bg-red-50/35" : index % 2 ? "bg-slate-50/45" : "bg-white"}`}
                 >
@@ -208,7 +211,7 @@ export default function DispatchMonitor() {
                     ) : (
                       <span className="h-5 w-5" />
                     )}
-                    {index + 1}
+                    {job.seq}
                   </span>
                   <span className="truncate text-slate-600" title={job.model}>{job.model}</span>
                   <span className="truncate font-medium text-slate-700" title={job.name}>{job.name}</span>
@@ -223,9 +226,7 @@ export default function DispatchMonitor() {
                       {job.status}
                     </span>
                   </span>
-                  <span className="text-slate-500">{job.cpu}</span>
-                  <span className="text-slate-500">{job.gpu}{job.gpuModel !== "-" ? ` · ${job.gpuModel}` : ""}</span>
-                  <span className="text-slate-500">{job.memory} GB</span>
+                  <span className="truncate font-mono text-[11px] text-slate-500" title={job.cluster}>{job.cluster}</span>
                   <span className="flex items-center gap-1.5 text-[#161FAD]">
                     <button
                       onClick={() => setSelectedLog({ title: job.name, lines: buildJobLog(job) })}
