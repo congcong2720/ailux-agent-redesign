@@ -196,8 +196,8 @@
     </div>
     <nav class="navlinks">
       <a href="#s1" class="active">01 做了什么</a>
-      <a href="#s2">02 外部对比</a>
-      <a href="#s3">03 真实案例</a>
+      <a href="#s2">02 专项测试</a>
+      <a href="#s3">03 效率与成本</a>
     </nav>
   </div>
 </header>
@@ -289,385 +289,83 @@
   </div>
 </section>
 
-<!-- ===== 02 与外部对比 ===== -->
+<!-- ===== 02 专项测试 ===== -->
 <section id="s2" style="background:#F6F8FC">
   <div class="wrap">
     <div class="sec-head fade">
-      <div class="sec-no"><span class="num">02</span><span class="cap">与外部对比 · 虚假完成率</span></div>
-      <h2>四款科研 Agent，同一指标，分两组对标</h2>
-      <div class="sub">Biomni 和天鹜都适合放进横向对比。指标用虚假完成率，越低越好，对 Biomni、天鹜和 Claude Science 同一适用。四方定位不同，评测必须用同一套抗体任务和同一评判标准，结果连同产品边界一起读。</div>
+      <div class="sec-no"><span class="num">02</span><span class="cap">专项测试 · 示例包</span></div>
+      <h2>只测短流程和单模型，不测完整亲和力</h2>
+      <div class="sub">全面覆盖对比现阶段意义不大。通用 Agent 铺得开，很多任务成功率并不高，看起来完整，专家一看就知道走不下去。本次只在抗体专项里选短任务比。完整亲和力流程运行时间过长，不纳入测试。</div>
       <div class="rule"></div>
     </div>
 
-    <p class="lead-txt fade">本次 Benchmark 横向对比 4 款生物医药科研 Agent，在抗体研发任务集下评估虚假完成率。虚假完成率是 Agent 谎称任务完成、但实际未正确执行的比例。比例越低，执行越可靠，幻觉越少。</p>
+    <div class="lead-txt fade">测试项从 <a href="https://xtalpi.feishu.cn/wiki/AkqNwHMNVizYS7ktDC8cZdsNnBf">Ailux Agent 试用示例包</a> 里选。同一提示词、同一示例文件、同一验收标准。结果跑完再填，页上不预写分数。</div>
 
-    <div class="logic fade">
-      <div><strong>对标 Biomni</strong>看抗体专项 Agent 相对国际学术通用 Agent 的执行可靠性。Biomni 与 Claude Science 同源，都由 Claude 驱动，对比口径更齐。</div>
-      <div><strong>对标天鹜</strong>看国内蛋白 / 抗体研发 Agent 赛道上的位置。药企和 CDMO 熟悉天鹜，这组结果更容易被国内客户读懂。</div>
-      <div><strong>保留 Claude Science</strong>作为国际工业界通用科研基线，承接已有的系统级对照，不从这组对比里拿掉。</div>
-    </div>
-
-    <div class="grid4 fade" style="margin-top:16px">
-      <div class="card me">
-        <div class="tag">自研 · 抗体专项</div>
-        <h3>Ailux</h3>
-        <p>抗体专项 Agent，按抗体研发工作流优化。横向对比里代表抗体任务域的主体。</p>
-      </div>
-      <div class="card">
-        <div class="tag">国际工业标杆</div>
-        <h3>Claude Science</h3>
-        <p>通用科研工作台，强项是代码执行和文献分析。评测需要 Anthropic 账号。</p>
-      </div>
-      <div class="card">
-        <div class="tag">国际学术标杆</div>
-        <h3>Biomni（斯坦福）</h3>
-        <p>开源生物医药通用 Agent，集成 150+ 生物工具、59 个数据库，自主规划并执行生信、蛋白与抗体任务。抗体是其多个领域中的一个。可本地部署评测。</p>
-      </div>
-      <div class="card">
-        <div class="tag">国内蛋白研发</div>
-        <h3>天鹜 MatwingsVenus</h3>
-        <p>对话式蛋白质研发智能体（晓鹜™），面向抗体序列设计、可开发性评估和靶点挖掘，强项是分子生成与定向进化。商业平台，盲测前需确认测试账号。</p>
-      </div>
-    </div>
-
-    <h3 class="sect fade">虚假完成率 · 分两组呈现</h3>
-    <div class="lead-txt fade">汇报拆成两张图。国际组放 Ailux、Claude Science、Biomni；国内组放 Ailux、天鹜。Ailux 3%，Biomni 16%，天鹜 9%，Claude Science 25%。</div>
-    <div class="duo" style="margin-top:16px">
-      <div class="chartbox fade">
-        <div class="ch-title">国际标杆组</div>
-        <div class="ch-sub">Ailux · Claude Science · Biomni（斯坦福） · 越低越好</div>
-        <div class="fbar" aria-label="国际标杆组虚假完成率">
-          <div class="fbar-row">
-            <div class="fbar-name">Ailux<span class="fbar-role">抗体专项 Agent</span></div>
-            <div class="fbar-track"><div class="fbar-fill" style="width:7.5%"></div></div>
-            <div class="fbar-val">3%</div>
-          </div>
-          <div class="fbar-row">
-            <div class="fbar-name">Claude Science<span class="fbar-role">通用科研工作台</span></div>
-            <div class="fbar-track"><div class="fbar-fill warn" style="width:62.5%"></div></div>
-            <div class="fbar-val" style="color:#C0392B">25%</div>
-          </div>
-          <div class="fbar-row">
-            <div class="fbar-name">Biomni<span class="fbar-role">通用生物医药 Agent</span></div>
-            <div class="fbar-track"><div class="fbar-fill" style="width:40%;background:#7E93B0"></div></div>
-            <div class="fbar-val" style="color:#536174">16%</div>
-          </div>
-        </div>
-        <div class="fbar-scale">坐标按 40% 封顶。</div>
-      </div>
-      <div class="chartbox fade">
-        <div class="ch-title">国内竞品组</div>
-        <div class="ch-sub">Ailux · 天鹜 MatwingsVenus（晓鹜） · 越低越好</div>
-        <div class="fbar" aria-label="国内竞品组虚假完成率">
-          <div class="fbar-row">
-            <div class="fbar-name">Ailux<span class="fbar-role">抗体专项 Agent</span></div>
-            <div class="fbar-track"><div class="fbar-fill" style="width:7.5%"></div></div>
-            <div class="fbar-val">3%</div>
-          </div>
-          <div class="fbar-row">
-            <div class="fbar-name">天鹜<span class="fbar-role">蛋白 / 抗体设计智能体</span></div>
-            <div class="fbar-track"><div class="fbar-fill" style="width:22.5%;background:#C4A574"></div></div>
-            <div class="fbar-val" style="color:#8A6A3B">9%</div>
-          </div>
-        </div>
-        <div class="fbar-scale">与国际组同一坐标。</div>
-      </div>
-    </div>
-
-    <div class="grid3 fade" style="margin-top:20px">
-      <div class="card">
-        <div class="tag">口径 1 · 任务集</div>
-        <h3>四款跑完全同一套题</h3>
-        <p>相同 prompt、相同评判标准，不按模型更换题目。任务覆盖靶点文献调研、抗体人源化分析、ADMET 与可开发性评估、序列与结构计算。下方 T01–T10 是当前验收表，后接入的 Agent 按这张表补数。</p>
-      </div>
-      <div class="card">
-        <div class="tag">口径 2 · 产品边界</div>
-        <h3>定位写在结果旁边</h3>
-        <p>Ailux 是抗体专项 Agent。Claude Science 是通用科研工作台。Biomni 是通用生物医药 Agent。天鹜是蛋白 / 抗体设计智能体，强项在分子生成。四组结果按这个边界解读。</p>
-      </div>
-      <div class="card">
-        <div class="tag">口径 3 · 可访问性</div>
-        <h3>先确认能不能测</h3>
-        <p>Biomni 有开源版本，可本地部署。天鹜是商业化平台，要提前确认测试账号和能否盲测。Claude Science 需要 Anthropic 账号。</p>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <h3 class="sect fade">四个维度 · 四款都列入</h3>
-    <div class="lead-txt fade">系统完整性、专业工具、效率成本、工程通量四张图都放入四款 Agent。13 胜 1 平 2 负只统计对 Claude Science 的对照。</div>
-
-    <div class="grid fade" style="margin-top:16px">
-      <div class="card">
-        <div class="tag">胜负总览 · 对 Claude Science · 16 项</div>
-        <div class="big" style="font-size:40px">13<span style="color:#8A94A6;font-size:20px">胜</span> · 1<span style="color:#C9302C;font-size:20px">平</span> · 2<span style="color:#C0392B;font-size:20px">负</span></div>
-        <h3 style="margin-top:10px">负项集中在效率与成本</h3>
-        <p>系统完整性 4 胜；专业工具能力 2 胜 1 平；工程与通量 6 胜。效率与成本 1 胜 2 负——总耗时与计算费用为负项，人工介入更少为胜项。</p>
-      </div>
-      <div class="card">
-        <div class="tag">四个主指标</div>
-        <div class="chart" id="chart-main" style="height:400px"></div>
-      </div>
-    </div>
-
-    <h3 class="sect fade">系统完整性 · 任务交付与完整流程</h3>
-    <div class="lead-txt fade">四款 Agent 使用同一套任务。计算交付率取 7 类正常输入任务、共 21 次 / 系统。Ailux 21/21，天鹜 17/21，Biomni 14/21，Claude Science 12/21。</div>
-    <div class="duo" style="margin-top:16px">
-      <div class="chartbox fade">
-        <div class="ch-title">正常计算任务交付率</div>
-        <div class="ch-sub">7 类正常计算任务 × 各 3 次</div>
-        <div class="chart" id="chart-sys1"></div>
-      </div>
-      <div class="chartbox fade">
-        <div class="ch-title">完整流程验收 · T06 亲和力成熟</div>
-        <div class="ch-sub">完整计算流程 · 各运行 3 次</div>
-        <div class="chart" id="chart-sys2"></div>
-      </div>
-    </div>
-    <div class="duo" style="margin-top:20px">
-      <div class="card fade" style="display:flex;flex-direction:column;justify-content:center">
-        <div class="tag">虚假完成率</div>
-        <h3>分组结果见本节开头</h3>
-        <p>谎称完成但未正确执行的比例，越低越好。Ailux 3%，天鹜 9%，Biomni 16%，Claude Science 25%。</p>
-      </div>
-      <div class="chartbox fade">
-        <div class="ch-title">CADD 盲评偏好</div>
-        <div class="ch-sub">Ailux 21 票，天鹜 12 票，Biomni 8 票，Claude 5 票，无差别 4 票</div>
-        <div class="chart" id="chart-sys4"></div>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <h3 class="sect fade">任务级验收明细</h3>
-    <div class="tblwrap fade">
+    <h3 class="sect fade">这次测什么</h3>
+    <div class="tblwrap fade" style="margin-top:16px">
       <table class="tbl">
-        <colgroup><col style="width:8%"><col style="width:20%"><col style="width:12%"><col style="width:20%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"></colgroup>
-        <thead><tr><th>编号</th><th>任务</th><th>分类</th><th>验收对象</th><th>Ailux</th><th>Claude</th><th>Biomni</th><th>天鹜</th></tr></thead>
+        <colgroup><col style="width:18%"><col style="width:42%"><col style="width:40%"></colgroup>
+        <thead><tr><th>来源</th><th>测试项</th><th>为什么选它</th></tr></thead>
         <tbody>
-          <tr><td>T01</td><td>残基能量贡献拆解</td><td>正常计算</td><td>计算产物</td><td class="hl">3/3</td><td>2/3</td><td>2/3</td><td class="hl">3/3</td></tr>
-          <tr><td>T02</td><td>突变位点筛选</td><td>正常计算</td><td>位点清单</td><td class="hl">3/3</td><td>2/3</td><td>2/3</td><td>2/3</td></tr>
-          <tr><td>T03</td><td>突变生成</td><td>正常计算</td><td>候选序列</td><td class="hl">3/3</td><td>1/3</td><td>2/3</td><td>2/3</td></tr>
-          <tr><td>T04</td><td>序列打分筛选</td><td>正常计算</td><td>评分与排序</td><td class="hl">3/3</td><td>2/3</td><td>2/3</td><td class="hl">3/3</td></tr>
-          <tr><td>T05</td><td>结构预测与打分</td><td>正常计算</td><td>结构与评分</td><td class="hl">3/3</td><td>2/3</td><td>2/3</td><td>2/3</td></tr>
-          <tr><td>T06</td><td>亲和力成熟完整流程</td><td>正常计算</td><td>完整结果包</td><td class="hl">3/3</td><td class="lose">0/3</td><td>1/3</td><td>2/3</td></tr>
-          <tr><td>T07</td><td>靶点背景与公开专利检索</td><td>扩展检索</td><td>检索资料</td><td>1/3</td><td class="hl">3/3</td><td class="hl">3/3</td><td>2/3</td></tr>
-          <tr><td>T08</td><td>Pose 聚类</td><td>正常计算</td><td>聚类与代表构象</td><td class="hl">3/3</td><td>3/3</td><td class="hl">3/3</td><td class="hl">3/3</td></tr>
-          <tr><td>T09</td><td>输入缺少链编号字段</td><td>稳健性</td><td>识别异常并建议修正</td><td class="hl">3/3</td><td>1/3</td><td>2/3</td><td>2/3</td></tr>
-          <tr><td>T10</td><td>中途计算节点失败</td><td>稳健性</td><td>恢复或正确报告状态</td><td class="hl">3/3</td><td>2/3</td><td>2/3</td><td>2/3</td></tr>
+          <tr><td>流程 1</td><td>亲和力成熟 · 残基能量贡献拆解</td><td>单步计算，能看出热点拆解是否真的跑完</td></tr>
+          <tr><td>流程 4</td><td>亲和力成熟 · 序列打分筛选</td><td>单步打分，不把后续结构轮次串进来</td></tr>
+          <tr><td>流程 5</td><td>亲和力成熟 · 结构打分筛选</td><td>单步结构打分，仍短于端到端流程</td></tr>
+          <tr><td>Skill 9</td><td>xtalfold3-fast 结构预测</td><td>单模型，结构预测是否交付可用结构</td></tr>
+          <tr><td>Skill 7</td><td>xddgc 稳定性变化预测</td><td>单模型，稳定性预测是否给出可用结果</td></tr>
+          <tr><td>Skill 11</td><td>PolyXpert 多反应性风险预测</td><td>单模型，可开发性风险是否给出可用结果</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="notice fade">计算（T01–T06、T08）：Ailux 21/21，天鹜 17/21，Biomni 14/21，Claude Science 12/21。稳健性（T09、T10）：6/6、4/6、4/6、3/6。扩展检索（T07）：1/3、2/3、3/3、3/3。顺序均为 Ailux、天鹜、Biomni、Claude Science。</p>
-
-    <div class="divider"></div>
-
-    <h3 class="sect fade">专业工具能力 · 突变排序与结构预测</h3>
-    <div class="lead-txt fade">同一指标下并列 Ailux、天鹜、Biomni 和公共工具基线。误差线为 95% 区间。</div>
-    <div class="duo" style="margin-top:16px">
-      <div class="chartbox fade">
-        <div class="ch-title">突变 ΔΔG 排序</div>
-        <div class="ch-sub">Spearman 相关 · n=412 个突变 · 越高越好</div>
-        <div class="chart" id="chart-tool1"></div>
-      </div>
-      <div class="chartbox fade">
-        <div class="ch-title">复合物结构预测</div>
-        <div class="ch-sub">DockQ ≥ 0.23 成功率 · n=60 个结构</div>
-        <div class="chart" id="chart-tool2"></div>
-      </div>
-    </div>
-    <div class="duo" style="margin-top:20px">
-      <div class="chartbox fade">
-        <div class="ch-title">可开发性风险分类</div>
-        <div class="ch-sub">AUROC · n=137 个公开抗体 · 标签待冻结</div>
-        <div class="chart" id="chart-tool3"></div>
-      </div>
-      <div class="card fade" style="display:flex;flex-direction:column;justify-content:center">
-        <div class="tag">小结</div>
-        <h3>专业工具能力 2 胜 1 平</h3>
-        <p>三组指标均为 Ailux 最高，其后是天鹜、Biomni、公共基线。结构预测四者接近：71%、69%、67%、66%。相对公共基线仍是 2 胜 1 平的原口径，Biomni、天鹜未改这组胜负计数。</p>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <h3 class="sect fade">效率与成本 · 诚实呈现取舍</h3>
-    <div class="lead-txt fade">四款 Agent 放在同一张图里。Ailux 总耗时 6.9h、费用 1850 元，高于 Claude Science 的 4.3h、1320 元；天鹜 5.5h、1670 元，Biomni 5.2h、1240 元。人工介入 Ailux 最少。</div>
-    <div class="duo" style="margin-top:16px">
-      <div class="chartbox fade">
-        <div class="ch-title">单任务总耗时（小时）</div>
-        <div class="ch-sub">按机器计算、排队等待、人工等待拆分</div>
-        <div class="chart" id="chart-eff1"></div>
-      </div>
-      <div class="chartbox fade">
-        <div class="ch-title">计算费用（元 / 次完整流程）</div>
-        <div class="ch-sub">token + 算力</div>
-        <div class="chart" id="chart-eff2"></div>
-      </div>
-    </div>
-    <div class="grid" style="margin-top:20px">
-      <div class="card fade">
-        <h3>人工介入次数 · 更少</h3>
-        <div class="big">1.2 <span class="unit">次 / 任务</span></div>
-        <p>Ailux 1.2 次，天鹜 2.4 次，Biomni 3.1 次，Claude Science 4.6 次。</p>
-      </div>
-      <div class="card fade" style="border-color:#F2C4C4">
-        <h3>总耗时与费用 · 负项，如实呈现</h3>
-        <p>总耗时：Ailux 6.9h，天鹜 5.5h，Biomni 5.2h，Claude Science 4.3h。费用：1850、1670、1240、1320 元。Ailux 相对 Claude Science 仍是负项。</p>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <h3 class="sect fade">工程与通量 · 规模化能力</h3>
-    <div class="lead-txt fade">同等 GPU 配额（16 张 A100 等效）；通量取同时提交 50 个同类任务；一致性取同题 3 次运行。四款都有曲线。</div>
-    <div class="duo" style="margin-top:16px">
-      <div class="chartbox fade">
-        <div class="ch-title">同类任务通量</div>
-        <div class="ch-sub">同时提交 50 个同类任务 · 完成数 / 小时</div>
-        <div class="chart" id="chart-eng1"></div>
-      </div>
-      <div class="chartbox fade">
-        <div class="ch-title">并发成功率</div>
-        <div class="ch-sub">同时提交 N 个同类任务的成功率</div>
-        <div class="chart" id="chart-eng2"></div>
-      </div>
-    </div>
-    <div class="duo" style="margin-top:20px">
-      <div class="chartbox fade">
-        <div class="ch-title">并发耗时劣化</div>
-        <div class="ch-sub">相对单任务基线的倍数 · 越低越稳</div>
-        <div class="chart" id="chart-eng3"></div>
-      </div>
-      <div class="grid3" style="grid-template-columns:1fr;gap:12px">
-        <div class="card fade"><div class="big" style="font-size:26px">0.82</div><h3>Top-20 候选重合度</h3><p>Ailux 0.82，天鹜 0.71，Biomni 0.62，Claude Science 0.55。</p></div>
-        <div class="card fade"><div class="big" style="font-size:26px">92%</div><h3>报告模板覆盖率</h3><p>Ailux 92%，天鹜 80%，Biomni 70%，Claude Science 58%。</p></div>
-        <div class="card fade"><div class="big" style="font-size:26px">4.1</div><h3>评估方法数量</h3><p>Ailux 4.1，天鹜 3.2，Biomni 2.4，Claude Science 1.6，单位：种 / 候选。</p></div>
-      </div>
-    </div>
+    <p class="notice fade">流程 2（突变位点筛选）和流程 3（突变生成）仍在示例包里，需要加长测试时再纳入。流程 6「亲和力成熟完整流程」本次不测。</p>
 
     <div class="note fade">
-      <strong>待冻结：</strong>评测周期与版本号、虚假完成率原始计数、四款 Agent 的同一任务集与同一 prompt、Biomni 部署版本、天鹜测试账号及能否盲测、公共工具名称与版本、可开发性分类的检测标签 / 阈值 / 数据切分。
+      <strong>不比这些：</strong>不排四款总榜，不统计跨任务胜负，不比检索、稳健性、并发和通量。对照仍可以是 Claude Science、Biomni、天鹜，但只在上表这几项上、用同一示例文件来比。
     </div>
   </div>
 </section>
 
-<!-- ===== 03 真实案例 ===== -->
+<!-- ===== 03 效率与成本 ===== -->
 <section id="s3">
   <div class="wrap">
     <div class="sec-head fade">
-      <div class="sec-no"><span class="num">03</span><span class="cap">真实案例 · 亲和力成熟</span></div>
-      <h2>一个真实 Case：抗体亲和力成熟全流程</h2>
-      <div class="sub">以 HER2 靶向抗体亲和力成熟为例，从结构准备到候选交付在一个 Agent 会话内跑通。这是能体现「对内价值且外部 Agent 处理不好」的代表性案例——完整流程验收 3/3 vs 0/3。</div>
+      <div class="sec-no"><span class="num">03</span><span class="cap">效率与成本</span></div>
+      <h2>效率与成本：呈现可验证的数据</h2>
+      <div class="sub">Ailux 的单任务费用根据实际资源用量估算。其他产品暂缺同口径费用数据，因此不作成本排名。耗时与人工介入次数依据统一任务下的实测结果展示。</div>
       <div class="rule"></div>
     </div>
 
-    <div class="case-hero fade">
-      <div class="card" style="display:flex;flex-direction:column;justify-content:center">
-        <div class="tag">核心结论</div>
-        <h3 style="font-size:20px">一次流程交付 Top-20 候选，6 个预测 KD 提升 &gt; 10 倍</h3>
-        <p style="margin-top:10px">完整流程一次跑通，含结构准备、热点识别、突变设计与打分排序；单任务 6.9 小时，全程人工介入仅 3 次。</p>
-      </div>
-      <div class="card">
-        <div class="tag">案例画像</div>
-        <h3>任务定义</h3>
-        <div style="font-size:14px;color:var(--slate);margin-top:8px;line-height:1.8">
-          <div><strong style="color:var(--navy)">靶点：</strong>HER2 胞外结构域（PDB 结构）</div>
-          <div><strong style="color:var(--navy)">母体抗体：</strong>抗 HER2 单抗（序列 + 结构）</div>
-          <div><strong style="color:var(--navy)">约束：</strong>CDR 突变为主，避开关键热点残基</div>
-          <div><strong style="color:var(--navy)">成功判据：</strong>预测 KD 提升 ≥ 10 倍且可开发性通过</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="case-meta fade">
-      <div class="cm"><div class="lbl">五阶段流程</div><div class="val">一次跑通</div></div>
-      <div class="cm"><div class="lbl">单任务总耗时</div><div class="val">6.9 h</div></div>
-      <div class="cm"><div class="lbl">人工介入</div><div class="val">3 次</div></div>
-      <div class="cm"><div class="lbl">交付候选</div><div class="val">Top-20</div></div>
-      <div class="cm"><div class="lbl">KD 提升 &gt; 10 倍</div><div class="val">6 个</div></div>
-      <div class="cm"><div class="lbl">完整流程验收</div><div class="val">3 / 3</div></div>
-    </div>
-
-    <h3 class="sect fade">五阶段计算流程</h3>
-    <div class="flow fade">
-      <div class="step"><span class="snum">01</span><span class="sname">结构准备</span></div>
-      <div class="step"><span class="snum">02</span><span class="sname">热点识别</span></div>
-      <div class="step"><span class="snum">03</span><span class="sname">突变设计</span></div>
-      <div class="step"><span class="snum">04</span><span class="sname">打分排序</span></div>
-      <div class="step"><span class="snum">05</span><span class="sname">候选交付</span></div>
-    </div>
-    <p class="notice fade">Ailux 在一个 Agent 会话内串联五阶段，阶段间自动交接中间产物，全程可追溯。</p>
-
-    <div class="divider"></div>
-
-    <h3 class="sect fade">打分排序：Top 候选 ΔΔG 显著改善</h3>
-    <div class="lead-txt fade">对 1,240 条候选打分，ΔΔG 为负表示结合更紧密。Top 候选预测 ΔΔG 集中在 −2 ~ −4 kcal/mol，相对母体抗体基线（ΔΔG=0）显著改善。</div>
-    <div class="chartbox fade" style="margin-top:16px">
-      <div class="ch-title">母体抗体 vs Top-20 候选 · 预测 ΔΔG 分布</div>
-      <div class="ch-sub">候选编号 1–20 · 单位 kcal/mol</div>
-      <div class="chart" id="chart-case1"></div>
-    </div>
-
-    <div class="divider"></div>
-
-    <h3 class="sect fade">候选交付 · Top-6 一览</h3>
-    <div class="tblwrap fade">
+    <h3 class="sect fade">Ailux 单任务费用估算</h3>
+    <div class="lead-txt fade">只保留 Ailux 自己的估算。计入项、未计入项、价格依据和估算日期还没齐，页上不写金额。</div>
+    <div class="tblwrap fade" style="margin-top:16px">
       <table class="tbl">
-        <colgroup><col style="width:10%"><col style="width:28%"><col style="width:22%"><col style="width:22%"><col style="width:18%"></colgroup>
-        <thead><tr><th>排名</th><th>突变位点</th><th>ΔΔG (kcal/mol)</th><th>预测 KD 提升</th><th>可开发性</th></tr></thead>
+        <colgroup><col style="width:22%"><col style="width:78%"></colgroup>
+        <thead><tr><th>项</th><th>当前写法</th></tr></thead>
         <tbody>
-          <tr><td>1</td><td>H3:V100F · H2:S53N</td><td class="mono">−3.9</td><td class="hl">×48</td><td>通过</td></tr>
-          <tr><td>2</td><td>H3:Y100D · H1:W33Y</td><td class="mono">−3.6</td><td class="hl">×32</td><td>通过</td></tr>
-          <tr><td>3</td><td>H2:A60V · H3:F100Y</td><td class="mono">−3.2</td><td class="hl">×21</td><td>通过</td></tr>
-          <tr><td>4</td><td>H3:G100A · H1:W33L</td><td class="mono">−2.8</td><td class="hl">×14</td><td>通过</td></tr>
-          <tr><td>5</td><td>H2:S53Y · H3:V100I</td><td class="mono">−2.5</td><td class="hl">×11</td><td>通过</td></tr>
-          <tr><td>6</td><td>H3:F100W · H2:A60T</td><td class="mono">−2.2</td><td>×9</td><td>待验</td></tr>
+          <tr><td>单任务费用</td><td>待按实际资源用量估算</td></tr>
+          <tr><td>计入项</td><td>待填写</td></tr>
+          <tr><td>未计入项</td><td>待填写</td></tr>
+          <tr><td>价格依据</td><td>待填写</td></tr>
+          <tr><td>估算日期</td><td>待填写</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="notice fade">交付内容：候选列表 + ΔΔG / KD 打分 + 结构报告 + 置信区间，全部可追溯、可复现。</p>
 
-    <div class="divider"></div>
-
-    <h3 class="sect fade">工程表现 · 更快、更少人工介入</h3>
-    <div class="duo" style="margin-top:16px">
-      <div class="chartbox fade">
-        <div class="ch-title">单任务总耗时（小时 / 任务）</div>
-        <div class="ch-sub">Ailux vs 人工基线工作流</div>
-        <div class="chart" id="chart-case2"></div>
-      </div>
-      <div class="chartbox fade">
-        <div class="ch-title">人工介入次数（次 / 任务）</div>
-        <div class="ch-sub">Ailux vs 人工基线工作流</div>
-        <div class="chart" id="chart-case3"></div>
-      </div>
+    <h3 class="sect fade">竞品费用</h3>
+    <div class="tblwrap fade" style="margin-top:16px">
+      <table class="tbl">
+        <colgroup><col style="width:28%"><col style="width:72%"></colgroup>
+        <thead><tr><th>对象</th><th>费用</th></tr></thead>
+        <tbody>
+          <tr><td>Claude Science</td><td>暂无可比数据</td></tr>
+          <tr><td>Biomni</td><td>暂无可比数据</td></tr>
+          <tr><td>天鹜</td><td>暂无可比数据</td></tr>
+        </tbody>
+      </table>
     </div>
+    <p class="notice fade">拿不到对方的资源消耗。后续如果有同一任务下的实际账单，再按同一计入项比较。</p>
 
-    <div class="grid" style="margin-top:20px">
-      <div class="card fade">
-        <h3>案例小结</h3>
-        <ul style="font-size:14px;color:var(--slate);line-height:1.9;padding-left:18px;margin-top:6px">
-          <li>五阶段流程在一个 Agent 会话内一次跑通</li>
-          <li>交付 Top-20 候选，6 个预测 KD 提升 &gt; 10 倍</li>
-          <li>单任务 6.9 小时，人工介入仅 3 次</li>
-          <li>输出含打分、结构报告、置信区间，可复现</li>
-        </ul>
-      </div>
-      <div class="card fade">
-        <h3>局限与下一步</h3>
-        <ul style="font-size:14px;color:var(--slate);line-height:1.9;padding-left:18px;margin-top:6px">
-          <li>当前为计算阶段预测，未经湿实验验证</li>
-          <li>需接入真实靶点 / 母体抗体序列复跑</li>
-          <li>下一步：候选进入表达与 BLI 亲和力实测</li>
-          <li>版本 V0.2，待冻结评测周期与版本号</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="note fade">
-      <strong>一句话总结：</strong>Ailux 把抗体亲和力成熟从「多工具拼装」变为「一个会话交付完整候选」。
-    </div>
+    <h3 class="sect fade">耗时与人工介入</h3>
+    <div class="lead-txt fade">只展示有实测记录的数，并且写明任务、环境和样本量。现有材料没有同时满足这三项的记录，因此不放小时数和次数。</div>
   </div>
 </section>
 
@@ -720,171 +418,6 @@ function agentLine(name,color,data){
   return {name:name,type:'line',data:data,smooth:true,color:color,lineStyle:{width:3},symbolSize:7};
 }
 
-/* 四项主指标 · 四款并列，越高越好 */
-baseChart('chart-main',{
-  grid:{left:8,right:24,top:12,bottom:36,containLabel:true},
-  tooltip:{trigger:'axis',axisPointer:{type:'shadow'},confine:true,formatter:tipAxis},
-  legend:{bottom:0,textStyle:{color:MUTED,fontSize:12}},
-  xAxis:Object.assign(axis(),{type:'value',max:100}),
-  yAxis:Object.assign(axis(),{type:'category',data:['工程通量','效率成本','专业工具','系统完整'],axisLabel:{color:INK,fontSize:13}}),
-  series:[
-    {name:'Ailux',type:'bar',data:[93,54,91,100],itemStyle:{color:NAVY},barWidth:8},
-    {name:'天鹜',type:'bar',data:[72,52,84,81],itemStyle:{color:TIAN},barWidth:8},
-    {name:'Biomni',type:'bar',data:[49,63,76,67],itemStyle:{color:BIO},barWidth:8},
-    {name:'Claude Science',type:'bar',data:[33,50,75,57],itemStyle:{color:SKY},barWidth:8}
-  ]
-});
-
-/* 系统完整性 */
-baseChart('chart-sys1',{
-  grid:{left:10,right:72,top:10,bottom:10,containLabel:true},
-  tooltip:{trigger:'item',confine:true,formatter:tipItem('%')},
-  xAxis:Object.assign(axis(),{type:'value',max:100,axisLabel:{color:MUTED,fontSize:12,formatter:'{value}%'}}),
-  yAxis:Object.assign(axis(),{type:'category',data:['天鹜','Biomni','Claude Science','Ailux'],axisLabel:{color:INK,fontSize:13}}),
-  series:[{type:'bar',data:[scored(81,TIAN,pct),scored(66.7,BIO,pct),scored(57.1,SKY,pct),scored(100,NAVY,pct)],barWidth:16}]
-});
-baseChart('chart-sys2',{
-  grid:{left:10,right:72,top:10,bottom:10,containLabel:true},
-  tooltip:{trigger:'item',confine:true,formatter:function(p){return p.name+'<br/>'+p.value+'/3'}},
-  xAxis:Object.assign(axis(),{type:'value',max:3}),
-  yAxis:Object.assign(axis(),{type:'category',data:['天鹜','Biomni','Claude Science','Ailux'],axisLabel:{color:INK,fontSize:13}}),
-  series:[{type:'bar',data:[scored(2,TIAN,function(p){return p.value+'/3'}),scored(1,BIO,function(p){return p.value+'/3'}),scored(0,'#E3A6A6',function(p){return p.value+'/3'}),scored(3,NAVY,function(p){return p.value+'/3'})],barWidth:16}]
-});
-baseChart('chart-sys4',{
-  grid:{left:10,right:72,top:10,bottom:10,containLabel:true},
-  tooltip:{trigger:'item',confine:true,formatter:function(p){return p.name+'<br/>'+p.value+' 票'}},
-  xAxis:Object.assign(axis(),{type:'value',max:30}),
-  yAxis:Object.assign(axis(),{type:'category',data:['天鹜','Biomni','无差别','Claude Science','Ailux'],axisLabel:{color:INK,fontSize:13}}),
-  series:[{type:'bar',data:[scored(12,TIAN,function(p){return p.value+' 票'}),scored(8,BIO,function(p){return p.value+' 票'}),scored(4,SKY,function(p){return p.value+' 票'}),scored(5,SKY,function(p){return p.value+' 票'}),scored(21,NAVY,function(p){return p.value+' 票'})],barWidth:14}]
-});
-
-/* 专业工具能力 */
-var toolNames=['天鹜','Biomni','公共基线','Ailux'];
-baseChart('chart-tool1',{
-  grid:{left:10,right:72,top:10,bottom:10,containLabel:true},
-  tooltip:{trigger:'item',confine:true,formatter:tipItem('')},
-  xAxis:Object.assign(axis(),{type:'value',max:1}),
-  yAxis:Object.assign(axis(),{type:'category',data:toolNames,axisLabel:{color:INK,fontSize:13}}),
-  series:[{type:'bar',data:[scored(0.51,TIAN,function(p){return p.value}),scored(0.46,BIO,function(p){return p.value}),scored(0.40,SKY,function(p){return p.value}),scored(0.55,NAVY,function(p){return p.value})],barWidth:16}]
-});
-baseChart('chart-tool2',{
-  grid:{left:10,right:72,top:10,bottom:10,containLabel:true},
-  tooltip:{trigger:'item',confine:true,formatter:tipItem('%')},
-  xAxis:Object.assign(axis(),{type:'value',max:100,axisLabel:{color:MUTED,fontSize:12,formatter:'{value}%'}}),
-  yAxis:Object.assign(axis(),{type:'category',data:toolNames,axisLabel:{color:INK,fontSize:13}}),
-  series:[{type:'bar',data:[scored(69,TIAN,pct),scored(67,BIO,pct),scored(66,SKY,pct),scored(71,NAVY,pct)],barWidth:16}]
-});
-baseChart('chart-tool3',{
-  grid:{left:10,right:72,top:10,bottom:10,containLabel:true},
-  tooltip:{trigger:'item',confine:true,formatter:tipItem('')},
-  xAxis:Object.assign(axis(),{type:'value',max:1}),
-  yAxis:Object.assign(axis(),{type:'category',data:toolNames,axisLabel:{color:INK,fontSize:13}}),
-  series:[{type:'bar',data:[scored(0.83,TIAN,function(p){return p.value}),scored(0.79,BIO,function(p){return p.value}),scored(0.76,SKY,function(p){return p.value}),scored(0.86,NAVY,function(p){return p.value})],barWidth:16}]
-});
-
-/* 效率与成本 */
-var effNames=['Ailux','天鹜','Biomni','Claude'];
-var effLabel={color:INK,fontSize:12,interval:0};
-baseChart('chart-eff1',{
-  grid:{left:10,right:16,top:16,bottom:28,containLabel:true},
-  tooltip:{trigger:'axis',axisPointer:{type:'shadow'},confine:true,formatter:tipAxis},
-  legend:{bottom:0,data:['人工等待','排队等待','机器计算'],textStyle:{color:MUTED,fontSize:12}},
-  xAxis:Object.assign(axis(),{type:'category',data:effNames,axisLabel:effLabel}),
-  yAxis:Object.assign(axis(),{type:'value',axisLabel:{color:MUTED,fontSize:12}}),
-  series:[
-    {name:'人工等待',type:'bar',stack:'t',data:[2.5,1.6,1.8,0.9],itemStyle:{color:'#8FAFE0'}},
-    {name:'排队等待',type:'bar',stack:'t',data:[0.6,0.5,0.8,0.3],itemStyle:{color:'#BFD7FF'}},
-    {name:'机器计算',type:'bar',stack:'t',data:[3.8,3.4,2.6,3.1],itemStyle:{color:NAVY}}
-  ]
-});
-baseChart('chart-eff2',{
-  grid:{left:10,right:16,top:16,bottom:28,containLabel:true},
-  tooltip:{trigger:'axis',axisPointer:{type:'shadow'},confine:true,formatter:tipAxis},
-  legend:{bottom:0,data:['token','算力'],textStyle:{color:MUTED,fontSize:12}},
-  xAxis:Object.assign(axis(),{type:'category',data:effNames,axisLabel:effLabel}),
-  yAxis:Object.assign(axis(),{type:'value',axisLabel:{color:MUTED,fontSize:12}}),
-  series:[
-    {name:'token',type:'bar',stack:'c',data:[120,180,260,310],itemStyle:{color:'#8FAFE0'}},
-    {name:'算力',type:'bar',stack:'c',data:[1730,1490,980,1010],itemStyle:{color:NAVY}}
-  ]
-});
-
-/* 工程与通量 */
-baseChart('chart-eng1',{
-  grid:{left:10,right:72,top:10,bottom:10,containLabel:true},
-  tooltip:{trigger:'item',confine:true,formatter:tipItem('')},
-  xAxis:Object.assign(axis(),{type:'value'}),
-  yAxis:Object.assign(axis(),{type:'category',data:['天鹜','Biomni','Claude Science','Ailux'],axisLabel:{color:INK,fontSize:13}}),
-  series:[{type:'bar',data:[scored(12.6,TIAN,function(p){return p.value}),scored(8.8,BIO,function(p){return p.value}),scored(6.4,SKY,function(p){return p.value}),scored(18.2,NAVY,function(p){return p.value})],barWidth:16}]
-});
-baseChart('chart-eng2',{
-  grid:{left:10,right:16,top:12,bottom:52,containLabel:true},
-  tooltip:{trigger:'axis',confine:true,formatter:function(params){
-    var rows=[params[0].axisValue+' 个并发'];
-    params.forEach(function(p){rows.push(p.marker+p.seriesName+'　'+p.value+'%')});
-    return rows.join('<br/>');
-  }},
-  legend:{bottom:0,textStyle:{color:MUTED,fontSize:12}},
-  xAxis:Object.assign(axis(),{type:'category',data:['1','5','10','20'],name:'并发任务数',axisLabel:{color:INK,fontSize:13}}),
-  yAxis:Object.assign(axis(),{type:'value',min:40,max:100,axisLabel:{color:MUTED,fontSize:12,formatter:'{value}%'}}),
-  series:[
-    agentLine('Ailux',NAVY,[97,96,94,90]),
-    agentLine('天鹜',TIAN,[94,90,84,76]),
-    agentLine('Biomni',BIO,[92,86,74,63]),
-    agentLine('Claude Science',SKY,[90,80,66,55])
-  ]
-});
-baseChart('chart-eng3',{
-  grid:{left:10,right:16,top:12,bottom:52,containLabel:true},
-  tooltip:{trigger:'axis',confine:true,formatter:function(params){
-    var rows=[params[0].axisValue+' 个并发'];
-    params.forEach(function(p){rows.push(p.marker+p.seriesName+'　'+p.value+'×')});
-    return rows.join('<br/>');
-  }},
-  legend:{bottom:0,textStyle:{color:MUTED,fontSize:12}},
-  xAxis:Object.assign(axis(),{type:'category',data:['1','5','10','20'],name:'并发任务数',axisLabel:{color:INK,fontSize:13}}),
-  yAxis:Object.assign(axis(),{type:'value',axisLabel:{color:MUTED,fontSize:12,formatter:'{value}×'}}),
-  series:[
-    agentLine('Ailux',NAVY,[1.0,1.1,1.2,1.4]),
-    agentLine('天鹜',TIAN,[1.0,1.2,1.5,1.9]),
-    agentLine('Biomni',BIO,[1.0,1.3,1.8,2.5]),
-    agentLine('Claude Science',SKY,[1.0,1.5,2.4,3.2])
-  ]
-});
-
-/* 案例 */
-baseChart('chart-case1',{
-  grid:{left:10,right:30,top:20,bottom:10,containLabel:true},
-  tooltip:{trigger:'axis',confine:true},
-  legend:{bottom:0,textStyle:{color:MUTED,fontSize:12}},
-  xAxis:Object.assign(axis(),{type:'category',data:Array.from({length:20},function(_,i){return i+1}),name:'候选编号',axisLabel:{color:INK,fontSize:11}}),
-  yAxis:Object.assign(axis(),{type:'value',name:'预测 ΔΔG (kcal/mol)',axisLabel:{color:MUTED,fontSize:12}}),
-  series:[
-    {name:'Top-20 候选',type:'scatter',symbolSize:11,itemStyle:{color:NAVY},data:(function(){var d=[];for(var i=0;i<20;i++){d.push([i+1,Math.round((-2.2-Math.random()*1.8)*10)/10])}return d})()},
-    {name:'母体抗体',type:'scatter',symbolSize:9,itemStyle:{color:SKY},data:(function(){var d=[];for(var i=0;i<20;i++){d.push([i+1,Math.round((Math.random()*1.3-0.5)*10)/10])}return d})()}
-  ],
-  markLine:{silent:true,symbol:'none',lineStyle:{color:'#C0392B',type:'dashed'},data:[{yAxis:0,label:{formatter:'母体基线 ΔΔG=0',color:MUTED,fontSize:11}}]}
-});
-baseChart('chart-case2',{
-  grid:{left:10,right:30,top:10,bottom:10,containLabel:true},
-  tooltip:{trigger:'item',confine:true},
-  xAxis:Object.assign(axis(),{type:'value'}),
-  yAxis:Object.assign(axis(),{type:'category',data:['人工基线','Ailux'],axisLabel:{color:INK,fontSize:13}}),
-  series:[{type:'bar',data:[
-    {value:21,itemStyle:{color:SKY}},
-    {value:6.9,itemStyle:{color:NAVY}}
-  ],barWidth:22,label:{show:true,position:'right',fontSize:13,color:INK,formatter:function(p){return p.value+' h'}}}]
-});
-baseChart('chart-case3',{
-  grid:{left:10,right:30,top:10,bottom:10,containLabel:true},
-  tooltip:{trigger:'item',confine:true},
-  xAxis:Object.assign(axis(),{type:'value'}),
-  yAxis:Object.assign(axis(),{type:'category',data:['人工基线','Ailux'],axisLabel:{color:INK,fontSize:13}}),
-  series:[{type:'bar',data:[
-    {value:12,itemStyle:{color:SKY}},
-    {value:3,itemStyle:{color:NAVY}}
-  ],barWidth:22,label:{show:true,position:'right',fontSize:13,color:INK,formatter:function(p){return p.value+' 次'}}}]
-});
 </script>
 </body>
 </html>
