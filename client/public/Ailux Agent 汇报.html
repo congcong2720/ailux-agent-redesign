@@ -616,11 +616,33 @@
     <div class="divider"></div>
 
     <h3 class="sect fade">打分排序：Top 候选 ΔΔG 显著改善</h3>
-    <div class="lead-txt fade">对 1,240 条候选打分，ΔΔG 为负表示结合更紧密。Top 候选预测 ΔΔG 集中在 −2 ~ −4 kcal/mol，相对母体抗体基线（ΔΔG=0）显著改善。</div>
-    <div class="chartbox fade" style="margin-top:16px">
-      <div class="ch-title">母体抗体 vs Top-20 候选 · 预测 ΔΔG 分布</div>
-      <div class="ch-sub">候选编号 1–20 · 单位 kcal/mol</div>
-      <div class="chart" id="chart-case1"></div>
+    <div class="lead-txt fade">对 1,240 条候选打分，ΔΔG 为负表示结合更紧密。Top 候选预测 ΔΔG 集中在 −2 ~ −4 kcal/mol，相对母体抗体基线（ΔΔG=0）显著改善。交付时可以同时给出界面结构。</div>
+    <div class="duo" style="margin-top:16px">
+      <div class="chartbox fade">
+        <div class="ch-title">母体抗体 vs Top-20 候选 · 预测 ΔΔG 分布</div>
+        <div class="ch-sub">候选编号 1–20 · 单位 kcal/mol</div>
+        <div class="chart" id="chart-case1"></div>
+      </div>
+      <div class="chartbox fade">
+        <div class="ch-title">界面结构示意 · 排名 1</div>
+        <div class="ch-sub">示例图 · H3:V100F 标在抗体–抗原界面</div>
+        <svg viewBox="0 0 520 320" width="100%" height="320" role="img" aria-label="抗体与抗原界面结构示意">
+          <rect x="0" y="0" width="520" height="320" fill="#F7F9FC" rx="8"/>
+          <ellipse cx="168" cy="150" rx="92" ry="78" fill="#E8F0FE" stroke="#0D47A1" stroke-width="2"/>
+          <path d="M118 118 C132 96 168 92 188 108 C206 122 198 146 176 150 C154 154 128 142 118 118 Z" fill="#BFD7FF"/>
+          <path d="M124 168 C140 186 176 194 198 176 C186 160 156 156 124 168 Z" fill="#9EBFEE"/>
+          <text x="168" y="248" text-anchor="middle" fill="#0D47A1" font-size="13" font-family="Noto Sans SC, sans-serif">抗原 · HER2 胞外区</text>
+          <path d="M300 78 C336 46 392 58 404 102 C416 146 386 168 352 160 C330 154 312 132 300 78 Z" fill="#0D47A1"/>
+          <path d="M292 150 C318 132 360 138 386 164 C368 196 318 206 292 184 Z" fill="#2E6FB0"/>
+          <path d="M318 176 C348 168 390 188 402 224 C378 252 328 248 310 214 Z" fill="#4A90D9"/>
+          <text x="360" y="248" text-anchor="middle" fill="#0D47A1" font-size="13" font-family="Noto Sans SC, sans-serif">抗体 Fab</text>
+          <circle cx="248" cy="146" r="9" fill="#C0392B" stroke="#fff" stroke-width="2"/>
+          <line x1="257" y1="138" x2="292" y2="96" stroke="#C0392B" stroke-width="1.4"/>
+          <rect x="292" y="72" width="118" height="28" rx="6" fill="#fff" stroke="#C0392B"/>
+          <text x="351" y="91" text-anchor="middle" fill="#C0392B" font-size="12" font-family="Noto Sans SC, sans-serif">H3:V100F</text>
+          <text x="260" y="292" text-anchor="middle" fill="#8A94A6" font-size="12" font-family="Noto Sans SC, sans-serif">示例，不是本次案例的真实坐标</text>
+        </svg>
+      </div>
     </div>
 
     <div class="divider"></div>
