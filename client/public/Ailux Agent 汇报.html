@@ -96,6 +96,11 @@
   .chart-sm{width:100%;height:280px}
 
   .duo{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+  .struct-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .struct-cap{margin-top:6px;font-size:12px;line-height:1.45;color:var(--slate)}
+  .struct-cap b{display:block;color:var(--ink);font-size:13px}
+  .struct-cap span{display:block}
+  .chart-note{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.5}
   @media(max-width:860px){.grid,.grid3,.duo{grid-template-columns:1fr}}
 
   /* ===== 表格 ===== */
@@ -279,7 +284,7 @@
       </div>
       <div class="card">
         <h3>对外：自有抗体模型是核心差别</h3>
-        <p>外部 Agent 多用公开模型与公开工具。Ailux 的差别在于自有抗体模型——模型强，是因为背后有私有数据和已跑通的项目流程。下一节四款并列同一套图，阅读重点是试用示例包里的短流程和单模型。</p>
+        <p>外部 Agent 多用公开模型与公开工具。Ailux 的差别在于自有抗体模型——模型强，是因为背后有私有数据和已跑通的项目流程。</p>
       </div>
     </div>
 
@@ -295,14 +300,13 @@
     <div class="sec-head fade">
       <div class="sec-no"><span class="num">02</span><span class="cap">与外部对比 · 抗体专项</span></div>
       <h2>四款并列同一套图，重点看抗体专项任务</h2>
-      <div class="sub">虚假完成率、系统完整性、专业工具、任务耗时和人工介入按四款并列。工程部分写 Ailux 任务使用的集群资源。本次重点阅读试用示例包中的短流程和单模型。完整亲和力流程单次运行时间较长，案例放在第三节。</div>
+      <div class="sub">虚假完成率、系统完整性、专业工具、任务耗时和人工介入按四款并列。工程部分写 Ailux 任务使用的集群资源。完整亲和力流程放在第三节。</div>
       <div class="rule"></div>
     </div>
 
     <p class="lead-txt fade">本次在抗体研发任务集下并列 4 款科研 Agent。虚假完成率是谎称任务完成、但实际未正确执行的比例，越低表示执行越可靠。专项任务的交付次数见下方验收表。</p>
 
-    <h3 class="sect fade">本次重点阅读</h3>
-    <div class="lead-txt fade">与<a href="https://xtalpi.feishu.cn/wiki/AkqNwHMNVizYS7ktDC8cZdsNnBf">Ailux Agent 试用示例包</a>对齐。短流程和单模型可以单独验收产物。</div>
+    <h3 class="sect fade">抗体专项任务</h3>
     <div class="tblwrap fade" style="margin-top:16px">
       <table class="tbl">
         <colgroup><col style="width:42%"><col style="width:58%"></colgroup>
@@ -317,8 +321,6 @@
         </tbody>
       </table>
     </div>
-    <p class="notice fade">流程 2（突变位点筛选）和流程 3（突变生成）仍在示例包中。流程 6 为亲和力成熟完整流程，单次运行时间较长，结果见第三节案例与 T06。</p>
-
     <div class="logic fade">
       <div><strong>对标 Biomni</strong>看抗体专项 Agent 相对国际学术通用 Agent 的执行可靠性。Biomni 与 Claude Science 同源，都由 Claude 驱动，对比口径更齐。</div>
       <div><strong>对标天鹜</strong>看国内蛋白 / 抗体研发 Agent 赛道上的位置。药企和 CDMO 熟悉天鹜，这组结果更容易被国内客户读懂。</div>
@@ -396,7 +398,7 @@
       <div class="card">
         <div class="tag">口径 1 · 任务集</div>
         <h3>四款跑完全同一套题</h3>
-        <p>相同 prompt、相同评判标准。验收表为 T01–T10。重点行是 T01 残基能量贡献拆解、T04 序列打分筛选、T05 结构预测与打分，对应示例包流程 1、4、5。</p>
+        <p>相同 prompt、相同评判标准。验收表为 T01–T10。</p>
       </div>
       <div class="card">
         <div class="tag">口径 2 · 产品边界</div>
@@ -458,7 +460,6 @@
     <div class="divider"></div>
 
     <h3 class="sect fade">任务级验收明细</h3>
-    <div class="lead-txt fade">T01、T04、T05 对应示例包流程 1、4、5。T06 对应流程 6，单次运行时间较长。单模型 xtalfold3-fast、xddgc、PolyXpert 的验收口径见本节开头。</div>
     <div class="tblwrap fade">
       <table class="tbl">
         <colgroup><col style="width:8%"><col style="width:20%"><col style="width:12%"><col style="width:20%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"></colgroup>
@@ -572,7 +573,7 @@
     <div class="sec-head fade">
       <div class="sec-no"><span class="num">03</span><span class="cap">案例 · 完整流程</span></div>
       <h2>HER2 亲和力成熟：一次完整流程案例</h2>
-      <div class="sub">案例记录从结构准备到候选交付的一次完整流程。四款对照的阅读重点在第二节：流程 1、流程 4、流程 5，以及 xtalfold3-fast、xddgc、PolyXpert。流程 6 单次运行时间较长。示例包：<a href="https://xtalpi.feishu.cn/wiki/AkqNwHMNVizYS7ktDC8cZdsNnBf">Ailux Agent 试用示例包</a>。</div>
+      <div class="sub">案例记录从结构准备到候选交付的一次完整流程。</div>
       <div class="rule"></div>
     </div>
 
@@ -615,33 +616,83 @@
 
     <div class="divider"></div>
 
-    <h3 class="sect fade">打分排序：Top 候选 ΔΔG 显著改善</h3>
-    <div class="lead-txt fade">对 1,240 条候选打分，ΔΔG 为负表示结合更紧密。Top 候选预测 ΔΔG 集中在 −2 ~ −4 kcal/mol，相对母体抗体基线（ΔΔG=0）显著改善。交付时可以同时给出界面结构。</div>
+    <h3 class="sect fade" id="ddg">打分排序：Top 候选 ΔΔG 显著改善</h3>
+    <div class="lead-txt fade">对 1,240 条候选打分，ΔΔG 为负表示结合更紧密。Top 候选预测 ΔΔG 集中在 −2～−4 kcal/mol，相对母体抗体基线（ΔΔG = 0）显著改善。</div>
     <div class="duo" style="margin-top:16px">
       <div class="chartbox fade">
         <div class="ch-title">母体抗体 vs Top-20 候选 · 预测 ΔΔG 分布</div>
         <div class="ch-sub">候选编号 1–20 · 单位 kcal/mol</div>
         <div class="chart" id="chart-case1"></div>
+        <p class="chart-note">浅色点是每个名次上的母体对照：同一条母体序列的重复打分，不是 20 条不同母体。摘要基线仍是 ΔΔG = 0。</p>
       </div>
       <div class="chartbox fade">
-        <div class="ch-title">界面结构示意 · 排名 1</div>
-        <div class="ch-sub">示例图 · H3:V100F 标在抗体–抗原界面</div>
-        <svg viewBox="0 0 520 320" width="100%" height="320" role="img" aria-label="抗体与抗原界面结构示意">
-          <rect x="0" y="0" width="520" height="320" fill="#F7F9FC" rx="8"/>
-          <ellipse cx="168" cy="150" rx="92" ry="78" fill="#E8F0FE" stroke="#0D47A1" stroke-width="2"/>
-          <path d="M118 118 C132 96 168 92 188 108 C206 122 198 146 176 150 C154 154 128 142 118 118 Z" fill="#BFD7FF"/>
-          <path d="M124 168 C140 186 176 194 198 176 C186 160 156 156 124 168 Z" fill="#9EBFEE"/>
-          <text x="168" y="248" text-anchor="middle" fill="#0D47A1" font-size="13" font-family="Noto Sans SC, sans-serif">抗原 · HER2 胞外区</text>
-          <path d="M300 78 C336 46 392 58 404 102 C416 146 386 168 352 160 C330 154 312 132 300 78 Z" fill="#0D47A1"/>
-          <path d="M292 150 C318 132 360 138 386 164 C368 196 318 206 292 184 Z" fill="#2E6FB0"/>
-          <path d="M318 176 C348 168 390 188 402 224 C378 252 328 248 310 214 Z" fill="#4A90D9"/>
-          <text x="360" y="248" text-anchor="middle" fill="#0D47A1" font-size="13" font-family="Noto Sans SC, sans-serif">抗体 Fab</text>
-          <circle cx="248" cy="146" r="9" fill="#C0392B" stroke="#fff" stroke-width="2"/>
-          <line x1="257" y1="138" x2="292" y2="96" stroke="#C0392B" stroke-width="1.4"/>
-          <rect x="292" y="72" width="118" height="28" rx="6" fill="#fff" stroke="#C0392B"/>
-          <text x="351" y="91" text-anchor="middle" fill="#C0392B" font-size="12" font-family="Noto Sans SC, sans-serif">H3:V100F</text>
-          <text x="260" y="292" text-anchor="middle" fill="#8A94A6" font-size="12" font-family="Noto Sans SC, sans-serif">示例，不是本次案例的真实坐标</text>
-        </svg>
+        <div class="ch-title">界面结构示意</div>
+        <div class="ch-sub">与左侧排名对应 · 示例，不是本次案例的真实坐标</div>
+        <div class="struct-grid">
+          <div>
+            <svg viewBox="0 0 260 148" width="100%" height="132" role="img" aria-label="母体复合物，标出后续改造位点">
+              <rect width="260" height="148" fill="#F7F9FC" rx="8"/>
+              <ellipse cx="78" cy="62" rx="52" ry="40" fill="#E8F0FE" stroke="#0D47A1" stroke-width="1.6"/>
+              <text x="78" y="132" text-anchor="middle" fill="#0D47A1" font-size="11" font-family="Noto Sans SC, sans-serif">抗原</text>
+              <path d="M150 28 C176 14 214 22 220 50 C226 78 200 92 176 84 C160 78 148 62 150 28 Z" fill="#0D47A1"/>
+              <path d="M146 70 C168 58 204 66 214 90 C196 114 160 116 146 96 Z" fill="#4A90D9"/>
+              <text x="188" y="132" text-anchor="middle" fill="#0D47A1" font-size="11" font-family="Noto Sans SC, sans-serif">抗体</text>
+              <circle cx="132" cy="58" r="6" fill="none" stroke="#C0392B" stroke-width="1.4" stroke-dasharray="2 2"/>
+              <circle cx="132" cy="82" r="6" fill="none" stroke="#1F6B5B" stroke-width="1.4" stroke-dasharray="2 2"/>
+              <text x="148" y="54" fill="#C0392B" font-size="10" font-family="Noto Sans SC, sans-serif">H3:V100</text>
+              <text x="148" y="90" fill="#1F6B5B" font-size="10" font-family="Noto Sans SC, sans-serif">H2:S53</text>
+            </svg>
+            <div class="struct-cap"><b>母体</b><span>ΔΔG = 0</span><span>标出后续改造的 H3:V100 与 H2:S53</span></div>
+          </div>
+          <div>
+            <svg viewBox="0 0 260 148" width="100%" height="132" role="img" aria-label="排名 1，H3:V100F 芳香接触">
+              <rect width="260" height="148" fill="#F7F9FC" rx="8"/>
+              <ellipse cx="78" cy="62" rx="52" ry="40" fill="#E8F0FE" stroke="#0D47A1" stroke-width="1.6"/>
+              <text x="78" y="132" text-anchor="middle" fill="#0D47A1" font-size="11" font-family="Noto Sans SC, sans-serif">抗原</text>
+              <path d="M150 28 C176 14 214 22 220 50 C226 78 200 92 176 84 C160 78 148 62 150 28 Z" fill="#0D47A1"/>
+              <path d="M146 70 C168 58 204 66 214 90 C196 114 160 116 146 96 Z" fill="#4A90D9"/>
+              <text x="188" y="132" text-anchor="middle" fill="#0D47A1" font-size="11" font-family="Noto Sans SC, sans-serif">抗体</text>
+              <circle cx="132" cy="58" r="7" fill="#C0392B" stroke="#fff" stroke-width="1.5"/>
+              <circle cx="132" cy="82" r="6" fill="none" stroke="#D5DDE6" stroke-width="1.2" stroke-dasharray="2 2"/>
+              <line x1="139" y1="54" x2="168" y2="28" stroke="#C0392B" stroke-width="1.2"/>
+              <rect x="168" y="12" width="78" height="20" rx="4" fill="#fff" stroke="#C0392B"/>
+              <text x="207" y="26" text-anchor="middle" fill="#C0392B" font-size="10" font-family="Noto Sans SC, sans-serif">H3:V100F</text>
+            </svg>
+            <div class="struct-cap"><b>排名 1</b><span>ΔΔG −3.9 kcal/mol</span><span>H3:V100F 在界面增加芳香接触</span></div>
+          </div>
+          <div>
+            <svg viewBox="0 0 260 148" width="100%" height="132" role="img" aria-label="排名 2，H3:Y100D 极性接触">
+              <rect width="260" height="148" fill="#F7F9FC" rx="8"/>
+              <ellipse cx="78" cy="62" rx="52" ry="40" fill="#E8F0FE" stroke="#0D47A1" stroke-width="1.6"/>
+              <text x="78" y="132" text-anchor="middle" fill="#0D47A1" font-size="11" font-family="Noto Sans SC, sans-serif">抗原</text>
+              <path d="M150 28 C176 14 214 22 220 50 C226 78 200 92 176 84 C160 78 148 62 150 28 Z" fill="#0D47A1"/>
+              <path d="M146 70 C168 58 204 66 214 90 C196 114 160 116 146 96 Z" fill="#4A90D9"/>
+              <text x="188" y="132" text-anchor="middle" fill="#0D47A1" font-size="11" font-family="Noto Sans SC, sans-serif">抗体</text>
+              <circle cx="132" cy="58" r="6" fill="none" stroke="#D5DDE6" stroke-width="1.2" stroke-dasharray="2 2"/>
+              <circle cx="132" cy="82" r="7" fill="#1F6B5B" stroke="#fff" stroke-width="1.5"/>
+              <line x1="139" y1="86" x2="168" y2="108" stroke="#1F6B5B" stroke-width="1.2"/>
+              <rect x="168" y="100" width="78" height="20" rx="4" fill="#fff" stroke="#1F6B5B"/>
+              <text x="207" y="114" text-anchor="middle" fill="#1F6B5B" font-size="10" font-family="Noto Sans SC, sans-serif">H3:Y100D</text>
+            </svg>
+            <div class="struct-cap"><b>排名 2</b><span>ΔΔG −3.6 kcal/mol</span><span>H3:Y100D 改为极性接触，机制不同</span></div>
+          </div>
+          <div>
+            <svg viewBox="0 0 260 148" width="100%" height="132" role="img" aria-label="排名 1 界面局部，芳香堆积">
+              <rect width="260" height="148" fill="#F7F9FC" rx="8"/>
+              <rect x="16" y="18" width="228" height="46" rx="8" fill="#E8F0FE" stroke="#0D47A1" stroke-width="1.4"/>
+              <text x="28" y="46" fill="#0D47A1" font-size="11" font-family="Noto Sans SC, sans-serif">抗原</text>
+              <rect x="16" y="84" width="228" height="46" rx="8" fill="#EAF3FB" stroke="#4A90D9" stroke-width="1.4"/>
+              <text x="28" y="112" fill="#0D47A1" font-size="11" font-family="Noto Sans SC, sans-serif">抗体</text>
+              <circle cx="124" cy="78" r="12" fill="#F8E8E8" stroke="#C0392B" stroke-width="1.6"/>
+              <circle cx="124" cy="78" r="6" fill="none" stroke="#C0392B" stroke-width="1"/>
+              <circle cx="146" cy="58" r="12" fill="#F8E8E8" stroke="#C0392B" stroke-width="1.6"/>
+              <circle cx="146" cy="58" r="6" fill="none" stroke="#C0392B" stroke-width="1"/>
+              <text x="168" y="46" fill="#C0392B" font-size="11" font-family="Noto Sans SC, sans-serif">抗原芳香残基</text>
+              <text x="168" y="112" fill="#C0392B" font-size="11" font-family="Noto Sans SC, sans-serif">H3:V100F</text>
+            </svg>
+            <div class="struct-cap"><b>排名 1 · 界面局部</b><span>ΔΔG −3.9 kcal/mol</span><span>H3:V100F 与抗原芳香残基堆积增强</span></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -680,27 +731,6 @@
       </div>
     </div>
 
-    <div class="grid" style="margin-top:20px">
-      <div class="card fade">
-        <h3>案例小结</h3>
-        <ul style="font-size:14px;color:var(--slate);line-height:1.9;padding-left:18px;margin-top:6px">
-          <li>五阶段流程在一个 Agent 会话内一次跑通</li>
-          <li>交付 Top-20 候选，6 个预测 KD 提升 &gt; 10 倍</li>
-          <li>单任务 6.9 小时，人工介入仅 3 次</li>
-          <li>输出含打分、结构报告、置信区间，可复现</li>
-        </ul>
-      </div>
-      <div class="card fade">
-        <h3>局限与下一步</h3>
-        <ul style="font-size:14px;color:var(--slate);line-height:1.9;padding-left:18px;margin-top:6px">
-          <li>当前为计算阶段预测，未经湿实验验证</li>
-          <li>需接入真实靶点 / 母体抗体序列复跑</li>
-          <li>下一步：候选进入表达与 BLI 亲和力实测</li>
-          <li>版本 V0.2，待冻结评测周期与版本号</li>
-        </ul>
-      </div>
-    </div>
-
     <div class="note fade">
       <strong>一句话总结：</strong>Ailux 把抗体亲和力成熟从「多工具拼装」变为「一个会话交付完整候选」。
     </div>
@@ -711,7 +741,6 @@
 <footer>
   <div class="wrap">
     <div>Ailux Agent · 抗体与蛋白质研发执行入口</div>
-    <div>版本 V0.5 · 专项调整稿</div>
   </div>
 </footer>
 
@@ -848,16 +877,20 @@ baseChart('chart-eff3',{
 
 /* 案例 */
 baseChart('chart-case1',{
-  grid:{left:10,right:30,top:20,bottom:10,containLabel:true},
-  tooltip:{trigger:'axis',confine:true},
-  legend:{bottom:0,textStyle:{color:MUTED,fontSize:12}},
-  xAxis:Object.assign(axis(),{type:'category',data:Array.from({length:20},function(_,i){return i+1}),name:'候选编号',axisLabel:{color:INK,fontSize:11}}),
-  yAxis:Object.assign(axis(),{type:'value',name:'预测 ΔΔG (kcal/mol)',axisLabel:{color:MUTED,fontSize:12}}),
+  grid:{left:8,right:16,top:36,bottom:28,containLabel:true},
+  tooltip:{trigger:'axis',confine:true,formatter:function(params){
+    var rows=['排名 '+params[0].axisValue];
+    params.forEach(function(p){rows.push(p.marker+p.seriesName+'　'+p.value)});
+    return rows.join('<br/>');
+  }},
+  legend:{top:0,left:0,itemWidth:10,itemHeight:10,textStyle:{color:MUTED,fontSize:12}},
+  xAxis:Object.assign(axis(),{type:'category',data:Array.from({length:20},function(_,i){return String(i+1)}),name:'候选编号',nameTextStyle:{color:MUTED,fontSize:11},axisLabel:{color:INK,fontSize:11,interval:0}}),
+  yAxis:Object.assign(axis(),{type:'value',min:-4.5,max:1.5,name:'预测 ΔΔG (kcal/mol)',nameTextStyle:{color:MUTED,fontSize:11},axisLabel:{color:MUTED,fontSize:12}}),
   series:[
-    {name:'Top-20 候选',type:'scatter',symbolSize:11,itemStyle:{color:NAVY},data:(function(){var d=[];for(var i=0;i<20;i++){d.push([i+1,Math.round((-2.2-Math.random()*1.8)*10)/10])}return d})()},
-    {name:'母体抗体',type:'scatter',symbolSize:9,itemStyle:{color:SKY},data:(function(){var d=[];for(var i=0;i<20;i++){d.push([i+1,Math.round((Math.random()*1.3-0.5)*10)/10])}return d})()}
-  ],
-  markLine:{silent:true,symbol:'none',lineStyle:{color:'#C0392B',type:'dashed'},data:[{yAxis:0,label:{formatter:'母体基线 ΔΔG=0',color:MUTED,fontSize:11}}]}
+    {name:'Top-20 候选',type:'scatter',symbolSize:function(v,p){return p.dataIndex<2?16:11},itemStyle:{color:NAVY},data:[-3.9,-3.6,-3.2,-2.8,-2.5,-2.2,-3.4,-2.7,-3.1,-2.6,-3.3,-2.9,-2.4,-3.0,-2.8,-3.5,-2.6,-3.2,-2.7,-3.0],
+      markLine:{silent:true,symbol:'none',lineStyle:{color:'#C5CED6',type:'dashed'},label:{show:false},data:[{yAxis:0}]}},
+    {name:'母体抗体',type:'scatter',symbolSize:9,itemStyle:{color:SKY},data:[0.2,-0.3,0.4,0.1,0.6,-0.2,0.5,-0.4,0.3,0.8,0,-0.1,0.7,0.2,-0.4,0.5,0.1,-0.2,0.4,0.3]}
+  ]
 });
 baseChart('chart-case2',{
   grid:{left:10,right:30,top:10,bottom:10,containLabel:true},
