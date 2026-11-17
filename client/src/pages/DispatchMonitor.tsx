@@ -1,3 +1,4 @@
+import { TaskCancellation } from "@/components/TaskCancellation";
 import { ArrowLeft, FileText, PanelRightOpen, Plus, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
@@ -5,7 +6,7 @@ import { toast } from "sonner";
 
 type DispatchScope = "run" | "conversation";
 type DispatchStatusFilter = "all" | "running" | "error" | "done" | "queued";
-type DispatchJobStatus = "queued" | "running" | "done" | "error";
+type DispatchJobStatus = "queued" | "running" | "done" | "error" | "processing" | "cancelled";
 
 type DispatchJob = {
   id: string;
@@ -61,6 +62,8 @@ const dispatchJobs: DispatchJob[] = [
 ];
 
 const statusMeta: Record<DispatchJobStatus, { className: string }> = {
+  processing: { className: "bg-blue-50 text-blue-700" },
+  cancelled: { className: "bg-slate-100 text-slate-500" },
   queued: { className: "bg-slate-100 text-slate-500" },
   running: { className: "bg-amber-50 text-amber-700" },
   done: { className: "bg-emerald-50 text-emerald-700" },
@@ -118,7 +121,8 @@ export default function DispatchMonitor() {
   const [selectedSplitJob, setSelectedSplitJob] = useState<DispatchJob | null>(null);
   const [selectedLog, setSelectedLog] = useState<{ title: string; lines: string[] } | null>(null);
 
-  const scopedJobs = useMemo(() => getScopedJobs(initialScope), [initialScope]);
+  const [jobStates, setJobStates] = useState<Record<string, "running" | "queued" | "processing" | "cancelled">>({});
+  const scopedJobs = useMemo(() => getScopedJobs(initialScope).map(job => jobStates[job.id] ? { ...job, status: jobStates[job.id], duration: jobStates[job.id] === "cancelled" ? "-" : job.duration } : job), [initialScope, jobStates]);
   const visibleJobs = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return scopedJobs.filter((job) => {
@@ -170,6 +174,7 @@ export default function DispatchMonitor() {
         </header>
 
         <div className="min-h-0 flex-1 overflow-auto px-6 py-5">
+          <div className="mb-5 max-w-[460px]"><TaskCancellation onJobsChange={setJobStates} /></div>
           {scopedJobs.length === 0 ? (
             <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 p-10 text-center">
               <p className="text-[15px] font-semibold text-slate-700">当前对话尚未提交调度任务</p>

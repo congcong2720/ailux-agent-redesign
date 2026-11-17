@@ -12,6 +12,7 @@ import { PdbViewer } from "@/components/PdbViewer";
 import { ProjectPanel } from "@/components/ProjectPanel";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { AgentPreferencePanel, ResourcePanel, TEMPLATES } from "@/components/ResourcePanel";
+import { TaskCancellation } from "@/components/TaskCancellation";
 import { ReportRating } from "@/components/ReportRating";
 import { SidePanelEmptyState } from "@/components/SidePanelEmptyState";
 import { StreamingAgentTurn, type StreamVariant } from "@/components/StreamingAgentTurn";
@@ -5333,45 +5334,12 @@ function MonitorPanelContent({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-[18px] border border-slate-100 bg-white px-4 py-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="text-[13px] font-semibold text-slate-700">{lang === "zh" ? "调度任务" : "Dispatch jobs"}</p>
-          <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[11px] text-slate-400">{text.monitorQueueValue}</span>
-        </div>
-        <div className="rounded-[14px] bg-slate-50/80 px-3 py-3">
-          <div className="flex items-start gap-3">
-            <Database className="mt-0.5 h-4 w-4 shrink-0 text-[#161FAD]" />
-            <div className="min-w-0 flex-1">
-              <p className="text-[12px] leading-5 text-slate-600">
-                {lang === "zh"
-                  ? "查看当前 Run 的调度明细。整个对话的 HPC 历史请点底部「历史记录」。"
-                  : "View this run’s dispatch jobs. Use History at the bottom for the whole conversation."}
-              </p>
-              <p className="mt-2 font-mono text-[11px] text-slate-400">{taskId}</p>
-            </div>
-          </div>
-          <div className="mt-3 flex gap-2">
-            <button
-              onClick={() => onOpenDispatchMonitor("all")}
-              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#161FAD] px-3 py-2 text-[12px] font-semibold text-white transition hover:bg-[#1724D8]"
-            >
-              <ArrowUpRight className="h-3.5 w-3.5" />
-              {lang === "zh" ? "查看调度任务" : "View dispatch jobs"}
-            </button>
-            <button
-              onClick={handleCopyTaskId}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-600 transition hover:border-[rgba(23,36,216,0.18)] hover:text-[#161FAD]"
-            >
-              {text.monitorCopyTaskId}
-            </button>
-          </div>
-        </div>
-      </div>
+      <TaskCancellation lang={lang} />
 
-      <div className="rounded-[18px] border border-slate-100 bg-white px-4 py-4">
+      <div className="rounded-[18px] border border-[#e8edfc] bg-white px-4 py-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <p className="text-[13px] font-semibold text-slate-700">{lang === "zh" ? "节点日志" : "Step logs"}</p>
-          <span className="text-[11px] text-slate-400">{doneCount}/{steps.length}</span>
+          <div className="flex items-center gap-3 text-[11px] text-[#5266b2]"><span>{doneCount}/{steps.length}</span><button onClick={() => toast.success(lang === "zh" ? "节点状态已刷新" : "Node states refreshed")} className="inline-flex items-center gap-1"><RefreshCw className="h-3.5 w-3.5" />{lang === "zh" ? "刷新" : "Refresh"}</button></div>
         </div>
         <div className="space-y-2">
           {steps.map((step, index) => {
@@ -5379,12 +5347,12 @@ function MonitorPanelContent({
             const iconDone = step.status === "done";
             const timing = getStepTiming(step, index, lang);
             return (
-              <div key={step.id} className="rounded-[14px] bg-slate-50/80 px-3 py-2.5">
+              <div key={step.id} className="rounded-[14px] bg-[#f5f8fc] px-3 py-3">
                 <div className="flex items-center gap-3">
                   <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${style.icon}`}>
                     {iconDone ? <CheckCircle2 className="h-3.5 w-3.5" /> : <CircleDashed className="h-3.5 w-3.5" />}
                   </div>
-                  <p className="min-w-0 flex-1 truncate text-[12px] font-medium text-slate-700">{pick(lang, step.title)}</p>
+                  <p className="min-w-0 flex-1 truncate text-[12px] font-medium text-slate-700">{["moe", "prodigy", "rosetta", "PAL", "PAL", "PAL"][index % 6]}</p>
                   <button
                     onClick={() => setSelectedStepLog({ step, index })}
                     title={lang === "zh" ? "查看节点详情" : "View step details"}
@@ -5394,7 +5362,7 @@ function MonitorPanelContent({
                     <FileText className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-2 pl-10 text-[10px]">
+                <div className="mt-2 grid grid-cols-2 gap-2 pl-10 text-[12px]">
                   <div className="rounded-xl bg-white px-2.5 py-1.5">
                     <p className="text-slate-400">{lang === "zh" ? "开始时间" : "Start"}</p>
                     <p className="mt-0.5 whitespace-nowrap font-medium text-slate-600">{timing.start}</p>
